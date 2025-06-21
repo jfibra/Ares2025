@@ -35,15 +35,6 @@ const AboutPage = () => {
     },
   ]
 
-  const achievements = [
-    "400+ Industry Professionals Attended",
-    "12 Expert Speakers from Across Asia",
-    "2 Days of Intensive Learning",
-    "100+ New Business Connections Made",
-    "50+ Companies Represented",
-    "95% Attendee Satisfaction Rate",
-  ]
-
   const sponsors = [
     { name: "Cebu Landmasters", image: "/cebulandmasters.webp" },
     { name: "Weecomm", image: "/weecomm.webp" },
@@ -170,30 +161,6 @@ const AboutPage = () => {
       <section className="py-20 bg-gradient-to-br from-gray-50 to-white">
         <div className="container mx-auto px-6">
           <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                Our{" "}
-                <span className="text-transparent bg-gradient-to-r from-[#ffd700] to-[#f59e0b] bg-clip-text">
-                  Achievements
-                </span>
-              </h2>
-              <div className="w-20 h-1 bg-gradient-to-r from-[#e22837] to-[#0078b6] mx-auto rounded-full mb-8" />
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                ARES 2023 was a tremendous success, setting new standards for real estate conferences in Asia.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-              {achievements.map((achievement, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-3 bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                >
-                  <CheckCircle className="text-green-500 flex-shrink-0" size={24} />
-                  <span className="text-gray-700 font-medium">{achievement}</span>
-                </div>
-              ))}
-            </div>
 
             <div className="text-center">
               <div className="bg-gradient-to-r from-[#e22837]/10 to-[#0078b6]/10 p-8 rounded-3xl border border-gray-200">
