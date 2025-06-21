@@ -7,6 +7,7 @@ import SpeakersPage from "@/components/speakers-page"
 // Enhanced metadata generation for individual speakers with poster OG images
 export async function generateMetadata({ searchParams }: { searchParams: { speaker?: string } }): Promise<Metadata> {
   const speakerSlug = searchParams.speaker
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ares2025.com"
 
   if (speakerSlug) {
     // Enhanced speaker data mapping for metadata with Hollywood-style descriptions
@@ -129,6 +130,8 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
     const speaker = speakerData[speakerSlug]
 
     if (speaker) {
+      const pageUrl = `${baseUrl}/speakers?speaker=${speakerSlug}`
+
       return {
         title: `${speaker.name} - ${speaker.tagline} | ARES 2025`,
         description: `${speaker.description} Speaking at the Asian Real Estate Summit 2025 in Bangkok, Thailand. Don't miss this legendary speaker!`,
@@ -147,6 +150,8 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         openGraph: {
           title: `🌟 ${speaker.name} - ${speaker.tagline}`,
           description: `${speaker.description} Join us at ARES 2025 in Bangkok! 🇹🇭`,
+          url: pageUrl,
+          siteName: "ARES 2025 - Asian Real Estate Summit",
           images: [
             {
               url: speaker.image,
@@ -157,7 +162,6 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
             },
           ],
           type: "profile",
-          siteName: "ARES 2025 - Asian Real Estate Summit",
           locale: "en_US",
         },
         twitter: {
@@ -169,13 +173,18 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
           site: "@ARES2025",
         },
         alternates: {
-          canonical: `/speakers?speaker=${speakerSlug}`,
+          canonical: pageUrl,
+        },
+        other: {
+          "fb:app_id": "your-facebook-app-id", // Replace with actual Facebook App ID
         },
       }
     }
   }
 
   // Enhanced default metadata for speakers page
+  const pageUrl = `${baseUrl}/speakers`
+
   return {
     title: "Meet the Legends - ARES 2025 Speakers | Asian Real Estate Summit",
     description:
@@ -196,6 +205,8 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
       title: "Meet the Legends - ARES 2025 Speakers",
       description:
         "🎬 The most epic lineup in real estate history! Industry titans, visionaries, and game-changers at ARES 2025.",
+      url: pageUrl,
+      siteName: "ARES 2025 - Asian Real Estate Summit",
       images: [
         {
           url: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png",
@@ -206,7 +217,6 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         },
       ],
       type: "website",
-      siteName: "ARES 2025 - Asian Real Estate Summit",
       locale: "en_US",
     },
     twitter: {
@@ -218,7 +228,10 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
       site: "@ARES2025",
     },
     alternates: {
-      canonical: "/speakers",
+      canonical: pageUrl,
+    },
+    other: {
+      "fb:app_id": "your-facebook-app-id", // Replace with actual Facebook App ID
     },
   }
 }
