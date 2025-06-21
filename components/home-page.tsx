@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { MapPin, Mail, Phone, Play, Pause, Volume2, VolumeX, X } from "lucide-react"
+import { MapPin, Mail, Phone, Play, Pause, Volume2, VolumeX, X, Calendar, Users, Award, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -22,9 +22,10 @@ const HomePage = () => {
   })
   const [showVideoModal, setShowVideoModal] = useState(true)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
+  const [isMuted, setIsMuted] = useState(true) // Start muted
   const videoRef = useRef<HTMLVideoElement>(null)
   const [hasSeenVideoToday, setHasSeenVideoToday] = useState(false)
+  const [userInteracted, setUserInteracted] = useState(false)
 
   // Check if user has seen video today
   useEffect(() => {
@@ -57,21 +58,6 @@ const HomePage = () => {
     setImages(shuffled.slice(0, 10))
   }, [])
 
-  useEffect(() => {
-    // No sticky timer
-  }, [])
-
-  // Auto-play video when modal opens
-  useEffect(() => {
-    if (showVideoModal && videoRef.current) {
-      const timer = setTimeout(() => {
-        videoRef.current?.play()
-        setIsPlaying(true)
-      }, 1500)
-      return () => clearTimeout(timer)
-    }
-  }, [showVideoModal])
-
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (showVideoModal) {
@@ -84,14 +70,23 @@ const HomePage = () => {
     }
   }, [showVideoModal])
 
+  const handleVideoPlay = () => {
+    if (videoRef.current && userInteracted) {
+      videoRef.current.play()
+      setIsPlaying(true)
+    }
+  }
+
   const togglePlay = () => {
+    setUserInteracted(true)
     if (videoRef.current) {
       if (isPlaying) {
         videoRef.current.pause()
+        setIsPlaying(false)
       } else {
         videoRef.current.play()
+        setIsPlaying(true)
       }
-      setIsPlaying(!isPlaying)
     }
   }
 
@@ -168,47 +163,40 @@ const HomePage = () => {
 
   return (
     <div className="flex-grow overflow-hidden">
-      {/* Fixed Hollywood-Style Video Modal */}
+      {/* Fixed Video Modal - No Autoplay */}
       {showVideoModal && !hasSeenVideoToday && (
         <div className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-1000">
-          {/* Close button - positioned at top right, always visible */}
           <button
             onClick={closeVideoModal}
-            className="absolute top-4 right-4 z-[10000] bg-red-600/80 hover:bg-red-600 text-white p-3 rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-110 shadow-2xl"
+            className="absolute top-6 right-6 z-[10000] bg-white/10 hover:bg-white/20 text-white p-3 rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-110 shadow-2xl border border-white/20"
           >
             <X size={24} />
           </button>
 
-          <div className="relative w-full max-w-5xl max-h-[90vh] animate-in zoom-in duration-1000 delay-500">
-            {/* Cinematic glow effect */}
-            <div className="absolute -inset-2 bg-gradient-to-r from-[#ffd700]/30 via-[#e22837]/30 to-[#0078b6]/30 rounded-2xl blur-xl animate-pulse" />
+          <div className="relative w-full max-w-4xl max-h-[85vh] animate-in zoom-in duration-1000 delay-300">
+            <div className="absolute -inset-4 bg-gradient-to-r from-[#ffd700]/20 via-[#e22837]/20 to-[#0078b6]/20 rounded-3xl blur-2xl animate-pulse" />
 
-            <div className="relative bg-gradient-to-br from-black/95 to-gray-900/95 rounded-xl overflow-hidden border border-[#ffd700]/40 shadow-2xl backdrop-blur-sm">
-              {/* Compact Header */}
-              <div className="text-center py-4 px-6 bg-gradient-to-r from-black/80 to-transparent">
-                <div className="mb-3 animate-in slide-in-from-top duration-1000 delay-1000">
-                  <img
-                    src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
-                    alt="ARES 2025"
-                    className="max-w-xs mx-auto h-auto filter drop-shadow-lg"
-                  />
-                </div>
-                <div className="bg-gradient-to-r from-[#e22837] to-[#0078b6] px-6 py-2 rounded-full inline-block shadow-lg animate-in slide-in-from-bottom duration-1000 delay-1200">
-                  <p className="text-white font-bold text-sm uppercase tracking-wider">
-                    BANGKOK, THAILAND | JULY 2, 2025
-                  </p>
+            <div className="relative bg-gradient-to-br from-gray-900/95 to-black/95 rounded-2xl overflow-hidden border border-white/20 shadow-2xl backdrop-blur-sm">
+              <div className="text-center py-6 px-8 border-b border-white/10">
+                <img
+                  src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
+                  alt="ARES 2025"
+                  className="max-w-xs mx-auto h-auto mb-4"
+                />
+                <div className="bg-gradient-to-r from-[#e22837] to-[#0078b6] px-6 py-2 rounded-full inline-block">
+                  <p className="text-white font-semibold text-sm">BANGKOK, THAILAND • JULY 2, 2025</p>
                 </div>
               </div>
 
-              {/* Video Container - Responsive */}
               <div className="relative group">
                 <video
                   ref={videoRef}
-                  className="w-full h-auto max-h-[60vh] object-cover"
+                  className="w-full h-auto max-h-[50vh] object-cover"
                   muted={isMuted}
                   onPlay={() => setIsPlaying(true)}
                   onPause={() => setIsPlaying(false)}
                   onEnded={() => setIsPlaying(false)}
+                  poster="/placeholder.svg?height=400&width=800&text=ARES+2025+Preview"
                 >
                   <source
                     src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+2025+TEASER.mp4"
@@ -217,19 +205,18 @@ const HomePage = () => {
                   Your browser does not support the video tag.
                 </video>
 
-                {/* Video Controls Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                  <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <button
                         onClick={togglePlay}
-                        className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-110"
+                        className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-all duration-300"
                       >
                         {isPlaying ? <Pause size={20} /> : <Play size={20} />}
                       </button>
                       <button
                         onClick={toggleMute}
-                        className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-110"
+                        className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-all duration-300"
                       >
                         {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
                       </button>
@@ -237,26 +224,24 @@ const HomePage = () => {
                   </div>
                 </div>
 
-                {/* Play button overlay when paused */}
                 {!isPlaying && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <button
                       onClick={togglePlay}
-                      className="bg-[#e22837]/90 hover:bg-[#e22837] text-white p-4 rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-110 shadow-2xl animate-pulse"
+                      className="bg-[#e22837]/90 hover:bg-[#e22837] text-white p-6 rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-110 shadow-2xl"
                     >
-                      <Play size={32} className="ml-1" />
+                      <Play size={40} className="ml-1" />
                     </button>
                   </div>
                 )}
               </div>
 
-              {/* Compact Footer */}
-              <div className="text-center py-4 bg-gradient-to-r from-transparent to-black/50">
+              <div className="text-center py-6 bg-gradient-to-r from-transparent via-white/5 to-transparent">
                 <Button
                   onClick={closeVideoModal}
-                  className="bg-gradient-to-r from-[#e22837] to-[#0078b6] hover:from-[#d41e2d] hover:to-[#005a8b] text-white px-8 py-3 text-base font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                  className="bg-gradient-to-r from-[#e22837] to-[#0078b6] hover:from-[#d41e2d] hover:to-[#005a8b] text-white px-8 py-3 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
                 >
-                  Enter ARES 2025
+                  Continue to Website
                 </Button>
               </div>
             </div>
@@ -265,57 +250,81 @@ const HomePage = () => {
       )}
 
       {/* Modern Hero Section */}
-      <div
-        className="min-h-screen flex items-center text-white relative overflow-hidden bg-cover bg-center"
+      <section
+        className="min-h-screen flex items-center justify-center relative overflow-hidden"
         style={{
-          backgroundImage: "url(/bangkok.png)",
+          background: "linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)",
         }}
       >
-        {/* Modern gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-purple-900/30 to-black/80" />
-
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#ffd700]/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#e22837]/10 rounded-full blur-3xl animate-pulse delay-1000" />
-          <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-[#0078b6]/10 rounded-full blur-3xl animate-pulse delay-2000" />
+        {/* Animated Background */}
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-20 w-72 h-72 bg-[#ffd700]/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-[#e22837]/10 rounded-full blur-3xl animate-pulse delay-1000" />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#0078b6]/5 rounded-full blur-3xl animate-pulse delay-2000" />
         </div>
 
-        <div className="container mx-auto px-4 mt-20 relative z-10">
-          <div className="max-w-6xl mx-auto text-center space-y-8">
-            {/* Modern hero title */}
-            <div className="space-y-4 animate-in slide-in-from-bottom duration-1000">
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-black font-['Lato'] bg-gradient-to-r from-[#ffd700] via-white to-[#ffd700] bg-clip-text text-transparent drop-shadow-2xl leading-tight">
-                ARES 2025
-              </h1>
-              <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold font-['Lato'] text-white/90 drop-shadow-lg">
-                Asian Real Estate Summit
-              </h2>
+        {/* Floating Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-2 h-2 bg-white/20 rounded-full animate-float"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 5}s`,
+                animationDuration: `${3 + Math.random() * 4}s`,
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="container mx-auto px-6 text-center relative z-10 mt-20">
+          <div className="max-w-5xl mx-auto space-y-8">
+            {/* Logo */}
+            <div className="mb-8 animate-in slide-in-from-top duration-1000">
+              <img
+                src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
+                alt="ARES 2025"
+                className="max-w-md mx-auto h-auto filter drop-shadow-2xl"
+              />
             </div>
 
-            {/* Event details */}
-            <div className="flex items-center justify-center space-x-3 animate-in slide-in-from-bottom duration-1000 delay-300">
-              <div className="bg-gradient-to-r from-[#e22837] to-[#0078b6] p-1 rounded-full">
-                <div className="bg-black/50 backdrop-blur-sm px-8 py-4 rounded-full flex items-center space-x-3">
-                  <MapPin className="text-[#ffd700] text-2xl" />
-                  <span className="text-xl md:text-2xl font-bold">Bangkok, Thailand</span>
-                  <span className="text-[#ffd700] text-xl">•</span>
-                  <span className="text-xl md:text-2xl font-bold">July 1-2, 2025</span>
-                </div>
+            {/* Main Title */}
+            <div className="space-y-6 animate-in slide-in-from-bottom duration-1000 delay-300">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-transparent bg-gradient-to-r from-[#ffd700] via-white to-[#ffd700] bg-clip-text leading-tight">
+                Asian Real Estate Summit
+              </h1>
+              <p className="text-xl md:text-2xl text-white/80 max-w-3xl mx-auto leading-relaxed">
+                Join Asia's most prestigious real estate conference where industry leaders, innovators, and visionaries
+                converge to shape the future of real estate.
+              </p>
+            </div>
+
+            {/* Event Info */}
+            <div className="flex flex-col md:flex-row items-center justify-center gap-6 animate-in slide-in-from-bottom duration-1000 delay-500">
+              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm px-6 py-3 rounded-full border border-white/20">
+                <Calendar className="text-[#ffd700]" size={20} />
+                <span className="text-white font-semibold">July 1-2, 2025</span>
+              </div>
+              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm px-6 py-3 rounded-full border border-white/20">
+                <MapPin className="text-[#ffd700]" size={20} />
+                <span className="text-white font-semibold">Bangkok, Thailand</span>
               </div>
             </div>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-in slide-in-from-bottom duration-1000 delay-500">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-in slide-in-from-bottom duration-1000 delay-700">
               <Link href="/about">
-                <Button className="bg-gradient-to-r from-[#e22837] to-[#0078b6] hover:from-[#d41e2d] hover:to-[#005a8b] text-white px-12 py-6 text-xl font-bold rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 border-2 border-white/20">
+                <Button className="bg-gradient-to-r from-[#e22837] to-[#0078b6] hover:from-[#d41e2d] hover:to-[#005a8b] text-white px-8 py-4 text-lg font-semibold rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 group">
                   Discover ARES
+                  <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={20} />
                 </Button>
               </Link>
               <Link href="/speakers">
                 <Button
                   variant="outline"
-                  className="border-2 border-white/50 text-white hover:bg-white/10 px-12 py-6 text-xl font-bold rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-105"
+                  className="border-2 border-white/30 text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-105"
                 >
                   Meet Speakers
                 </Button>
@@ -323,28 +332,66 @@ const HomePage = () => {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Modern Teaser Video Section */}
-      <div className="bg-gradient-to-br from-black via-gray-900 to-black py-20 relative overflow-hidden">
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+          <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center">
+            <div className="w-1 h-3 bg-white/50 rounded-full mt-2 animate-pulse" />
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-20 bg-gradient-to-r from-white via-gray-50 to-white">
+        <div className="container mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="text-center group">
+              <div className="bg-gradient-to-br from-[#e22837] to-[#d41e2d] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                <Users className="text-white" size={32} />
+              </div>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2">400+</h3>
+              <p className="text-gray-600 font-medium">Industry Professionals</p>
+            </div>
+            <div className="text-center group">
+              <div className="bg-gradient-to-br from-[#0078b6] to-[#005a8b] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                <Award className="text-white" size={32} />
+              </div>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2">12</h3>
+              <p className="text-gray-600 font-medium">Expert Speakers</p>
+            </div>
+            <div className="text-center group">
+              <div className="bg-gradient-to-br from-[#ffd700] to-[#f59e0b] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                <MapPin className="text-white" size={32} />
+              </div>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2">2</h3>
+              <p className="text-gray-600 font-medium">Days of Excellence</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Video & Countdown Section */}
+      <section className="py-20 bg-gradient-to-br from-gray-900 via-black to-gray-900 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('/placeholder.svg?height=1080&width=1920&text=Geometric+Pattern')] opacity-5" />
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center mb-12 animate-in slide-in-from-top duration-1000">
-            <h2 className="text-4xl md:text-6xl font-black text-transparent bg-gradient-to-r from-[#ffd700] to-white bg-clip-text font-['Lato'] mb-6">
-              Experience the Future
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Experience{" "}
+              <span className="text-transparent bg-gradient-to-r from-[#ffd700] to-[#f59e0b] bg-clip-text">
+                ARES 2025
+              </span>
             </h2>
-            <p className="text-white/80 text-xl max-w-3xl mx-auto leading-relaxed">
-              Get an exclusive preview of Asia's most prestigious real estate summit
+            <p className="text-xl text-white/80 max-w-3xl mx-auto">
+              Get an exclusive preview of what awaits you at Asia's premier real estate summit
             </p>
           </div>
 
-          <div className="max-w-5xl mx-auto animate-in slide-in-from-bottom duration-1000 delay-300">
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-gray-800 to-black border border-[#ffd700]/30 group">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#e22837]/20 via-transparent to-[#0078b6]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="max-w-4xl mx-auto mb-16">
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-gray-800 to-black border border-white/10 group">
               <video
                 controls
-                className="w-full h-auto relative z-10"
-                poster="/placeholder.svg?height=600&width=1000&text=ARES+2025+Teaser"
+                className="w-full h-auto"
+                poster="/placeholder.svg?height=500&width=900&text=ARES+2025+Preview"
               >
                 <source
                   src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+2025+TEASER.mp4"
@@ -355,233 +402,215 @@ const HomePage = () => {
             </div>
           </div>
 
-          {/* Smaller Countdown Timer Below Video */}
-          <div id="countdown-section" className="mt-16 animate-in slide-in-from-bottom duration-1000 delay-500">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl md:text-3xl font-bold text-[#ffd700] mb-4">Event Countdown</h3>
-              <div className="w-24 h-1 bg-gradient-to-r from-[#e22837] to-[#0078b6] mx-auto rounded-full" />
-            </div>
+          {/* Countdown Timer */}
+          <div className="text-center">
+            <h3 className="text-2xl md:text-3xl font-bold text-white mb-8">Event Countdown</h3>
             <div className="flex justify-center">
-              <div className="transform scale-75 md:scale-90">
+              <div className="transform scale-90">
                 <CountdownTimer />
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Modern About Section */}
-      <div className="bg-gradient-to-br from-white via-gray-50 to-white py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/placeholder.svg?height=1080&width=1920&text=Subtle+Pattern')] opacity-5" />
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="animate-in slide-in-from-left duration-1000">
-              <div className="relative">
-                <div className="absolute -inset-4 bg-gradient-to-r from-[#e22837]/20 to-[#0078b6]/20 rounded-3xl blur-xl" />
-                <img
-                  src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg"
-                  alt="ARES Event"
-                  className="relative w-full h-[600px] object-cover rounded-3xl shadow-2xl"
-                />
+      {/* About Preview Section */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center max-w-6xl mx-auto">
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+                  Shaping the{" "}
+                  <span className="text-transparent bg-gradient-to-r from-[#e22837] to-[#0078b6] bg-clip-text">
+                    Future
+                  </span>{" "}
+                  of Real Estate
+                </h2>
+                <div className="w-20 h-1 bg-gradient-to-r from-[#e22837] to-[#0078b6] rounded-full mb-8" />
+              </div>
+
+              <div className="space-y-6 text-gray-700 text-lg leading-relaxed">
+                <p className="text-xl font-semibold text-gray-900">
+                  ARES brings together the brightest minds in Asian real estate for an unprecedented summit of
+                  innovation and collaboration.
+                </p>
+                <p>
+                  Our bi-annual international conference unites hundreds of industry leaders, from seasoned developers
+                  to cutting-edge proptech innovators, creating a dynamic ecosystem of knowledge exchange.
+                </p>
+                <p>
+                  Experience world-class presentations, engage in interactive workshops, and discover the latest trends
+                  shaping the future of real estate across Asia.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link href="/about">
+                  <Button className="bg-gradient-to-r from-[#e22837] to-[#0078b6] hover:from-[#d41e2d] hover:to-[#005a8b] text-white px-8 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                    Learn More
+                  </Button>
+                </Link>
+                <Link href="/speakers">
+                  <Button
+                    variant="outline"
+                    className="border-2 border-[#0078b6] text-[#0078b6] hover:bg-[#0078b6] hover:text-white px-8 py-4 text-lg font-semibold rounded-full transition-all duration-300 hover:scale-105"
+                  >
+                    View Speakers
+                  </Button>
+                </Link>
               </div>
             </div>
 
-            <div className="animate-in slide-in-from-right duration-1000 delay-300">
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-4xl md:text-6xl font-black text-transparent bg-gradient-to-r from-[#e22837] to-[#0078b6] bg-clip-text font-['Lato'] mb-6">
-                    Redefining Real Estate
-                  </h2>
-                  <div className="w-24 h-1 bg-gradient-to-r from-[#e22837] to-[#0078b6] rounded-full mb-8" />
-                </div>
-
-                <div className="space-y-6 text-gray-700 text-lg leading-relaxed">
-                  <p className="text-xl font-semibold text-gray-900">
-                    ARES brings together the brightest minds in Asian real estate for an unprecedented summit of
-                    innovation and collaboration.
-                  </p>
-
-                  <p>
-                    Our bi-annual international conference unites hundreds of industry leaders, from seasoned developers
-                    to cutting-edge proptech innovators, creating a dynamic ecosystem of knowledge exchange and
-                    strategic partnerships.
-                  </p>
-
-                  <p>
-                    Experience world-class presentations from twelve renowned experts, engage in interactive workshops,
-                    and discover the latest trends shaping the future of real estate across Asia.
-                  </p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Link href="/about">
-                    <Button className="bg-gradient-to-r from-[#e22837] to-[#0078b6] hover:from-[#d41e2d] hover:to-[#005a8b] text-white px-8 py-4 text-lg font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                      Learn More
-                    </Button>
-                  </Link>
-                  <Link href="/speakers">
-                    <Button
-                      variant="outline"
-                      className="border-2 border-[#0078b6] text-[#0078b6] hover:bg-[#0078b6] hover:text-white px-8 py-4 text-lg font-bold rounded-full transition-all duration-300 hover:scale-105"
-                    >
-                      View Speakers
-                    </Button>
-                  </Link>
-                </div>
-              </div>
+            <div className="relative">
+              <div className="absolute -inset-6 bg-gradient-to-r from-[#e22837]/20 to-[#0078b6]/20 rounded-3xl blur-2xl" />
+              <img
+                src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg"
+                alt="ARES Event"
+                className="relative w-full h-[500px] object-cover rounded-3xl shadow-2xl"
+              />
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Modern Gallery Section */}
-      <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#e22837]/10 via-transparent to-[#0078b6]/10" />
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center mb-16 animate-in slide-in-from-top duration-1000">
-            <h2 className="text-4xl md:text-6xl font-black text-transparent bg-gradient-to-r from-[#ffd700] to-white bg-clip-text font-['Lato'] mb-6">
-              Moments of Excellence
+      {/* Gallery Preview */}
+      <section className="py-20 bg-gradient-to-br from-gray-50 to-white">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              Moments of{" "}
+              <span className="text-transparent bg-gradient-to-r from-[#ffd700] to-[#f59e0b] bg-clip-text">
+                Excellence
+              </span>
             </h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-[#e22837] to-[#0078b6] mx-auto rounded-full mb-8" />
-            <p className="text-white/80 text-xl max-w-3xl mx-auto">Relive the highlights from previous ARES summits</p>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Relive the highlights and memorable moments from previous ARES summits
+            </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 animate-in slide-in-from-bottom duration-1000 delay-300">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
             {galleryImages.slice(0, 6).map((image, index) => (
-              <div key={index} className="group cursor-pointer" onClick={() => handleImageClick(index)}>
-                <div className="relative overflow-hidden rounded-2xl shadow-2xl">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent z-10" />
+              <div
+                key={index}
+                className="group cursor-pointer relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105"
+                onClick={() => handleImageClick(index)}
+              >
+                <div className="aspect-square overflow-hidden">
                   <img
                     src={image || "/placeholder.svg"}
                     alt={`ARES Event ${index + 1}`}
-                    className="w-full h-64 object-cover transition-all duration-500 group-hover:scale-110 group-hover:brightness-110"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-r from-[#e22837]/20 to-[#0078b6]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20" />
                 </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
             ))}
           </div>
 
-          <div className="text-center mt-12 animate-in slide-in-from-bottom duration-1000 delay-500">
+          <div className="text-center">
             <Link href="/gallery">
-              <Button className="bg-gradient-to-r from-[#e22837] to-[#0078b6] hover:from-[#d41e2d] hover:to-[#005a8b] text-white px-12 py-6 text-xl font-bold rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105">
+              <Button className="bg-gradient-to-r from-[#e22837] to-[#0078b6] hover:from-[#d41e2d] hover:to-[#005a8b] text-white px-8 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group">
                 Explore Full Gallery
+                <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={20} />
               </Button>
             </Link>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Modern Contact Section */}
-      <div
-        className="min-h-screen flex items-center justify-center py-20 bg-cover bg-center relative"
-        style={{
-          backgroundImage: "url(/contact-us-background.png)",
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-blue-900/60 to-black/80" />
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="relative animate-in slide-in-from-left duration-1000">
-              <div className="hidden lg:block">
-                <div className="absolute -inset-4 bg-gradient-to-r from-[#e22837]/30 to-[#0078b6]/30 rounded-3xl blur-xl" />
-                <img
-                  src="/lady-support.png"
-                  alt="Customer Support"
-                  className="relative w-full h-[600px] object-cover rounded-3xl shadow-2xl"
-                />
+      {/* Contact Section */}
+      <section className="py-20 bg-gradient-to-br from-gray-900 via-black to-gray-900 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/placeholder.svg?height=1080&width=1920&text=Contact+Pattern')] opacity-5" />
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="grid lg:grid-cols-2 gap-16 items-center max-w-6xl mx-auto">
+            <div className="text-white space-y-8">
+              <div>
+                <h2 className="text-4xl md:text-5xl font-bold mb-6">
+                  Ready to{" "}
+                  <span className="text-transparent bg-gradient-to-r from-[#ffd700] to-[#f59e0b] bg-clip-text">
+                    Join Us?
+                  </span>
+                </h2>
+                <div className="w-20 h-1 bg-gradient-to-r from-[#e22837] to-[#0078b6] rounded-full mb-8" />
+                <p className="text-xl text-white/80 leading-relaxed">
+                  Connect with us for registration, sponsorship opportunities, or any questions about ARES 2025.
+                </p>
               </div>
 
-              {/* Contact Info Cards */}
-              <div className="lg:absolute lg:top-16 lg:-right-16 space-y-6">
-                <div className="bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-white/20">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-16 h-16 bg-gradient-to-r from-[#0078b6] to-[#005a8b] text-white rounded-2xl flex items-center justify-center shadow-lg">
-                      <Mail size={28} />
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-bold text-gray-800 mb-1">Email Us</h3>
-                      <p className="text-gray-600 text-lg">info@filipinohomes.com</p>
-                    </div>
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/20">
+                  <div className="w-12 h-12 bg-gradient-to-r from-[#0078b6] to-[#005a8b] rounded-xl flex items-center justify-center">
+                    <Mail size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Email Us</h3>
+                    <p className="text-white/80">info@filipinohomes.com</p>
                   </div>
                 </div>
 
-                <div className="bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-white/20">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-16 h-16 bg-gradient-to-r from-[#e22837] to-[#d41e2d] text-white rounded-2xl flex items-center justify-center shadow-lg">
-                      <Phone size={28} />
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-bold text-gray-800 mb-1">Call Us</h3>
-                      <p className="text-gray-600 text-lg">(+63) 977 815 0888</p>
-                    </div>
+                <div className="flex items-center gap-4 bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/20">
+                  <div className="w-12 h-12 bg-gradient-to-r from-[#e22837] to-[#d41e2d] rounded-xl flex items-center justify-center">
+                    <Phone size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Call Us</h3>
+                    <p className="text-white/80">(+63) 977 815 0888</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="animate-in slide-in-from-right duration-1000 delay-300">
-              <div className="bg-white/95 backdrop-blur-sm p-8 lg:p-12 rounded-3xl shadow-2xl border border-white/20">
-                <div className="mb-8">
-                  <h2 className="text-4xl md:text-5xl font-black text-transparent bg-gradient-to-r from-[#e22837] to-[#0078b6] bg-clip-text font-['Lato'] mb-4">
-                    Get in Touch
-                  </h2>
-                  <div className="w-24 h-1 bg-gradient-to-r from-[#e22837] to-[#0078b6] rounded-full mb-6" />
-                  <p className="text-gray-600 text-lg">
-                    Ready to join ARES 2025? Contact us for more information about registration, sponsorship
-                    opportunities, or any questions you may have.
-                  </p>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <Input
-                      placeholder="Full Name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      required
-                      className="bg-white/80 border-gray-300 focus:border-[#0078b6] focus:ring-[#0078b6] rounded-xl py-4 text-lg"
-                    />
-                    <Input
-                      type="email"
-                      placeholder="Email Address"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      required
-                      className="bg-white/80 border-gray-300 focus:border-[#0078b6] focus:ring-[#0078b6] rounded-xl py-4 text-lg"
-                    />
-                  </div>
+            <div className="bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-2xl border border-white/20">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">Send us a Message</h3>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-4">
                   <Input
-                    placeholder="Phone Number"
-                    name="phone"
-                    value={formData.phone}
+                    placeholder="Full Name"
+                    name="name"
+                    value={formData.name}
                     onChange={handleInputChange}
                     required
-                    className="bg-white/80 border-gray-300 focus:border-[#0078b6] focus:ring-[#0078b6] rounded-xl py-4 text-lg"
+                    className="bg-white border-gray-200 focus:border-[#0078b6] focus:ring-[#0078b6] rounded-xl py-3"
                   />
-                  <Textarea
-                    placeholder="Your Message"
-                    name="message"
-                    value={formData.message}
+                  <Input
+                    type="email"
+                    placeholder="Email Address"
+                    name="email"
+                    value={formData.email}
                     onChange={handleInputChange}
                     required
-                    rows={5}
-                    className="bg-white/80 border-gray-300 focus:border-[#0078b6] focus:ring-[#0078b6] rounded-xl text-lg"
+                    className="bg-white border-gray-200 focus:border-[#0078b6] focus:ring-[#0078b6] rounded-xl py-3"
                   />
-                  <Button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-[#e22837] to-[#0078b6] hover:from-[#d41e2d] hover:to-[#005a8b] text-white py-6 text-xl font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
-                  >
-                    Send Message
-                  </Button>
-                </form>
-              </div>
+                </div>
+                <Input
+                  placeholder="Phone Number"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  required
+                  className="bg-white border-gray-200 focus:border-[#0078b6] focus:ring-[#0078b6] rounded-xl py-3"
+                />
+                <Textarea
+                  placeholder="Your Message"
+                  name="message"
+                  value={formData.message}
+                  onChange={handleInputChange}
+                  required
+                  rows={4}
+                  className="bg-white border-gray-200 focus:border-[#0078b6] focus:ring-[#0078b6] rounded-xl"
+                />
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-[#e22837] to-[#0078b6] hover:from-[#d41e2d] hover:to-[#005a8b] text-white py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                >
+                  Send Message
+                </Button>
+              </form>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <CustomLightbox
         open={lightboxOpen}
