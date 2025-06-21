@@ -61,8 +61,11 @@ const GalleryPage = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-gray-900 via-black to-gray-900">
-        <div className="absolute inset-0 bg-[url('/placeholder.svg?height=1080&width=1920&text=Gallery+Background')] opacity-10" />
+      <section
+        className="min-h-screen flex items-center justify-center relative overflow-hidden bg-cover bg-center bg-fixed"
+        style={{ backgroundImage: "url(/bangkok.png)" }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-slate-800/80 to-black/70" />
 
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
@@ -194,7 +197,9 @@ const GalleryPage = () => {
                   >
                     <div className={`overflow-hidden ${viewMode === "grid" ? "aspect-square" : "aspect-[4/3]"}`}>
                       <img
-                        src={image || "/placeholder.svg"}
+                        src={
+                          image || "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ares-thumbnail.png"
+                        }
                         alt={`Event Image ${(page - 1) * itemsPerPage + index + 1}`}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         loading="lazy"
@@ -282,7 +287,11 @@ const GalleryPage = () => {
 
             <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-gray-800 to-black border border-white/10 group mb-12">
               <div className="absolute inset-0 bg-gradient-to-r from-[#e22837]/20 via-transparent to-[#0078b6]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <video controls className="w-full h-auto relative z-10" poster="/video-cover.png">
+              <video
+                controls
+                className="w-full h-auto relative z-10"
+                poster="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ares-thumbnail.png"
+              >
                 <source src="https://leuteriorealty.com/videos/ARES2023.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
@@ -311,7 +320,7 @@ const GalleryPage = () => {
       <CustomLightbox
         open={lightboxOpen}
         onClose={closeLightbox}
-        currentImage={images[lightboxIndex] || ""}
+        currentImage={images[lightboxIndex] || "/placeholder.svg"}
         onPrev={movePrev}
         onNext={moveNext}
         imageCount={images.length}

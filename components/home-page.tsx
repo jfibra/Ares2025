@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { MapPin, Mail, Phone, Play, Pause, Volume2, VolumeX, X, Calendar, Users, Award, ArrowRight } from "lucide-react"
+import { MapPin, Mail, Phone, Play, Pause, Volume2, VolumeX, X, Users, Award, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -43,6 +43,7 @@ const HomePage = () => {
     "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/Event%20Photos/Ares+Event+(95).JPG",
     "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/Event%20Photos/Ares+Event+(68).JPG",
     "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/Event%20Photos/Ares+Event+(4).JPG",
+    "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/Event+Photos/Ares+Event+(193).JPG",
   ]
 
   useEffect(() => {
@@ -196,7 +197,7 @@ const HomePage = () => {
                   onPlay={() => setIsPlaying(true)}
                   onPause={() => setIsPlaying(false)}
                   onEnded={() => setIsPlaying(false)}
-                  poster="/placeholder.svg?height=400&width=800&text=ARES+2025+Preview"
+                  poster="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ares-thumbnail.png"
                 >
                   <source
                     src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+2025+TEASER.mp4"
@@ -249,94 +250,43 @@ const HomePage = () => {
         </div>
       )}
 
-      {/* Modern Hero Section */}
+      {/* Original Hero Section with Skewed Banners */}
       <section
-        className="min-h-screen flex items-center justify-center relative overflow-hidden"
+        className="min-h-screen flex items-center text-white relative overflow-hidden bg-cover bg-center"
         style={{
-          background: "linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)",
+          backgroundImage: "url(/bangkok.png)",
         }}
       >
-        {/* Animated Background */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-[#ffd700]/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-[#e22837]/10 rounded-full blur-3xl animate-pulse delay-1000" />
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#0078b6]/5 rounded-full blur-3xl animate-pulse delay-2000" />
-        </div>
-
-        {/* Floating Elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(20)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-2 h-2 bg-white/20 rounded-full animate-float"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 5}s`,
-                animationDuration: `${3 + Math.random() * 4}s`,
-              }}
-            />
-          ))}
-        </div>
-
-        <div className="container mx-auto px-6 text-center relative z-10 mt-20">
-          <div className="max-w-5xl mx-auto space-y-8">
-            {/* Logo */}
-            <div className="mb-8 animate-in slide-in-from-top duration-1000">
-              <img
-                src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
-                alt="ARES 2025"
-                className="max-w-md mx-auto h-auto filter drop-shadow-2xl"
-              />
-            </div>
-
-            {/* Main Title */}
-            <div className="space-y-6 animate-in slide-in-from-bottom duration-1000 delay-300">
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-transparent bg-gradient-to-r from-[#ffd700] via-white to-[#ffd700] bg-clip-text leading-tight">
-                Asian Real Estate Summit
+        <div className="container mx-auto px-6 mt-20 relative z-10">
+          <div className="max-w-6xl mx-auto">
+            <div className="hero-text-container animate-in slide-in-from-bottom duration-1000">
+              <h1 className="hero-title blue-bg text-4xl md:text-6xl lg:text-7xl font-black font-['Poppins'] leading-tight mb-0 mobile-hero-text">
+                Welcome to ARES 2025
               </h1>
-              <p className="text-xl md:text-2xl text-white/80 max-w-3xl mx-auto leading-relaxed">
-                Join Asia's most prestigious real estate conference where industry leaders, innovators, and visionaries
-                converge to shape the future of real estate.
-              </p>
+              <h1 className="hero-title red-bg text-2xl md:text-4xl lg:text-5xl font-black font-['Poppins'] leading-tight mt-0 mobile-hero-text">
+                Asian Real Estate Summit!
+              </h1>
             </div>
 
-            {/* Event Info */}
-            <div className="flex flex-col md:flex-row items-center justify-center gap-6 animate-in slide-in-from-bottom duration-1000 delay-500">
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm px-6 py-3 rounded-full border border-white/20">
-                <Calendar className="text-[#ffd700]" size={20} />
-                <span className="text-white font-semibold">July 1-2, 2025</span>
-              </div>
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm px-6 py-3 rounded-full border border-white/20">
-                <MapPin className="text-[#ffd700]" size={20} />
-                <span className="text-white font-semibold">Bangkok, Thailand</span>
-              </div>
+            <div className="flex items-center mt-6 animate-in slide-in-from-bottom duration-1000 delay-300">
+              <MapPin className="text-white mr-2 mt-1" size={35} />
+              <h2 className="text-xl md:text-2xl lg:text-4xl font-bold font-['Poppins'] text-shadow">
+                July 01 to 02, 2025 - Bangkok, Thailand
+              </h2>
             </div>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-in slide-in-from-bottom duration-1000 delay-700">
+            <div className="mt-12 animate-in slide-in-from-bottom duration-1000 delay-500">
               <Link href="/about">
-                <Button className="bg-gradient-to-r from-[#e22837] to-[#0078b6] hover:from-[#d41e2d] hover:to-[#005a8b] text-white px-8 py-4 text-lg font-semibold rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 group">
-                  Discover ARES
-                  <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={20} />
-                </Button>
-              </Link>
-              <Link href="/speakers">
-                <Button
-                  variant="outline"
-                  className="border-2 border-white/30 text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-105"
-                >
-                  Meet Speakers
+                <Button className="premium-cta-button group relative overflow-hidden bg-gradient-to-r from-[#e22837] via-[#e22837] to-[#d41e2d] hover:from-[#d41e2d] hover:via-[#c41f2d] hover:to-[#b01e2a] text-white px-10 py-4 text-lg md:text-xl font-semibold font-['Poppins'] shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:scale-105 hover:-translate-y-1 border-0 rounded-none">
+                  <span className="relative z-10 flex items-center gap-3">
+                    About the Event
+                    <ArrowRight className="group-hover:translate-x-1 transition-transform duration-300" size={20} />
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#0078b6] to-[#005a8b] transform skew-x-12 translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out" />
+                  <div className="absolute top-0 right-0 w-0 h-full bg-[#0078b6] transform skew-x-[-30deg] group-hover:w-8 transition-all duration-300" />
                 </Button>
               </Link>
             </div>
-          </div>
-        </div>
-
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center">
-            <div className="w-1 h-3 bg-white/50 rounded-full mt-2 animate-pulse" />
           </div>
         </div>
       </section>
@@ -391,7 +341,7 @@ const HomePage = () => {
               <video
                 controls
                 className="w-full h-auto"
-                poster="/placeholder.svg?height=500&width=900&text=ARES+2025+Preview"
+                poster="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ares-thumbnail.png"
               >
                 <source
                   src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+2025+TEASER.mp4"
@@ -467,7 +417,7 @@ const HomePage = () => {
               <img
                 src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg"
                 alt="ARES Event"
-                className="relative w-full h-[500px] object-cover rounded-3xl shadow-2xl"
+                className="relative w-full h-full object-cover rounded-3xl shadow-2xl"
               />
             </div>
           </div>

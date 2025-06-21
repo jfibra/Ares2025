@@ -87,8 +87,11 @@ const ContactPage = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-gray-900 via-black to-gray-900">
-        <div className="absolute inset-0 bg-[url('/placeholder.svg?height=1080&width=1920&text=Contact+Background')] opacity-10" />
+      <section
+        className="min-h-screen flex items-center justify-center relative overflow-hidden bg-cover bg-center bg-fixed"
+        style={{ backgroundImage: "url(/bangkok.png)" }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-slate-800/80 to-black/70" />
 
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">

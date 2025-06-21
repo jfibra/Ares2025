@@ -80,21 +80,45 @@ function Navbar() {
                 </Link>
               </div>
 
-              {/* Desktop Menu */}
-              <div className="hidden md:flex items-center gap-1 mr-16">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 relative overflow-hidden ${
-                      pathname === item.href
-                        ? "bg-gradient-to-r from-[#0078b6] to-[#005a8b] text-white shadow-lg"
-                        : "text-gray-700 hover:text-[#0078b6] hover:bg-gray-100"
-                    }`}
+              {/* Desktop Menu with Social Icons */}
+              <div className="hidden md:flex items-center">
+                <div className="flex items-center gap-1 mr-4">
+                  {navItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 relative overflow-hidden ${
+                        pathname === item.href
+                          ? "bg-gradient-to-r from-[#0078b6] to-[#005a8b] text-white shadow-lg"
+                          : "text-gray-700 hover:text-[#0078b6] hover:bg-gray-100"
+                      }`}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Social Icons - positioned as part of navigation */}
+                <div className="flex flex-col">
+                  <a
+                    href="https://facebook.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-12 h-10 bg-gradient-to-br from-[#1877f2] to-[#0d5dbf] text-white flex items-center justify-center hover:from-[#0d5dbf] hover:to-[#1877f2] transition-all duration-300 hover:scale-105 relative overflow-hidden group"
                   >
-                    {item.name}
-                  </Link>
-                ))}
+                    <Facebook size={18} />
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
+                  </a>
+                  <a
+                    href="https://twitter.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-12 h-10 bg-gradient-to-br from-[#1da1f2] to-[#0d8bd9] text-white flex items-center justify-center hover:from-[#0d8bd9] hover:to-[#1da1f2] transition-all duration-300 hover:scale-105 relative overflow-hidden group"
+                  >
+                    <Twitter size={18} />
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
+                  </a>
+                </div>
               </div>
 
               {/* Mobile Menu Button */}
@@ -114,26 +138,6 @@ function Navbar() {
           {isScrolled && (
             <div className="absolute top-0 left-full w-screen h-full bg-gradient-to-r from-white to-gray-50 shadow-lg" />
           )}
-        </div>
-
-        {/* Social Icons - positioned absolutely to extend beyond container */}
-        <div className="absolute right-0 top-0 flex flex-col shadow-lg hidden md:flex">
-          <a
-            href="https://facebook.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-12 h-12 bg-[#0077B6] text-white flex items-center justify-center hover:bg-[#005a8b] transition-colors"
-          >
-            <Facebook size={20} />
-          </a>
-          <a
-            href="https://twitter.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-12 h-12 bg-[#00689E] text-white flex items-center justify-center hover:bg-[#004a73] transition-colors"
-          >
-            <Twitter size={20} />
-          </a>
         </div>
       </nav>
 

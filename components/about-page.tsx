@@ -55,8 +55,11 @@ const AboutPage = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-gray-900 via-black to-gray-900">
-        <div className="absolute inset-0 bg-[url('/placeholder.svg?height=1080&width=1920&text=About+Background')] opacity-10" />
+      <section
+        className="min-h-screen flex items-center justify-center relative overflow-hidden bg-cover bg-center bg-fixed"
+        style={{ backgroundImage: "url(/bangkok.png)" }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-slate-800/80 to-black/70" />
 
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
@@ -91,7 +94,7 @@ const AboutPage = () => {
               <Link href="/gallery">
                 <Button
                   variant="outline"
-                  className="border-2 border-white/30 text-white hover:bg-white/10 px-8 py-4 text-lg font-semibold rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-105"
+                  className="border-2 border-white/30 text-black hover:bg-white/10 px-8 py-4 text-lg font-semibold rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-105"
                 >
                   View Gallery
                 </Button>
@@ -155,7 +158,7 @@ const AboutPage = () => {
                 <img
                   src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg"
                   alt="ARES Mission"
-                  className="relative w-full h-[400px] object-cover rounded-3xl shadow-2xl"
+                  className="relative w-full h-full object-cover rounded-3xl shadow-2xl"
                 />
               </div>
             </div>
@@ -205,61 +208,6 @@ const AboutPage = () => {
                   </Button>
                 </Link>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Full Width Experience */}
-      <section className="py-20 bg-gradient-to-br from-gray-900 via-black to-gray-900">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              The{" "}
-              <span className="text-transparent bg-gradient-to-r from-[#ffd700] to-[#f59e0b] bg-clip-text">
-                ARES Experience
-              </span>
-            </h2>
-            <div className="w-20 h-1 bg-gradient-to-r from-[#e22837] to-[#0078b6] mx-auto rounded-full" />
-          </div>
-          <div className="relative rounded-3xl overflow-hidden shadow-2xl max-w-5xl mx-auto">
-            <div className="absolute inset-0 bg-gradient-to-r from-[#e22837]/20 via-transparent to-[#0078b6]/20" />
-            <img src="/Backdrop.webp" alt="ARES Experience" className="w-full h-auto" />
-          </div>
-        </div>
-      </section>
-
-      {/* Partners Section */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-6">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                Our{" "}
-                <span className="text-transparent bg-gradient-to-r from-[#e22837] to-[#0078b6] bg-clip-text">
-                  Partners
-                </span>
-              </h2>
-              <div className="w-20 h-1 bg-gradient-to-r from-[#e22837] to-[#0078b6] mx-auto rounded-full mb-8" />
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                We're proud to collaborate with industry leaders who share our vision for advancing real estate across
-                Asia.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 items-center">
-              {sponsors.map((sponsor, index) => (
-                <div
-                  key={sponsor.name}
-                  className="group bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-gray-100"
-                >
-                  <img
-                    src={sponsor.image || "/placeholder.svg?height=80&width=160&text=" + sponsor.name}
-                    alt={sponsor.name}
-                    className="w-full h-16 object-contain grayscale group-hover:grayscale-0 transition-all duration-300"
-                  />
-                </div>
-              ))}
             </div>
           </div>
         </div>
