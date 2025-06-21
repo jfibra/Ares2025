@@ -154,7 +154,7 @@ const CountdownContest = () => {
               <X size={20} />
             </button>
             <img
-              src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/howtojoin.jpeg"
+              src="/howtojoin.jpeg"
               alt="How to Join"
               className="w-full h-auto rounded-xl"
               onError={(e) => {
