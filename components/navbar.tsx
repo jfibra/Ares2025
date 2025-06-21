@@ -51,6 +51,11 @@ function Navbar() {
     }
   }, [isOpen])
 
+  useEffect(() => {
+    // Scroll to top when pathname changes
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }, [pathname])
+
   return (
     <>
       <nav
@@ -69,7 +74,7 @@ function Navbar() {
 
           {/* Main navbar content */}
           <div className="bg-gradient-to-r from-white to-gray-50 border-b border-gray-200 relative">
-            <div className="flex justify-between items-center h-20 px-4">
+            <div className="flex justify-between items-center h-20 pl-4">
               <div className="flex-shrink-0 z-10">
                 <Link href="/" className="block transition-transform hover:scale-105">
                   <img
