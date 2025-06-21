@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --red: #e22837;
+  --blue: #0078b6;
+  --purple: #672e91;
+  --white: #fff;
+  --orange: #f7941d;
+  font-family: "Poppins", sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--white);
+}
+
+.main-content {
+  min-height: calc(100vh - 64px);
+}
+
+/* Hero section skewed backgrounds */
+.hero-title {
+  position: relative;
+  display: inline-block;
+  padding: 10px 50px 10px 20px;
+  z-index: 1;
+}
+
+.hero-title::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  background-color: inherit;
+  z-index: -1;
+  transform-origin: bottom left;
+  transform: skew(-30deg, 0deg);
+}
+
+.blue-bg::before {
+  background-color: rgba(0, 119, 182, 0.75);
+  transform: skew(-35deg) !important;
+}
+
+.red-bg::before {
+  background-color: rgba(226, 40, 55, 0.75);
+  transform: skew(-35deg);
+}
+
+/* Custom animations */
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 20s linear infinite;
+}
+
+/* Text shadow utility */
+.text-shadow {
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .hero-title {
+    padding: 5px 25px 5px 10px;
+  }
+
+  .hero-title::before {
+    transform: skew(-20deg);
+  }
+
+  .blue-bg::before,
+  .red-bg::before {
+    transform: skew(-25deg);
+  }
+}
