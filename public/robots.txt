@@ -1,0 +1,56 @@
+# Robots.txt for ARES 2025 - Asian Real Estate Summit
+# https://ares2025.com
+
+User-agent: *
+Allow: /
+
+# Allow all major search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+# Disallow admin and private areas (if any)
+Disallow: /admin/
+Disallow: /private/
+Disallow: /_next/
+Disallow: /api/
+
+# Allow important pages
+Allow: /
+Allow: /about
+Allow: /speakers
+Allow: /gallery
+Allow: /contact-us
+Allow: /ares-2025-countdown-contest
+
+# Sitemap location
+Sitemap: https://ares2025.com/sitemap.xml
+
+# Crawl delay (optional - be respectful to server resources)
+Crawl-delay: 1
+
+# Cache directive
+# Cache: public, max-age=3600

@@ -2,6 +2,8 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Poppins } from "next/font/google"
 import "./globals.css"
+import AnalyticsWrapper from "@/components/analytics-wrapper"
+import { Suspense } from "react"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -108,6 +110,13 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
 
+        {/* Preload critical fonts */}
+        <link
+          rel="preload"
+          href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap"
+          as="style"
+        />
+
         {/* Structured Data */}
         <script
           type="application/ld+json"
@@ -142,7 +151,12 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <Suspense fallback={"Loading..."}>
+          {children}
+          <AnalyticsWrapper />
+        </Suspense>
+      </body>
     </html>
   )
 }
