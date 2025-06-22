@@ -51,11 +51,11 @@ export const metadata: Metadata = {
       "🌟 Join Asia's premier real estate summit! Industry legends, visionaries, and game-changers in Bangkok, Thailand. July 2, 2025",
     images: [
       {
-        url: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png",
+        url: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg",
         width: 1200,
         height: 630,
-        alt: "ARES 2025 - Asian Real Estate Summit",
-        type: "image/png",
+        alt: "ARES 2025 - Asian Real Estate Summit Event Photo",
+        type: "image/jpeg",
       },
     ],
   },
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ARES 2025 - Asian Real Estate Summit",
     description: "🌟 Join Asia's premier real estate summit in Bangkok, Thailand! July 2, 2025 🚀",
-    images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"],
+    images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg"],
     creator: "@filipinohomes",
     site: "@ARES2025",
   },
@@ -145,7 +145,7 @@ export default function RootLayout({
                 name: "Filipino Homes",
                 url: "https://filipinohomes.com",
               },
-              image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png",
+              image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg",
               url: baseUrl,
             }),
           }}
