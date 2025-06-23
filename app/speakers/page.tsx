@@ -31,6 +31,16 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         description:
           "🌟 THE LEGEND HIMSELF - From humble beginnings to 2024 International REALTOR® of the Year, Anthony has built the Philippines' largest real estate network with 30,000+ agents. When Anthony speaks, the industry listens.",
       },
+      "may-antonette-leuterio": {
+        name: "May Antonette Leuterio",
+        title: "Managing Director",
+        company: "Rent.ph",
+        image:
+          "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/May+Antonette+Leuterio.png",
+        tagline: "The Rental Revolution Leader",
+        description:
+          "🚀 THE RENTAL REVOLUTION LEADER - Managing Director of Rent.ph, the country's premier rental platform serving thousands of OFWs and property owners with excellence.",
+      },
       "cesar-wee-jr": {
         name: "Cesar Wee Jr.",
         title: "President",
@@ -67,16 +77,6 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         tagline: "The Hospitality Innovator",
         description:
           "✨ THE HOSPITALITY INNOVATOR - AVP bringing five-star hotel service to residential living. Pioneering luxury developments where every day feels like a premium vacation.",
-      },
-      "may-antonette-leuterio": {
-        name: "May Antonette Leuterio",
-        title: "Managing Director",
-        company: "Rent.ph",
-        image:
-          "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/May+Antonette+Leuterio.png",
-        tagline: "The Rental Revolution Leader",
-        description:
-          "🚀 THE RENTAL REVOLUTION LEADER - Managing Director of Rent.ph, the country's premier rental platform serving thousands of OFWs and property owners with excellence.",
       },
       "dr-sopon-pornchokchai": {
         name: "Dr. Sopon Pornchokchai",

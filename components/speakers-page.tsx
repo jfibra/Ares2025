@@ -75,6 +75,20 @@ const speakerPosters: Speaker[] = [
   },
   {
     id: 5,
+    name: "Yuriy Braterskyy",
+    title: "Founder & CEO, SUPERAGENT.CO",
+    company: "INTERNATIONAL SPEAKER (UKRAINE)",
+    image:
+      "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Yuriy+Braterskyy.png",
+    slug: "yuriy-braterskyy",
+    tagline: "The AI‑Powered Proptech Pioneer",
+    achievements: ["Proptech Startup Founder", "AI-Powered Real Estate Innovator", "APAC Tech Conference Speaker"],
+    expertise: ["AI Automation in Real Estate", "Digital Platform Scaling", "Startup Growth Strategy"],
+    description:
+      "What happens when real estate meets AI?\n\nYou get Yuriy Braterskyy. 🔥 \n\nHe's the CEO of Superagent.co, a rising tech company that's changing how property deals are done.\n\nThink of it like having a smart assistant in your pocket—helping agents close faster, answer better, and stay one step ahead.\n\nAt ARES 2025, Yuriy will show us how tech isn't just for the big guys. With the right tools, every broker and agent can work smarter—not harder.\n\nFilipino Homes believes in the same thing: providing agents with the support they need to thrive in today's digital world.\n\n#ARES2025 #Superagent #FilipinoHomes",
+  },
+  {
+    id: 6,
     name: "Samantha Manigsaca",
     title: "AVP for Hospitality",
     company: "AppleOne Properties",
@@ -87,7 +101,7 @@ const speakerPosters: Speaker[] = [
       "Real estate isn't just about homes—it's also about how people live, rest, and feel at home.\n\nThat's where Samantha Manigsaca shines.\n\nAs AVP for Hospitality at AppleOne Properties, Samantha blends real estate with hotel-style living—creating developments that offer comfort, class, and long-term value.\n\nShe's worked with some of the biggest global hotel brands, and at ARES 2025, she'll show us how hospitality can make real estate even more exciting for investors and homebuyers.\n\nLooking to develop a lifestyle-driven project? Filipino Homes can connect you to the right ideas—and the right people.\n\n#ARES2025 #AppleOne #FilipinoHomes",
   },
   {
-    id: 6,
+    id: 7,
     name: "May Antonette Leuterio",
     title: "Managing Director",
     company: "Rent.ph",
@@ -101,44 +115,32 @@ const speakerPosters: Speaker[] = [
       "Rental real estate is booming—and May Antonette Leuterio is leading the way.\n\nShe's the Managing Director of Rent.ph, the country's top rental platform, helping thousands of OFWs and property owners connect with the right tenants faster and easier.\n\nBut she's not just about tech. May's all heart. She trains agents. Builds tools. And creates systems that actually work in the real world.\n\nAt ARES 2025, May will talk about how to grow rental income, reach overseas buyers, and future-proof your rental business.\n\nAnother reason to join Filipino Homes? Leaders like May are here to help you succeed.\n\n#ARES2025 #RentPH #FilipinoHomes",
   },
   {
-    id: 7,
-    name: "Dr. Sopon Pornchokchai",
-    title: "Real Estate Valuation Expert",
-    company: "Agency for Real Estate Affairs (Thailand)",
-    image:
-      "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Dr.+Sopon+Pornchokchai.png",
-    slug: "dr-sopon-pornchokchai",
-    tagline: "The Valuation Virtuoso",
-    achievements: ["40+ Years Experience", "30+ Countries Expertise", "World Bank Advisor"],
-    expertise: ["Property Valuation", "Market Analysis", "International Standards"],
-    description:
-      "What do you get when you invite Asia's leading authority on real estate valuation to speak at the biggest real estate summit of the year?\n\nYou get serious knowledge. Practical solutions. And a whole new way to look at property.\n\nDr. Sopon Pornchokchai has over 40 years of experience in more than 30 countries—and he's not just teaching theory. He helped build Thailand's first computer-assisted mass appraisal system and has advised the World Bank, UN-Habitat, and governments across Southeast Asia. His work bridges the realms of real estate, public policy, and economic growth.\n\nAt ARES 2025, we're proud to welcome Dr. Sopon as he shares how strong valuation systems can boost investor trust and help developing nations grow faster and smarter.\n\nThis is the kind of global insight we want every Filipino Homes agent and developer to hear. \n\nBecause when we grow together, we grow stronger.\n\n💡 Want to build something bigger than just your sales target?\n💡 Want to partner with real estate leaders who think long-term?\n\nThen, ARES 2025 in Bangkok is where you need to be.",
-  },
-  {
     id: 8,
-    name: "Azela Honor",
-    title: "Team Leader, Team A",
-    company: "Filipino Homes",
-    image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Azela+Honor.png",
-    slug: "azela-honor",
-    tagline: "The Next-Gen Champion",
-    achievements: ["Top Team Performance", "Digital Strategy Pioneer", "Agent Development Expert"],
-    expertise: ["Team Leadership", "Digital Marketing", "Agent Training"],
+    name: "Alejandro Mañalac",
+    title: "Real Estate Specialist",
+    company: "Market Expert",
+    image:
+      "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Alejandro+Ma%C3%B1alac.png",
+    slug: "alejandro-manalac",
+    tagline: "The Market Visionary",
+    achievements: ["Market Analysis Expert", "Investment Opportunity Identifier", "Trend Prediction Specialist"],
+    expertise: ["Market Analysis", "Investment Strategy", "Trend Forecasting"],
     description:
-      "If there's one word for Azela Honor, it's unstoppable.\n\nShe leads Filipino Homes Team A and runs multiple companies in real estate, hospitality, and property management—while advocating for women in business and leadership.\n\nA health sciences grad turned broker, Azela's 15-year journey proves that with vision and grit, you can build an empire from the ground up.\n\nAt ARES 2025, she'll share lessons on resilience, innovation, and how to lead multiple ventures with purpose and balance.\n\nShe's real, relatable, and exactly the kind of voice our industry needs more of.\n\n#ARES2025 #WomenInRealEstate #FilipinoHomes",
+      "If you've been in real estate long enough, you know the name Andy Mañalac.\n\nHe's a mentor, coach, and strategist who has helped shape some of the country's largest developers and brokerage teams.\n\nAs Chairman of Havitas and Operating Principal of Keller Williams Manila Bay, Andy blends global systems with local success.\n\nAnd at ARES 2025, he's bringing straight talk on leadership, sales, and how to lead with heart—without losing your edge.\n\nWant to grow your team or start your own real estate venture? This is the guy to listen to. And Filipino Homes is the place to start.\n\n#ARES2025 #Havitas #KellerWilliams #FilipinoHomes",
   },
   {
     id: 9,
-    name: "George Sarmago",
-    title: "Real Estate Expert",
-    company: "Industry Leader",
-    image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/George+Sarmago.png",
-    slug: "george-sarmago",
-    tagline: "The Strategic Innovator",
-    achievements: ["Decades of Market Expertise", "Investment Strategy Pioneer", "Development Innovation Leader"],
-    expertise: ["Investment Strategy", "Market Analysis", "Development Planning"],
+    name: "Elddie Benigay",
+    title: "Filipino Homes, Unit Manager",
+    company: "Of Team Beautiful Properties",
+    image:
+      "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Elddie+Benigay.png",
+    slug: "elddie-benigay",
+    tagline: "The Content‑Driven Real Estate Leader",
+    achievements: ["500+ Agent Team Leader", "Top Real Estate Content Creator", "Filipino Homes Influencer"],
+    expertise: ["Content Marketing for Real Estate", "Team Building & Leadership", "Social Media Lead Generation"],
     description:
-      "George Ryan Sarmago didn't start in real estate until he was 34 years old. Today? He's closed over ₱2 billion in sales. 🔥\n\nFrom corporate bulk deals to luxury listings, George has mastered how to read clients—and turn 'let me think about it' into 'where do I sign?'\n\nAt ARES 2025, he's sharing his secret playbook: decoding buyer psychology, building a personal brand, and selling with empathy.\n\nGeorge believes real estate can give you more than income—it can provide you with freedom, purpose, and a better life for your family.\n\n#ARES2025 #BuyerPsychology #FilipinoHomes",
+      "From civil engineer to full-time real estate influencer—Elddie Benigay is proof that bold career moves can change lives.\n\nHe now leads a 500-strong sales team at Filipino Homes and has become a go-to voice in the industry, thanks to his engaging YouTube home tours and viral TikTok tips.\n\nAt ARES 2025, Elddie will show us how agents can use content creation to build trust, attract clients, and grow their brand—without spending big.\n\nHe's not just selling properties. He's inspiring a new generation of digital-savvy agents.\n\n#ARES2025 #DigitalAgent #FilipinoHomes",
   },
   {
     id: 10,
@@ -155,17 +157,43 @@ const speakerPosters: Speaker[] = [
   },
   {
     id: 11,
-    name: "Alejandro Mañalac",
-    title: "Real Estate Specialist",
-    company: "Market Expert",
-    image:
-      "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Alejandro+Ma%C3%B1alac.png",
-    slug: "alejandro-manalac",
-    tagline: "The Market Visionary",
-    achievements: ["Market Analysis Expert", "Investment Opportunity Identifier", "Trend Prediction Specialist"],
-    expertise: ["Market Analysis", "Investment Strategy", "Trend Forecasting"],
+    name: "George Sarmago",
+    title: "Real Estate Expert",
+    company: "Industry Leader",
+    image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/George+Sarmago.png",
+    slug: "george-sarmago",
+    tagline: "The Strategic Innovator",
+    achievements: ["Decades of Market Expertise", "Investment Strategy Pioneer", "Development Innovation Leader"],
+    expertise: ["Investment Strategy", "Market Analysis", "Development Planning"],
     description:
-      "If you've been in real estate long enough, you know the name Andy Mañalac.\n\nHe's a mentor, coach, and strategist who has helped shape some of the country's largest developers and brokerage teams.\n\nAs Chairman of Havitas and Operating Principal of Keller Williams Manila Bay, Andy blends global systems with local success.\n\nAnd at ARES 2025, he's bringing straight talk on leadership, sales, and how to lead with heart—without losing your edge.\n\nWant to grow your team or start your own real estate venture? This is the guy to listen to. And Filipino Homes is the place to start.\n\n#ARES2025 #Havitas #KellerWilliams #FilipinoHomes",
+      "George Ryan Sarmago didn't start in real estate until he was 34 years old. Today? He's closed over ₱2 billion in sales. 🔥\n\nFrom corporate bulk deals to luxury listings, George has mastered how to read clients—and turn 'let me think about it' into 'where do I sign?'\n\nAt ARES 2025, he's sharing his secret playbook: decoding buyer psychology, building a personal brand, and selling with empathy.\n\nGeorge believes real estate can give you more than income—it can provide you with freedom, purpose, and a better life for your family.\n\n#ARES2025 #BuyerPsychology #FilipinoHomes",
+  },
+  {
+    id: 12,
+    name: "Azela Honor",
+    title: "Team Leader, Team A",
+    company: "Filipino Homes",
+    image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Azela+Honor.png",
+    slug: "azela-honor",
+    tagline: "The Next-Gen Champion",
+    achievements: ["Top Team Performance", "Digital Strategy Pioneer", "Agent Development Expert"],
+    expertise: ["Team Leadership", "Digital Marketing", "Agent Training"],
+    description:
+      "If there's one word for Azela Honor, it's unstoppable.\n\nShe leads Filipino Homes Team A and runs multiple companies in real estate, hospitality, and property management—while advocating for women in business and leadership.\n\nA health sciences grad turned broker, Azela's 15-year journey proves that with vision and grit, you can build an empire from the ground up.\n\nAt ARES 2025, she'll share lessons on resilience, innovation, and how to lead multiple ventures with purpose and balance.\n\nShe's real, relatable, and exactly the kind of voice our industry needs more of.\n\n#ARES2025 #WomenInRealEstate #FilipinoHomes",
+  },
+  {
+    id: 13,
+    name: "Dr. Sopon Pornchokchai",
+    title: "Real Estate Valuation Expert",
+    company: "Agency for Real Estate Affairs (Thailand)",
+    image:
+      "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Dr.+Sopon+Pornchokchai.png",
+    slug: "dr-sopon-pornchokchai",
+    tagline: "The Valuation Virtuoso",
+    achievements: ["40+ Years Experience", "30+ Countries Expertise", "World Bank Advisor"],
+    expertise: ["Property Valuation", "Market Analysis", "International Standards"],
+    description:
+      "What do you get when you invite Asia's leading authority on real estate valuation to speak at the biggest real estate summit of the year?\n\nYou get serious knowledge. Practical solutions. And a whole new way to look at property.\n\nDr. Sopon Pornchokchai has over 40 years of experience in more than 30 countries—and he's not just teaching theory. He helped build Thailand's first computer-assisted mass appraisal system and has advised the World Bank, UN-Habitat, and governments across Southeast Asia. His work bridges the realms of real estate, public policy, and economic growth.\n\nAt ARES 2025, we're proud to welcome Dr. Sopon as he shares how strong valuation systems can boost investor trust and help developing nations grow faster and smarter.\n\nThis is the kind of global insight we want every Filipino Homes agent and developer to hear. \n\nBecause when we grow together, we grow stronger.\n\n💡 Want to build something bigger than just your sales target?\n💡 Want to partner with real estate leaders who think long-term?\n\nThen, ARES 2025 in Bangkok is where you need to be.",
   },
 ]
 
