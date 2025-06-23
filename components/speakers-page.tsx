@@ -78,8 +78,7 @@ const speakerPosters: Speaker[] = [
     name: "Yuriy Braterskyy",
     title: "Founder & CEO, SUPERAGENT.CO",
     company: "INTERNATIONAL SPEAKER (UKRAINE)",
-    image:
-      "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Yuriy+Braterskyy.png",
+    image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Yuriy+Braterskyy.png",
     slug: "yuriy-braterskyy",
     tagline: "The AI‑Powered Proptech Pioneer",
     achievements: ["Proptech Startup Founder", "AI-Powered Real Estate Innovator", "APAC Tech Conference Speaker"],
@@ -133,8 +132,7 @@ const speakerPosters: Speaker[] = [
     name: "Elddie Benigay",
     title: "Filipino Homes, Unit Manager",
     company: "Of Team Beautiful Properties",
-    image:
-      "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Elddie+Benigay.png",
+    image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Elddie+Benigay.png",
     slug: "elddie-benigay",
     tagline: "The Content‑Driven Real Estate Leader",
     achievements: ["500+ Agent Team Leader", "Top Real Estate Content Creator", "Filipino Homes Influencer"],
@@ -273,7 +271,8 @@ export default function SpeakersPage() {
         <div
           className="fixed inset-0 bg-cover bg-center bg-no-repeat z-0"
           style={{
-            backgroundImage: "url(https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/background.png)",
+            backgroundImage:
+              "url(https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-qAAsBalSqEa49mfP2ferjpKPeTF5PX.png)",
           }}
         />
 
@@ -426,7 +425,7 @@ export default function SpeakersPage() {
       <div
         className="fixed inset-0 bg-cover bg-center bg-no-repeat z-0"
         style={{
-          backgroundImage: "url(https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/background.png)",
+          backgroundImage: "url(https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-qAAsBalSqEa49mfP2ferjpKPeTF5PX.png)",
         }}
       />
 
@@ -527,6 +526,6 @@ export default function SpeakersPage() {
           </div>
         </div>
       </div>
-    </div>
+  </div>
   )
 }
