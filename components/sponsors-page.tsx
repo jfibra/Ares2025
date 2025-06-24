@@ -386,8 +386,8 @@ const SponsorsPage = () => {
                   innovation and collaboration.
                 </p>
                 <p>
-                  Our biennial international conference unites hundreds of industry leaders, from seasoned developers
-                  to cutting-edge proptech innovators, creating a dynamic ecosystem of knowledge exchange.
+                  Our biennial international conference unites hundreds of industry leaders, from seasoned developers to
+                  cutting-edge proptech innovators, creating a dynamic ecosystem of knowledge exchange.
                 </p>
                 <p>
                   Experience world-class presentations, engage in interactive workshops, and discover the latest trends
@@ -420,6 +420,121 @@ const SponsorsPage = () => {
                 className="relative w-full h-full object-cover rounded-3xl shadow-2xl"
               />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Sponsors Showcase Section */}
+      <section className="py-20 bg-[#fcf6e6] relative overflow-hidden">
+        <div className="container mx-auto px-6 relative z-10">
+          {/* Thank You Banner */}
+          <div className="text-center mb-16">
+            <div className="inline-block bg-gradient-to-r from-[#1e40af] to-[#dc2626] px-12 py-4 rounded-full shadow-2xl transform hover:scale-105 transition-transform duration-300">
+              <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide">
+                THANK YOU TO OUR PARTNER DEVELOPERS
+              </h2>
+            </div>
+          </div>
+
+          {/* Developer Logos - Tier 1 (4 logos) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12 max-w-6xl mx-auto">
+            {[
+              { src: "/developers/primary-logo.png", alt: "Primary Homes" },
+              { src: "/developers/apple-one-logo.png", alt: "Apple One" },
+              { src: "/developers/be-residences-logo.png", alt: "BE Residences" },
+              { src: "/developers/italpinas-logo.png", alt: "Italpinas" },
+            ].map((logo, index) => (
+              <div
+                key={index}
+                className="p-8 hover:shadow-2xl transition-all duration-300 hover:scale-105 group animate-in slide-in-from-bottom duration-1000"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <img
+                  src={logo.src || "/placeholder.svg"}
+                  alt={logo.alt}
+                  className="w-full h-24 object-contain group-hover:scale-110 transition-transform duration-300"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Developer Logos - Tier 2 (5 logos) */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-12 max-w-6xl mx-auto">
+            {[
+              { src: "/developers/Keyland Logo.jpg", alt: "Keyland" },
+              { src: "/developers/grandland-logo.png", alt: "Grandland" },
+              { src: "/developers/a-brown-logo.png", alt: "A Brown Company" },
+              { src: "/developers/cli-logo.png", alt: "Cebu Landmasters" },
+              { src: "/developers/weecomm-logo.png", alt: "Weecomm" },
+            ].map((logo, index) => (
+              <div
+                key={index}
+                className="p-4 hover:shadow-xl transition-all duration-300 hover:scale-105 group animate-in slide-in-from-bottom duration-1000"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <img
+                  src={logo.src || "/placeholder.svg"}
+                  alt={logo.alt}
+                  className="w-full h-16 object-contain group-hover:scale-110 transition-transform duration-300"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Developer Logos - Tier 3 (First 10 logos) */}
+          <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-4 mb-8 max-w-7xl mx-auto">
+            {[
+              { src: "/developers/priland-logo.png", alt: "Priland" },
+              { src: "/developers/Primeworld Logo.jpg", alt: "Primeworld" },
+              { src: "/developers/eon-logo.png", alt: "EON Realty" },
+              { src: "/developers/ProFriends.png", alt: "ProFriends" },
+              { src: "/developers/king-logo.png", alt: "King Properties" },
+              { src: "/developers/explorer-logo.png", alt: "Explorer Davao" },
+              { src: "/developers/aeon-luxe-logo.png", alt: "Aeon Luxe" },
+              { src: "/developers/alsons-logo.png", alt: "Alsons" },
+              { src: "/developers/Jeco Logo.jpg", alt: "Jeco Development" },
+              { src: "/developers/First Georgetown Logo.jpg", alt: "First Georgetown" },
+            ].map((logo, index) => (
+              <div
+                key={index}
+                className="p-3 hover:shadow-lg transition-all duration-300 hover:scale-105 group animate-in slide-in-from-bottom duration-1000"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <img
+                  src={logo.src || "/placeholder.svg"}
+                  alt={logo.alt}
+                  className="w-full h-12 object-contain group-hover:scale-110 transition-transform duration-300"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Developer Logos - Tier 4 (Second 10 logos) */}
+          <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-4 max-w-7xl mx-auto">
+            {[
+              { src: "/developers/filinvest-logo.png", alt: "Filinvest" },
+              { src: "/developers/damosa-logo.png", alt: "Damosa Land" },
+              { src: "/developers/nexus-logo.png", alt: "Nexus" },
+              { src: "/developers/taft-logo.png", alt: "Taft Properties" },
+              { src: "/developers/wrld-logo.png", alt: "WRLD" },
+              { src: "/developers/Marrea Logo.jpg", alt: "Marrea" },
+              { src: "/developers/Mycollex Logo.jpg", alt: "Mycollex" },
+              { src: "/developers/johndorf-logo.png", alt: "Johndorf" },
+              { src: "/developers/Jamaica Logo.jpg", alt: "Jamaica" },
+              { src: "/developers/Eastland Logo.PNG", alt: "Eastland" },
+            ].map((logo, index) => (
+              <div
+                key={index}
+                className="p-3 hover:shadow-lg transition-all duration-300 hover:scale-105 group animate-in slide-in-from-bottom duration-1000"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <img
+                  src={logo.src || "/placeholder.svg"}
+                  alt={logo.alt}
+                  className="w-full h-12 object-contain group-hover:scale-110 transition-transform duration-300"
+                />
+              </div>
+            ))}
           </div>
         </div>
       </section>
