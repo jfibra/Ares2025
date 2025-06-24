@@ -320,6 +320,177 @@ const SponsorsPage = () => {
         </div>
       </section>
 
+      {/* Sponsors Showcase Section - Enhanced Hollywood Style */}
+      <section className="py-32 bg-gradient-to-br from-gray-900 via-black to-gray-800 relative overflow-hidden">
+        {/* Sparkling Stars Animation Background */}
+        <div className="absolute inset-0">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-[#e22837]/5 via-transparent to-[#0078b6]/5" />
+
+          {/* Animated Stars */}
+          {[...Array(50)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute animate-pulse"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 3}s`,
+                animationDuration: `${2 + Math.random() * 2}s`,
+              }}
+            >
+              <div className="w-1 h-1 bg-white rounded-full opacity-60" />
+            </div>
+          ))}
+
+          {/* Larger Twinkling Stars */}
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={`star-${i}`}
+              className="absolute animate-ping"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 4}s`,
+                animationDuration: `${3 + Math.random() * 2}s`,
+              }}
+            >
+              <div className="w-2 h-2 bg-gradient-to-r from-[#ffd700] to-[#f59e0b] rounded-full opacity-40" />
+            </div>
+          ))}
+
+          {/* Moving Light Streaks */}
+          <div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#ffd700]/30 to-transparent animate-pulse" />
+          <div
+            className="absolute top-3/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#e22837]/30 to-transparent animate-pulse"
+            style={{ animationDelay: "2s" }}
+          />
+
+          {/* Floating Orbs */}
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#ffd700]/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#e22837]/10 rounded-full blur-3xl animate-pulse delay-1000" />
+          <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-[#0078b6]/10 rounded-full blur-3xl animate-pulse delay-2000" />
+
+          {/* Rotating Background Element */}
+          <div
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-conic from-[#0078b6]/5 via-transparent to-[#e22837]/5 rounded-full blur-2xl animate-spin"
+            style={{ animationDuration: "60s" }}
+          />
+        </div>
+
+        <div className="container mx-auto px-6 relative z-10">
+          {/* Premium Header */}
+          <div className="text-center mb-20">
+            <div className="inline-block relative">
+              <div className="absolute -inset-4 bg-gradient-to-r from-[#ffd700]/20 via-[#e22837]/20 to-[#0078b6]/20 rounded-3xl blur-2xl animate-pulse" />
+              <div className="relative bg-gradient-to-r from-[#1e40af] via-[#7c3aed] to-[#dc2626] px-16 py-6 rounded-2xl shadow-2xl transform hover:scale-105 transition-all duration-500 border border-white/20 backdrop-blur-sm">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-wide font-['Poppins']">
+                  OUR PRESTIGIOUS
+                </h2>
+                <div className="text-2xl md:text-3xl lg:text-4xl font-bold text-transparent bg-gradient-to-r from-[#ffd700] to-[#f59e0b] bg-clip-text mt-2">
+                  PARTNER DEVELOPERS
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xl md:text-2xl text-white/80 mt-8 max-w-4xl mx-auto leading-relaxed">
+              Celebrating the industry leaders who make ARES 2025 possible
+            </p>
+          </div>
+
+          {/* Unified Developer Logos Container */}
+          <div className="relative">
+            <div className="absolute -inset-8 bg-gradient-to-r from-[#ffd700]/10 via-[#e22837]/10 to-[#0078b6]/10 rounded-3xl blur-2xl" />
+            <div className="relative bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8 md:p-12">
+              {/* All Developer Logos in One Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-6 md:gap-8">
+                {[
+                  // Tier 1 - Larger logos
+                  { src: "/developers/primary-logo.png", alt: "Primary Homes", size: "large" },
+                  { src: "/developers/apple-one-logo.png", alt: "Apple One", size: "large" },
+                  { src: "/developers/be-residences-logo.png", alt: "BE Residences", size: "large" },
+                  { src: "/developers/italpinas-logo.png", alt: "Italpinas", size: "large" },
+
+                  // Tier 2 - Medium logos
+                  { src: "/developers/Keyland Logo.jpg", alt: "Keyland", size: "medium" },
+                  { src: "/developers/grandland-logo.png", alt: "Grandland", size: "medium" },
+                  { src: "/developers/a-brown-logo.png", alt: "A Brown Company", size: "medium" },
+                  { src: "/developers/cli-logo.png", alt: "Cebu Landmasters", size: "medium" },
+                  { src: "/developers/weecomm-logo.png", alt: "Weecomm", size: "medium" },
+
+                  // Tier 3 & 4 - Standard logos
+                  { src: "/developers/priland-logo.png", alt: "Priland", size: "standard" },
+                  { src: "/developers/Primeworld Logo.jpg", alt: "Primeworld", size: "standard" },
+                  { src: "/developers/eon-logo.png", alt: "EON Realty", size: "standard" },
+                  { src: "/developers/ProFriends.png", alt: "ProFriends", size: "standard" },
+                  { src: "/developers/king-logo.png", alt: "King Properties", size: "standard" },
+                  { src: "/developers/explorer-logo.png", alt: "Explorer Davao", size: "standard" },
+                  { src: "/developers/aeon-luxe-logo.png", alt: "Aeon Luxe", size: "standard" },
+                  { src: "/developers/alsons-logo.png", alt: "Alsons", size: "standard" },
+                  { src: "/developers/Jeco Logo.jpg", alt: "Jeco Development", size: "standard" },
+                  { src: "/developers/First Georgetown Logo.jpg", alt: "First Georgetown", size: "standard" },
+                  { src: "/developers/filinvest-logo.png", alt: "Filinvest", size: "standard" },
+                  { src: "/developers/damosa-logo.png", alt: "Damosa Land", size: "standard" },
+                  { src: "/developers/nexus-logo.png", alt: "Nexus", size: "standard" },
+                  { src: "/developers/taft-logo.png", alt: "Taft Properties", size: "standard" },
+                  { src: "/developers/wrld-logo.png", alt: "WRLD", size: "standard" },
+                  { src: "/developers/Marrea Logo.jpg", alt: "Marrea", size: "standard" },
+                  { src: "/developers/Mycollex Logo.jpg", alt: "Mycollex", size: "standard" },
+                  { src: "/developers/johndorf-logo.png", alt: "Johndorf", size: "standard" },
+                  { src: "/developers/Jamaica Logo.jpg", alt: "Jamaica", size: "standard" },
+                  { src: "/developers/Eastland Logo.PNG", alt: "Eastland", size: "standard" },
+                ].map((logo, index) => (
+                  <div
+                    key={index}
+                    className={`group relative animate-in slide-in-from-bottom duration-1000 ${
+                      logo.size === "large"
+                        ? "col-span-2 sm:col-span-2 md:col-span-2"
+                        : logo.size === "medium"
+                          ? "col-span-1 sm:col-span-1 md:col-span-1"
+                          : "col-span-1"
+                    }`}
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <div className="absolute -inset-2 bg-gradient-to-r from-[#ffd700]/20 via-[#e22837]/20 to-[#0078b6]/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-105 border border-white/30 group-hover:border-[#ffd700]/50 group-hover:bg-white/90">
+                      <div className="absolute top-1 right-1 w-3 h-3 bg-gradient-to-br from-[#ffd700] to-[#f59e0b] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <img
+                        src={logo.src || "/placeholder.svg"}
+                        alt={logo.alt}
+                        className={`w-full object-contain group-hover:scale-110 transition-transform duration-500 filter group-hover:brightness-110 ${
+                          logo.size === "large"
+                            ? "h-20 md:h-24"
+                            : logo.size === "medium"
+                              ? "h-16 md:h-18"
+                              : "h-12 md:h-14"
+                        }`}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#ffd700]/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Decorative Elements */}
+              <div className="absolute top-4 left-4 w-8 h-8 bg-gradient-to-br from-[#ffd700]/30 to-[#f59e0b]/30 rounded-full blur-sm" />
+              <div className="absolute top-4 right-4 w-6 h-6 bg-gradient-to-br from-[#e22837]/30 to-[#0078b6]/30 rounded-full blur-sm" />
+              <div className="absolute bottom-4 left-4 w-4 h-4 bg-gradient-to-br from-[#0078b6]/30 to-[#7c3aed]/30 rounded-full blur-sm" />
+              <div className="absolute bottom-4 right-4 w-10 h-10 bg-gradient-to-br from-[#ffd700]/20 to-[#e22837]/20 rounded-full blur-lg" />
+            </div>
+          </div>
+
+          {/* Premium Footer CTA */}
+          <div className="text-center mt-20">
+            <div className="inline-block relative">
+              <div className="absolute -inset-2 bg-gradient-to-r from-[#ffd700]/30 to-[#f59e0b]/30 rounded-2xl blur-xl animate-pulse" />
+              <div className="relative bg-gradient-to-r from-[#e22837] to-[#0078b6] px-12 py-4 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 border border-white/20">
+                <p className="text-white font-semibold text-lg md:text-xl">Join Our Network of Excellence</p>
+                <p className="text-white/80 text-sm mt-1">Partnership opportunities available for ARES 2025</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Video & Countdown Section */}
       <section className="py-20 bg-gradient-to-br from-gray-900 via-black to-gray-900 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('/placeholder.svg?height=1080&width=1920&text=Geometric+Pattern')] opacity-5" />
@@ -420,121 +591,6 @@ const SponsorsPage = () => {
                 className="relative w-full h-full object-cover rounded-3xl shadow-2xl"
               />
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Sponsors Showcase Section */}
-      <section className="py-20 bg-[#fcf6e6] relative overflow-hidden">
-        <div className="container mx-auto px-6 relative z-10">
-          {/* Thank You Banner */}
-          <div className="text-center mb-16">
-            <div className="inline-block bg-gradient-to-r from-[#1e40af] to-[#dc2626] px-12 py-4 rounded-full shadow-2xl transform hover:scale-105 transition-transform duration-300">
-              <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide">
-                THANK YOU TO OUR PARTNER DEVELOPERS
-              </h2>
-            </div>
-          </div>
-
-          {/* Developer Logos - Tier 1 (4 logos) */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12 max-w-6xl mx-auto">
-            {[
-              { src: "/developers/primary-logo.png", alt: "Primary Homes" },
-              { src: "/developers/apple-one-logo.png", alt: "Apple One" },
-              { src: "/developers/be-residences-logo.png", alt: "BE Residences" },
-              { src: "/developers/italpinas-logo.png", alt: "Italpinas" },
-            ].map((logo, index) => (
-              <div
-                key={index}
-                className="p-8 hover:shadow-2xl transition-all duration-300 hover:scale-105 group animate-in slide-in-from-bottom duration-1000"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <img
-                  src={logo.src || "/placeholder.svg"}
-                  alt={logo.alt}
-                  className="w-full h-24 object-contain group-hover:scale-110 transition-transform duration-300"
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* Developer Logos - Tier 2 (5 logos) */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-12 max-w-6xl mx-auto">
-            {[
-              { src: "/developers/Keyland Logo.jpg", alt: "Keyland" },
-              { src: "/developers/grandland-logo.png", alt: "Grandland" },
-              { src: "/developers/a-brown-logo.png", alt: "A Brown Company" },
-              { src: "/developers/cli-logo.png", alt: "Cebu Landmasters" },
-              { src: "/developers/weecomm-logo.png", alt: "Weecomm" },
-            ].map((logo, index) => (
-              <div
-                key={index}
-                className="p-4 hover:shadow-xl transition-all duration-300 hover:scale-105 group animate-in slide-in-from-bottom duration-1000"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <img
-                  src={logo.src || "/placeholder.svg"}
-                  alt={logo.alt}
-                  className="w-full h-16 object-contain group-hover:scale-110 transition-transform duration-300"
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* Developer Logos - Tier 3 (First 10 logos) */}
-          <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-4 mb-8 max-w-7xl mx-auto">
-            {[
-              { src: "/developers/priland-logo.png", alt: "Priland" },
-              { src: "/developers/Primeworld Logo.jpg", alt: "Primeworld" },
-              { src: "/developers/eon-logo.png", alt: "EON Realty" },
-              { src: "/developers/ProFriends.png", alt: "ProFriends" },
-              { src: "/developers/king-logo.png", alt: "King Properties" },
-              { src: "/developers/explorer-logo.png", alt: "Explorer Davao" },
-              { src: "/developers/aeon-luxe-logo.png", alt: "Aeon Luxe" },
-              { src: "/developers/alsons-logo.png", alt: "Alsons" },
-              { src: "/developers/Jeco Logo.jpg", alt: "Jeco Development" },
-              { src: "/developers/First Georgetown Logo.jpg", alt: "First Georgetown" },
-            ].map((logo, index) => (
-              <div
-                key={index}
-                className="p-3 hover:shadow-lg transition-all duration-300 hover:scale-105 group animate-in slide-in-from-bottom duration-1000"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <img
-                  src={logo.src || "/placeholder.svg"}
-                  alt={logo.alt}
-                  className="w-full h-12 object-contain group-hover:scale-110 transition-transform duration-300"
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* Developer Logos - Tier 4 (Second 10 logos) */}
-          <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-4 max-w-7xl mx-auto">
-            {[
-              { src: "/developers/filinvest-logo.png", alt: "Filinvest" },
-              { src: "/developers/damosa-logo.png", alt: "Damosa Land" },
-              { src: "/developers/nexus-logo.png", alt: "Nexus" },
-              { src: "/developers/taft-logo.png", alt: "Taft Properties" },
-              { src: "/developers/wrld-logo.png", alt: "WRLD" },
-              { src: "/developers/Marrea Logo.jpg", alt: "Marrea" },
-              { src: "/developers/Mycollex Logo.jpg", alt: "Mycollex" },
-              { src: "/developers/johndorf-logo.png", alt: "Johndorf" },
-              { src: "/developers/Jamaica Logo.jpg", alt: "Jamaica" },
-              { src: "/developers/Eastland Logo.PNG", alt: "Eastland" },
-            ].map((logo, index) => (
-              <div
-                key={index}
-                className="p-3 hover:shadow-lg transition-all duration-300 hover:scale-105 group animate-in slide-in-from-bottom duration-1000"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <img
-                  src={logo.src || "/placeholder.svg"}
-                  alt={logo.alt}
-                  className="w-full h-12 object-contain group-hover:scale-110 transition-transform duration-300"
-                />
-              </div>
-            ))}
           </div>
         </div>
       </section>
