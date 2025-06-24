@@ -131,7 +131,7 @@ const AboutPage = () => {
                 <div className="space-y-6 text-gray-700 text-lg leading-relaxed">
                   <p>
                     ARES is more than just a conference—it's a transformative experience that brings together the
-                    brightest minds in Asian real estate. Our bi-annual summit creates an unparalleled opportunity for
+                    brightest minds in Asian real estate. Our biennial summit creates an unparalleled opportunity for
                     learning, networking, and business development.
                   </p>
                   <p>

@@ -35,7 +35,7 @@ function Footer() {
                 <div className="absolute bottom-0 left-0 w-16 h-1 bg-gradient-to-r from-[#0078b6] to-[#e22837] rounded-full" />
               </h2>
               <p className="text-gray-600 text-lg leading-relaxed mb-8">
-                The Asian Real Estate Summit (ARES) is an bi-annual international conference uniting real estate
+                The Asian Real Estate Summit (ARES) is an biennial international conference uniting real estate
                 professionals across Asia. We facilitate knowledge exchange, networking, and collaboration among
                 developers, brokers, agents, and proptech companies.
               </p>

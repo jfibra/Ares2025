@@ -386,7 +386,7 @@ const HomePage = () => {
                   innovation and collaboration.
                 </p>
                 <p>
-                  Our bi-annual international conference unites hundreds of industry leaders, from seasoned developers
+                  Our biennial international conference unites hundreds of industry leaders, from seasoned developers
                   to cutting-edge proptech innovators, creating a dynamic ecosystem of knowledge exchange.
                 </p>
                 <p>
