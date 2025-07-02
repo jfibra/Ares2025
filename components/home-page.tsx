@@ -351,16 +351,6 @@ const HomePage = () => {
               </video>
             </div>
           </div>
-
-          {/* Countdown Timer */}
-          <div className="text-center">
-            <h3 className="text-2xl md:text-3xl font-bold text-white mb-8">Event Countdown</h3>
-            <div className="flex justify-center">
-              <div className="transform scale-90">
-                <CountdownTimer />
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
