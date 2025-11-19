@@ -1,5 +1,4 @@
 # Robots.txt for ARES 2025 - Asian Real Estate Summit
-# https://ares2025.com
 
 User-agent: *
 Allow: /
@@ -47,7 +46,7 @@ Allow: /contact-us
 Allow: /ares-2025-countdown-contest
 
 # Sitemap location
-Sitemap: https://ares2025.com/sitemap.xml
+Sitemap: https://asianrealestatesummit.com/sitemap.xml
 
 # Crawl delay (optional - be respectful to server resources)
 Crawl-delay: 1

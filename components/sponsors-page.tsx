@@ -405,17 +405,17 @@ const SponsorsPage = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-6 md:gap-8">
                 {[
                   // Tier 1 - Larger logos
+                  { src: "/developers/cli-logo.png", alt: "Cebu Landmasters", size: "large" },
+                  { src: "/developers/weecomm-logo.png", alt: "Weecomm", size: "large" },
                   { src: "/developers/primary-logo.png", alt: "Primary Homes", size: "large" },
                   { src: "/developers/apple-one-logo.png", alt: "Apple One", size: "large" },
-                  { src: "/developers/be-residences-logo.png", alt: "BE Residences", size: "large" },
-                  { src: "/developers/italpinas-logo.png", alt: "Italpinas", size: "large" },
 
                   // Tier 2 - Medium logos
+                  { src: "/developers/be-residences-logo.png", alt: "BE Residences", size: "medium" },
+                  { src: "/developers/italpinas-logo.png", alt: "Italpinas", size: "medium" },
                   { src: "/developers/Keyland Logo.jpg", alt: "Keyland", size: "medium" },
                   { src: "/developers/grandland-logo.png", alt: "Grandland", size: "medium" },
                   { src: "/developers/a-brown-logo.png", alt: "A Brown Company", size: "medium" },
-                  { src: "/developers/cli-logo.png", alt: "Cebu Landmasters", size: "medium" },
-                  { src: "/developers/weecomm-logo.png", alt: "Weecomm", size: "medium" },
 
                   // Tier 3 & 4 - Standard logos
                   { src: "/developers/priland-logo.png", alt: "Priland", size: "standard" },
@@ -450,18 +450,18 @@ const SponsorsPage = () => {
                     }`}
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    <div className="absolute -inset-2 bg-gradient-to-r from-[#ffd700]/20 via-[#e22837]/20 to-[#0078b6]/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="relative bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-105 border border-white/30 group-hover:border-[#ffd700]/50 group-hover:bg-white/90">
+                    <div className="absolute -inset-2 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="">
                       <div className="absolute top-1 right-1 w-3 h-3 bg-gradient-to-br from-[#ffd700] to-[#f59e0b] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       <img
                         src={logo.src || "/placeholder.svg"}
                         alt={logo.alt}
                         className={`w-full object-contain group-hover:scale-110 transition-transform duration-500 filter group-hover:brightness-110 ${
                           logo.size === "large"
-                            ? "h-20 md:h-24"
+                            ? "h-20 md:h-24 w-full"
                             : logo.size === "medium"
-                              ? "h-16 md:h-18"
-                              : "h-12 md:h-14"
+                              ? "h-40 md:h-40 w-full"
+                              : "h-12 md:h-14 w-full"
                         }`}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#ffd700]/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -475,17 +475,6 @@ const SponsorsPage = () => {
               <div className="absolute top-4 right-4 w-6 h-6 bg-gradient-to-br from-[#e22837]/30 to-[#0078b6]/30 rounded-full blur-sm" />
               <div className="absolute bottom-4 left-4 w-4 h-4 bg-gradient-to-br from-[#0078b6]/30 to-[#7c3aed]/30 rounded-full blur-sm" />
               <div className="absolute bottom-4 right-4 w-10 h-10 bg-gradient-to-br from-[#ffd700]/20 to-[#e22837]/20 rounded-full blur-lg" />
-            </div>
-          </div>
-
-          {/* Premium Footer CTA */}
-          <div className="text-center mt-20">
-            <div className="inline-block relative">
-              <div className="absolute -inset-2 bg-gradient-to-r from-[#ffd700]/30 to-[#f59e0b]/30 rounded-2xl blur-xl animate-pulse" />
-              <div className="relative bg-gradient-to-r from-[#e22837] to-[#0078b6] px-12 py-4 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 border border-white/20">
-                <p className="text-white font-semibold text-lg md:text-xl">Join Our Network of Excellence</p>
-                <p className="text-white/80 text-sm mt-1">Partnership opportunities available for ARES 2025</p>
-              </div>
             </div>
           </div>
         </div>
