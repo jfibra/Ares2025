@@ -70,6 +70,24 @@ const GalleryPage = () => {
     setPage(1)
   }
 
+  // Reflect the chosen album in the URL so a filtered view can be linked and
+  // survives a refresh. Read on mount rather than during render, so the markup
+  // still matches what the server sent.
+  useEffect(() => {
+    const slug = new URLSearchParams(window.location.search).get("album")
+    if (slug && galleryAlbums.some((album) => album.slug === slug)) {
+      setActiveAlbum(slug)
+    }
+  }, [])
+
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    if (activeAlbum === "all") url.searchParams.delete("album")
+    else url.searchParams.set("album", activeAlbum)
+    // replaceState keeps the back button meaning "the page before the gallery".
+    window.history.replaceState(null, "", url)
+  }, [activeAlbum])
+
   const totalPages = Math.ceil(photos.length / itemsPerPage)
   const activePhoto = photos[lightboxIndex]
 
@@ -213,6 +231,7 @@ const GalleryPage = () => {
                 <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-xl p-1">
                   <button
                     onClick={() => setViewMode("grid")}
+                    aria-label="Grid view"
                     className={`p-2 rounded-lg transition-all duration-200 ${
                       viewMode === "grid" ? "bg-[#0078b6] text-white" : "text-gray-600 hover:bg-gray-100"
                     }`}
@@ -221,6 +240,7 @@ const GalleryPage = () => {
                   </button>
                   <button
                     onClick={() => setViewMode("masonry")}
+                    aria-label="Masonry view"
                     className={`p-2 rounded-lg transition-all duration-200 ${
                       viewMode === "masonry" ? "bg-[#0078b6] text-white" : "text-gray-600 hover:bg-gray-100"
                     }`}
@@ -257,26 +277,36 @@ const GalleryPage = () => {
               </div>
             ) : (
               <div
-                className={`grid gap-6 mb-12 ${
+                className={
                   viewMode === "grid"
-                    ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-                    : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-                }`}
+                    ? "grid gap-6 mb-12 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                    : // Masonry: CSS columns let each photo keep its own height.
+                      "mb-12 gap-6 columns-1 sm:columns-2 lg:columns-3 [column-fill:_balance]"
+                }
               >
                 {displayedPhotos.map((photo, index) => (
                   <div
                     key={`${photo.album.slug}-${photo.indexInAlbum}`}
-                    className="group cursor-pointer relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 bg-white"
+                    className={`group cursor-pointer relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 bg-white ${
+                      viewMode === "grid" ? "hover:scale-105" : "mb-6 break-inside-avoid hover:shadow-2xl"
+                    }`}
                     onClick={() => openLightbox(index)}
                   >
-                    <div className={`overflow-hidden ${viewMode === "grid" ? "aspect-square" : "aspect-[4/3]"}`}>
+                    <div
+                      className={`overflow-hidden ${viewMode === "grid" ? "aspect-square" : ""}`}
+                      // In masonry the tile takes the photo's own shape; reserving it
+                      // up front stops the columns reflowing as images lazy-load.
+                      style={viewMode === "grid" ? undefined : { aspectRatio: String(photo.ratio) }}
+                    >
                       <img
                         src={
                           photo.thumb ||
                           "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ares-thumbnail.png"
                         }
                         alt={`${photo.album.title} photo ${photo.indexInAlbum}`}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        className={`w-full h-full transition-transform duration-500 ${
+                          viewMode === "grid" ? "object-cover group-hover:scale-110" : "object-cover"
+                        }`}
                         loading="lazy"
                       />
                     </div>

@@ -41,6 +41,7 @@ OUT_ROOT="public/gallery"
 MANIFEST="lib/gallery-photos.generated.ts"
 SELF="scripts/build-gallery-derivatives.sh"
 CONVERTER="scripts/webp-convert.py"
+MANIFEST_WRITER="scripts/write-manifest.py"
 
 python3 -c "import PIL" 2>/dev/null || { echo "Pillow not found — pip3 install Pillow"; exit 1; }
 [ -d "$SRC_ROOT" ] || { echo "no $SRC_ROOT directory"; exit 1; }
@@ -56,11 +57,11 @@ slugify() {
 titleize() { echo "$1" | sed 's/_/ - /g'; }
 
 jobs_file=$(mktemp)
-manifest_body=$(mktemp)
+manifest_rows=$(mktemp)
 active_slugs=$(mktemp)
 archived_slugs=$(mktemp)
 all_hashes=$(mktemp)
-trap 'rm -f "$jobs_file" "$manifest_body" "$active_slugs" "$archived_slugs" "$all_hashes"' EXIT
+trap 'rm -f "$jobs_file" "$manifest_rows" "$active_slugs" "$archived_slugs" "$all_hashes"' EXIT
 
 for album_dir in "$SRC_ROOT"/*/; do
   album_name=$(basename "$album_dir")
@@ -70,6 +71,7 @@ for album_dir in "$SRC_ROOT"/*/; do
     _*) echo "$album_name -> skipped (archived)"; echo "$slug" >> "$archived_slugs"; continue ;;
   esac
 
+  album_title=$(titleize "$album_name")
   keep_file=$(mktemp)
   album_chunk=$(mktemp)
   seen_hashes=$(mktemp)
@@ -89,7 +91,7 @@ for album_dir in "$SRC_ROOT"/*/; do
     name=$(printf "%03d-%s" "$i" "$base")
     printf '%s\0%s\0%s\0' "$src" "$OUT_ROOT/$slug/full/$name.webp" "$OUT_ROOT/$slug/thumb/$name.webp" >> "$jobs_file"
     echo "$name" >> "$keep_file"
-    echo "      \"$name\"," >> "$album_chunk"
+    printf '%s\t%s\t%s\t%s\n' "$slug" "$album_title" "$name" "$OUT_ROOT/$slug/full/$name.webp" >> "$album_chunk"
   done < <(find "$album_dir" -type f \( -iname '*.jpg' -o -iname '*.jpeg' \) -not -path '*/_*' | LC_ALL=C sort)
 
   [ "$dupes" -gt 0 ] && echo "  skipped $dupes duplicate photo(s)"
@@ -105,14 +107,7 @@ for album_dir in "$SRC_ROOT"/*/; do
   echo "$slug" >> "$active_slugs"
   mkdir -p "$OUT_ROOT/$slug/full" "$OUT_ROOT/$slug/thumb"
 
-  {
-    echo "  \"$slug\": {"
-    echo "    title: \"$(titleize "$album_name")\","
-    echo "    photos: ["
-    cat "$album_chunk"
-    echo "    ],"
-    echo "  },"
-  } >> "$manifest_body"
+  cat "$album_chunk" >> "$manifest_rows"
 
   # Prune derivatives that are no longer part of this album (renamed, removed or
   # archived sources), so retired photos stop being served.
@@ -148,7 +143,7 @@ done
 
 # Never overwrite a good manifest with an empty one: if no album produced any
 # photos, the originals are probably missing rather than genuinely gone.
-if [ ! -s "$manifest_body" ]; then
+if [ ! -s "$manifest_rows" ]; then
   echo "no albums found in $SRC_ROOT — leaving $MANIFEST and $OUT_ROOT untouched."
   echo "If the originals are on another drive, reconnect it and re-run."
   exit 1
@@ -164,20 +159,8 @@ fi
 echo "Converting (this takes a few minutes on a cold run)..."
 python3 "$CONVERTER" < "$jobs_file" || { echo "conversion reported failures (see above)"; exit 1; }
 
-{
-  echo "// GENERATED FILE — do not edit by hand."
-  echo "// Run \`bash $SELF\` to regenerate from public/albums."
-  echo ""
-  echo "export type GeneratedAlbum = {"
-  echo "  title: string"
-  echo "  /** Derivative basenames; URLs are /gallery/<slug>/{thumb,full}/<name>.webp */"
-  echo "  photos: string[]"
-  echo "}"
-  echo ""
-  echo "export const generatedAlbums: Record<string, GeneratedAlbum> = {"
-  cat "$manifest_body"
-  echo "}"
-} > "$MANIFEST"
+# Ratios come from the converted images, so the manifest is written after
+# conversion, by the same tool that knows how to read them.
+python3 "$MANIFEST_WRITER" < "$manifest_rows"
 
-echo "Wrote $MANIFEST"
 du -sh "$OUT_ROOT"

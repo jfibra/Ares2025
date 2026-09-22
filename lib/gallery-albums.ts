@@ -5,6 +5,8 @@ export type AlbumPhoto = {
   thumb: string
   /** Larger WebP used in the lightbox */
   full: string
+  /** width / height, so layouts can reserve space before the image loads */
+  ratio: number
 }
 
 export type GalleryAlbum = {
@@ -44,7 +46,8 @@ export const buildSequentialPhotos = ({
 }): AlbumPhoto[] =>
   Array.from({ length: count }, (_, i) => {
     const url = `${baseUrl}(${start + i}).${extension}`
-    return { thumb: url, full: url }
+    // Remote photos have no recorded size; 3:2 matches the rest of the set.
+    return { thumb: url, full: url, ratio: 1.5 }
   })
 
 /* -------------------------------------------------------------------------- */
@@ -139,9 +142,10 @@ const fallbackMeta = (title: string): AlbumMeta => ({
 
 const localAlbums: GalleryAlbum[] = Object.entries(generatedAlbums).map(([slug, generated]) => {
   const meta = localAlbumMeta[slug] ?? fallbackMeta(generated.title)
-  const photos: AlbumPhoto[] = generated.photos.map((name) => ({
+  const photos: AlbumPhoto[] = generated.photos.map(([name, ratio]) => ({
     thumb: `/gallery/${slug}/thumb/${name}.webp`,
     full: `/gallery/${slug}/full/${name}.webp`,
+    ratio,
   }))
 
   const title = meta.title ?? generated.title
