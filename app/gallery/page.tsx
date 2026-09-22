@@ -2,18 +2,29 @@ import type { Metadata } from "next"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import GalleryPage from "@/components/gallery-page"
+import { galleryAlbums, totalPhotoCount } from "@/lib/gallery-albums"
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ares2025.com"
 const pageUrl = `${baseUrl}/gallery`
 
+// Built from the album data so the copy can't drift as albums are added.
+const albumTitles = galleryAlbums.map((album) => album.title).join(", ")
+const description =
+  `📸 Browse ${totalPhotoCount.toLocaleString()} photos from the Asian Real Estate Summit across ` +
+  `${galleryAlbums.length} albums: ${albumTitles}. Keynotes, conference sessions, the delegates' ` +
+  `dinner cruise and more from ARES 2025 in Bangkok, Thailand.`
+const shortDescription =
+  `${totalPhotoCount.toLocaleString()} photos from ARES 2025 in Bangkok — keynotes, sessions and ` +
+  `the delegates' dinner cruise. 🚀`
+
 export const metadata: Metadata = {
-  title: "ARES Gallery - Event Photos & Highlights | Asian Real Estate Summit",
-  description:
-    "📸 Explore the ARES 2025 Gallery! View stunning photos and highlights from previous Asian Real Estate Summit events. Relive the memorable moments and see what awaits you in Bangkok, Thailand.",
+  title: "ARES 2025 Gallery - Event Photos & Highlights | Asian Real Estate Summit",
+  description,
   keywords: [
-    "ARES Gallery",
-    "Event Photos",
-    "Asian Real Estate Summit",
+    "ARES 2025 Gallery",
+    "ARES 2025 Photos",
+    "Asian Real Estate Summit 2025",
+    "ARES Bangkok 2025",
     "Bangkok",
     "Thailand",
     "Real Estate Events",
@@ -23,9 +34,8 @@ export const metadata: Metadata = {
     "Event Highlights",
   ],
   openGraph: {
-    title: "📸 ARES Gallery - Event Photos & Highlights",
-    description:
-      "Explore stunning photos and highlights from ARES events! See what awaits you at Asia's premier real estate summit.",
+    title: "📸 ARES 2025 Gallery - Event Photos & Highlights",
+    description,
     url: pageUrl,
     siteName: "ARES 2025 - Asian Real Estate Summit",
     images: [
@@ -33,7 +43,7 @@ export const metadata: Metadata = {
         url: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png",
         width: 1200,
         height: 630,
-        alt: "ARES Gallery - Event Photos & Highlights",
+        alt: "ARES 2025 Gallery - Event Photos & Highlights",
         type: "image/png",
       },
     ],
@@ -42,17 +52,14 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "📸 ARES Gallery - Event Photos & Highlights",
-    description: "Explore stunning photos from Asia's premier real estate summit! 🚀",
+    title: "📸 ARES 2025 Gallery - Event Photos & Highlights",
+    description: shortDescription,
     images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"],
     creator: "@filipinohomes",
     site: "@ARES2025",
   },
   alternates: {
     canonical: pageUrl,
-  },
-  other: {
-    "fb:app_id": "your-facebook-app-id", // Replace with actual Facebook App ID
   },
 }
 

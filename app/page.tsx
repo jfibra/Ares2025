@@ -51,9 +51,6 @@ export const metadata: Metadata = {
   alternates: {
     canonical: baseUrl,
   },
-  other: {
-    "fb:app_id": "your-facebook-app-id", // Replace with actual Facebook App ID
-  },
 }
 
 export default function Page() {

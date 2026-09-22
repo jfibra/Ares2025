@@ -175,9 +175,6 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         alternates: {
           canonical: pageUrl,
         },
-        other: {
-          "fb:app_id": "your-facebook-app-id", // Replace with actual Facebook App ID
-        },
       }
     }
   }
@@ -229,9 +226,6 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
     },
     alternates: {
       canonical: pageUrl,
-    },
-    other: {
-      "fb:app_id": "your-facebook-app-id", // Replace with actual Facebook App ID
     },
   }
 }

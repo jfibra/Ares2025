@@ -83,16 +83,8 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  verification: {
-    google: "your-google-verification-code", // Replace with actual Google verification code
-    yandex: "your-yandex-verification-code", // Replace with actual Yandex verification code
-    yahoo: "your-yahoo-verification-code", // Replace with actual Yahoo verification code
-  },
   alternates: {
     canonical: baseUrl,
-  },
-  other: {
-    "fb:app_id": "your-facebook-app-id", // Replace with actual Facebook App ID
   },
     generator: 'v0.dev'
 }
