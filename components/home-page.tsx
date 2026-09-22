@@ -248,24 +248,24 @@ const HomePage = () => {
         <div className="container mx-auto px-6 mt-20 relative z-10">
           <div className="max-w-6xl mx-auto">
             <div className="hero-text-container animate-in slide-in-from-bottom duration-1000">
-              <h1 className="hero-title blue-bg text-4xl md:text-6xl lg:text-7xl font-black font-['Poppins'] leading-tight mb-0 mobile-hero-text">
+              <h1 className="hero-title blue-bg text-4xl md:text-6xl lg:text-7xl font-black font-sans leading-tight mb-0 mobile-hero-text">
                 Welcome to ARES 2025
               </h1>
-              <h1 className="hero-title red-bg text-2xl md:text-4xl lg:text-5xl font-black font-['Poppins'] leading-tight mt-0 mobile-hero-text">
+              <h1 className="hero-title red-bg text-2xl md:text-4xl lg:text-5xl font-black font-sans leading-tight mt-0 mobile-hero-text">
                 Asian Real Estate Summit!
               </h1>
             </div>
 
             <div className="flex items-center mt-6 animate-in slide-in-from-bottom duration-1000 delay-300">
               <MapPin className="text-white mr-2 mt-1" size={35} />
-              <h2 className="text-xl md:text-2xl lg:text-4xl font-bold font-['Poppins'] text-shadow">
+              <h2 className="text-xl md:text-2xl lg:text-4xl font-bold font-sans text-shadow">
                 July 01 to 02, 2025 - Bangkok, Thailand
               </h2>
             </div>
 
             <div className="mt-12 animate-in slide-in-from-bottom duration-1000 delay-500">
               <Link href="/about">
-                <Button className="premium-cta-button group relative overflow-hidden bg-gradient-to-r from-[#e22837] via-[#e22837] to-[#d41e2d] hover:from-[#d41e2d] hover:via-[#c41f2d] hover:to-[#b01e2a] text-white px-10 py-4 text-lg md:text-xl font-semibold font-['Poppins'] shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:scale-105 hover:-translate-y-1 border-0 rounded-none">
+                <Button className="premium-cta-button group relative overflow-hidden bg-gradient-to-r from-[#e22837] via-[#e22837] to-[#d41e2d] hover:from-[#d41e2d] hover:via-[#c41f2d] hover:to-[#b01e2a] text-white px-10 py-4 text-lg md:text-xl font-semibold font-sans shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:scale-105 hover:-translate-y-1 border-0 rounded-none">
                   <span className="relative z-10 flex items-center gap-3">
                     About the Event
                     <ArrowRight className="group-hover:translate-x-1 transition-transform duration-300" size={20} />

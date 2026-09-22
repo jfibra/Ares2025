@@ -82,13 +82,13 @@ export default function NotFound() {
             }`}
           >
             <div className="relative mb-8">
-              <h1 className="text-8xl md:text-9xl font-black text-transparent bg-gradient-to-r from-[#ffd700] via-[#e22837] to-[#0078b6] bg-clip-text leading-none font-['Poppins']">
+              <h1 className="text-8xl md:text-9xl font-black text-transparent bg-gradient-to-r from-[#ffd700] via-[#e22837] to-[#0078b6] bg-clip-text leading-none font-sans">
                 404
               </h1>
               <div className="absolute -inset-4 bg-gradient-to-r from-[#ffd700]/20 via-[#e22837]/20 to-[#0078b6]/20 rounded-3xl blur-3xl animate-pulse" />
             </div>
 
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 font-['Poppins']">Oops! Page Not Found</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 font-sans">Oops! Page Not Found</h2>
             <p className="text-xl text-white/80 mb-2">{"Looks like you've wandered off the path to Bangkok! 🇹🇭"}</p>
             <p className="text-lg text-white/70 mb-8 max-w-2xl mx-auto">
               {

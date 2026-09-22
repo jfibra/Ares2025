@@ -300,7 +300,7 @@ export default function SpeakersPage() {
               </span>
               <Crown className="text-[#0078b6]" size={16} />
             </div>
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-3 md:mb-4 font-['Poppins'] leading-tight px-2">
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-3 md:mb-4 font-sans leading-tight px-2">
               {s.name}
             </h1>
             <p className="text-lg md:text-xl text-[#0078b6] italic font-bold mb-2 px-2">"{s.tagline}"</p>
@@ -325,7 +325,7 @@ export default function SpeakersPage() {
             <div className="space-y-6 md:space-y-8 order-1 lg:order-2">
               {/* Achievements */}
               <div className="rounded-xl md:rounded-2xl border border-[#0078b6]/40 p-4 md:p-6 bg-white/10 backdrop-blur-sm">
-                <h3 className="flex items-center gap-2 text-[#0078b6] font-bold text-lg md:text-xl mb-3 md:mb-4 font-['Poppins']">
+                <h3 className="flex items-center gap-2 text-[#0078b6] font-bold text-lg md:text-xl mb-3 md:mb-4 font-sans">
                   <Trophy size={20} /> Achievements
                 </h3>
                 <div className="space-y-2 md:space-y-3">
@@ -340,7 +340,7 @@ export default function SpeakersPage() {
 
               {/* Expertise */}
               <div className="rounded-xl md:rounded-2xl border border-[#e22837]/40 p-4 md:p-6 bg-white/10 backdrop-blur-sm">
-                <h3 className="flex items-center gap-2 text-[#e22837] font-bold text-lg md:text-xl mb-3 md:mb-4 font-['Poppins']">
+                <h3 className="flex items-center gap-2 text-[#e22837] font-bold text-lg md:text-xl mb-3 md:mb-4 font-sans">
                   <Sparkles size={20} /> Expertise
                 </h3>
                 <div className="flex flex-wrap gap-2 md:gap-3">
@@ -375,7 +375,7 @@ export default function SpeakersPage() {
 
           {/* Bio */}
           <div className="bg-white/10 backdrop-blur-sm p-6 md:p-8 lg:p-12 rounded-2xl md:rounded-3xl border border-white/20 shadow-2xl mb-12 md:mb-16">
-            <h2 className="text-2xl md:text-3xl font-black text-[#0078b6] mb-4 md:mb-6 text-center font-['Poppins']">
+            <h2 className="text-2xl md:text-3xl font-black text-[#0078b6] mb-4 md:mb-6 text-center font-sans">
               Speaker Biography
             </h2>
             <div className="prose prose-lg prose-invert max-w-none">
@@ -389,7 +389,7 @@ export default function SpeakersPage() {
 
           {/* Suggested */}
           <div className="text-center">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-6 md:mb-8 font-['Poppins']">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-6 md:mb-8 font-sans">
               Other Featured Speakers
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
@@ -405,7 +405,7 @@ export default function SpeakersPage() {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
                     <div className="mt-3 md:mt-4 text-center px-2">
-                      <h3 className="font-bold text-white/90 text-base md:text-lg font-['Poppins']">{sp.name}</h3>
+                      <h3 className="font-bold text-white/90 text-base md:text-lg font-sans">{sp.name}</h3>
                       <p className="text-[#0078b6] text-sm italic">"{sp.tagline}"</p>
                     </div>
                   </div>
@@ -445,12 +445,12 @@ export default function SpeakersPage() {
           </div>
 
           <div className="bg-gradient-to-r from-[#e22837] to-[#0078b6] px-4 md:px-8 py-3 md:py-4 rounded-full inline-block shadow-2xl border-2 border-white/20 backdrop-blur-sm mb-6 md:mb-8 mx-2">
-            <h2 className="text-white font-black text-sm md:text-lg uppercase tracking-wider font-['Poppins']">
+            <h2 className="text-white font-black text-sm md:text-lg uppercase tracking-wider font-sans">
               🌟 BANGKOK, THAILAND | JULY 2, 2025 🌟
             </h2>
           </div>
 
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-4 md:mb-6 leading-tight font-['Poppins'] px-2">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-4 md:mb-6 leading-tight font-sans px-2">
             MEET THE{" "}
             <span className="text-transparent bg-gradient-to-r from-[#0078b6] to-[#e22837] bg-clip-text">SPEAKERS</span>
           </h1>
@@ -489,7 +489,7 @@ export default function SpeakersPage() {
 
                     {/* Hover info */}
                     <div className="absolute bottom-0 left-0 right-0 p-3 md:p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <h3 className="text-white font-bold text-base md:text-lg mb-1 font-['Poppins']">{s.name}</h3>
+                      <h3 className="text-white font-bold text-base md:text-lg mb-1 font-sans">{s.name}</h3>
                       <p className="text-[#0078b6] text-xs md:text-sm font-bold italic">"{s.tagline}"</p>
                       <p className="text-white/80 text-xs">{s.title}</p>
                     </div>
@@ -509,7 +509,7 @@ export default function SpeakersPage() {
         {/* Coming Soon */}
         <div className="text-center mt-16 md:mt-20">
           <div className="bg-white/10 backdrop-blur-sm p-8 md:p-12 rounded-2xl md:rounded-3xl border-2 border-[#0078b6]/30 shadow-2xl max-w-4xl mx-auto">
-            <h3 className="text-2xl md:text-3xl font-black text-[#0078b6] mb-4 md:mb-6 uppercase tracking-wide font-['Poppins']">
+            <h3 className="text-2xl md:text-3xl font-black text-[#0078b6] mb-4 md:mb-6 uppercase tracking-wide font-sans">
               More Speakers Coming Soon!
             </h3>
             <p className="text-white/90 text-lg md:text-xl leading-relaxed mb-6 md:mb-8 px-2">

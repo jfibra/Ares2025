@@ -46,7 +46,7 @@ const CountdownTimer = () => {
         <div
           className={`bg-gradient-to-br ${gradients[index]} rounded-2xl p-6 min-w-[100px] shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 border border-white/20 backdrop-blur-sm`}
         >
-          <div className="text-4xl md:text-5xl font-black text-white mb-2 font-['Poppins']">{timeLeft[interval]}</div>
+          <div className="text-4xl md:text-5xl font-black text-white mb-2 font-sans">{timeLeft[interval]}</div>
           <div className="text-sm md:text-base text-white/90 uppercase font-semibold tracking-wider">{interval}</div>
         </div>
 

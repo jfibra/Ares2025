@@ -9,6 +9,11 @@ const poppins = Poppins({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800", "900"],
   variable: "--font-poppins",
+  // Show the fallback immediately, swap in Poppins when it arrives.
+  display: "swap",
+  // Used if Poppins can't be fetched; next/font also generates a
+  // metrics-adjusted local fallback to keep the swap from shifting layout.
+  fallback: ["system-ui", "-apple-system", "Segoe UI", "Arial", "sans-serif"],
 })
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ares2025.com"
