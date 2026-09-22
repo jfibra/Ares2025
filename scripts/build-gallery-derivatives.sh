@@ -28,31 +28,11 @@
 # needed after changing the size or quality settings above, since the normal
 # run skips derivatives that are newer than their source.
 #
-# Requires: cwebp (brew install webp) and sips (macOS built-in).
+# Sizes, quality and EXIF orientation handling live in scripts/webp-convert.py.
+#
+# Requires: python3 with Pillow (pip3 install Pillow).
 
 set -euo pipefail
-
-FULL_EDGE=1400
-FULL_Q=76
-THUMB_EDGE=500
-THUMB_Q=70
-JOBS=8
-
-# --- worker: invoked by xargs, one call per photo -----------------------------
-if [ "${1:-}" = "--convert-one" ]; then
-  src="$2"; full_out="$3"; thumb_out="$4"
-  # Resize on the longest edge so portraits don't get blown up.
-  read -r w h < <(sips -g pixelWidth -g pixelHeight "$src" 2>/dev/null |
-    awk '/pixelWidth/{w=$2} /pixelHeight/{h=$2} END{print w, h}')
-  if [ "${w:-0}" -ge "${h:-0}" ]; then
-    full_dim=("-resize" "$FULL_EDGE" "0"); thumb_dim=("-resize" "$THUMB_EDGE" "0")
-  else
-    full_dim=("-resize" "0" "$FULL_EDGE"); thumb_dim=("-resize" "0" "$THUMB_EDGE")
-  fi
-  [ -f "$full_out" ]  && [ "$full_out"  -nt "$src" ] || cwebp -quiet -q "$FULL_Q"  "${full_dim[@]}"  "$src" -o "$full_out"
-  [ -f "$thumb_out" ] && [ "$thumb_out" -nt "$src" ] || cwebp -quiet -q "$THUMB_Q" "${thumb_dim[@]}" "$src" -o "$thumb_out"
-  exit 0
-fi
 
 # --- driver -------------------------------------------------------------------
 cd "$(dirname "$0")/.."
@@ -60,8 +40,9 @@ SRC_ROOT="public/albums"
 OUT_ROOT="public/gallery"
 MANIFEST="lib/gallery-photos.generated.ts"
 SELF="scripts/build-gallery-derivatives.sh"
+CONVERTER="scripts/webp-convert.py"
 
-command -v cwebp >/dev/null || { echo "cwebp not found — brew install webp"; exit 1; }
+python3 -c "import PIL" 2>/dev/null || { echo "Pillow not found — pip3 install Pillow"; exit 1; }
 [ -d "$SRC_ROOT" ] || { echo "no $SRC_ROOT directory"; exit 1; }
 
 if [ "${1:-}" = "--clean" ]; then
@@ -181,7 +162,7 @@ if [ "$cross" -gt 0 ]; then
 fi
 
 echo "Converting (this takes a few minutes on a cold run)..."
-xargs -0 -n 3 -P "$JOBS" "$SELF" --convert-one < "$jobs_file"
+python3 "$CONVERTER" < "$jobs_file" || { echo "conversion reported failures (see above)"; exit 1; }
 
 {
   echo "// GENERATED FILE — do not edit by hand."
