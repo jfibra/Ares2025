@@ -165,6 +165,14 @@ for out_dir in "$OUT_ROOT"/*/; do
   fi
 done
 
+# Never overwrite a good manifest with an empty one: if no album produced any
+# photos, the originals are probably missing rather than genuinely gone.
+if [ ! -s "$manifest_body" ]; then
+  echo "no albums found in $SRC_ROOT — leaving $MANIFEST and $OUT_ROOT untouched."
+  echo "If the originals are on another drive, reconnect it and re-run."
+  exit 1
+fi
+
 cross=$(sort "$all_hashes" | awk '{print $1}' | uniq -d | wc -l | tr -d ' ')
 if [ "$cross" -gt 0 ]; then
   echo "note: $cross photo(s) appear in more than one album:"
