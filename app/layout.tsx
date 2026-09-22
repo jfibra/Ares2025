@@ -144,7 +144,9 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body>
+      {/* Browser extensions (ColorZilla, Grammarly, ...) add attributes to body
+          before hydration; suppress the resulting dev-only mismatch warning. */}
+      <body suppressHydrationWarning>
         <Suspense fallback={"Loading..."}>
           {children}
           <AnalyticsWrapper />
