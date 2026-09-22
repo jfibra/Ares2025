@@ -9,9 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import CustomLightbox from "./custom-lightbox"
 import CountdownTimer from "./countdown-timer"
+import { homepageHighlights } from "@/lib/gallery-albums"
 
 const HomePage = () => {
-  const [images, setImages] = useState<string[]>([])
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [formData, setFormData] = useState({
@@ -37,27 +37,9 @@ const HomePage = () => {
     }
   }, [])
 
-  const galleryImages = [
-    "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/Event+Photos/Ares+Event+(56).JPG",
-    "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/Event%20Photos/Ares+Event+(51).JPG",
-    "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/Event%20Photos/Ares+Event+(95).JPG",
-    "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/Event%20Photos/Ares+Event+(68).JPG",
-    "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/Event%20Photos/Ares+Event+(4).JPG",
-    "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/Event+Photos/Ares+Event+(193).JPG",
-  ]
-
-  useEffect(() => {
-    const imageUrls = [
-      ...galleryImages,
-      ...Array.from(
-        { length: 198 },
-        (_, i) =>
-          `https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/Event Photos/Ares+Event+(${i + 1}).JPG`,
-      ),
-    ]
-    const shuffled = imageUrls.sort(() => 0.5 - Math.random())
-    setImages(shuffled.slice(0, 10))
-  }, [])
+  // Curated ARES 2025 photos; the grid and the lightbox read the same list, so
+  // clicking a tile opens that tile's photo.
+  const images = homepageHighlights
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -425,12 +407,12 @@ const HomePage = () => {
               </span>
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Relive the highlights and memorable moments from previous ARES summits
+              Relive the highlights and memorable moments from ARES 2025 in Bangkok
             </p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
-            {galleryImages.slice(0, 6).map((image, index) => (
+            {images.map((photo, index) => (
               <div
                 key={index}
                 className="group cursor-pointer relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105"
@@ -438,8 +420,9 @@ const HomePage = () => {
               >
                 <div className="aspect-square overflow-hidden">
                   <img
-                    src={image || "/placeholder.svg"}
-                    alt={`ARES Event ${index + 1}`}
+                    src={photo.thumb || "/placeholder.svg"}
+                    alt={`${photo.album.title} photo ${photo.indexInAlbum}`}
+                    loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 </div>
@@ -555,7 +538,12 @@ const HomePage = () => {
       <CustomLightbox
         open={lightboxOpen}
         onClose={handleLightboxClose}
-        currentImage={images[currentImageIndex] || ""}
+        currentImage={images[currentImageIndex]?.full || ""}
+        caption={
+          images[currentImageIndex]
+            ? `${images[currentImageIndex].album.title} · #${images[currentImageIndex].indexInAlbum}`
+            : undefined
+        }
         onPrev={handleLightboxPrev}
         onNext={handleLightboxNext}
         imageCount={images.length}

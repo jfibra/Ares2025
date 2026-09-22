@@ -180,6 +180,37 @@ export const allGalleryPhotos: GalleryPhoto[] = galleryAlbums.flatMap((album) =>
 export const getPhotosForAlbum = (slug: string | "all"): GalleryPhoto[] =>
   slug === "all" ? allGalleryPhotos : allGalleryPhotos.filter((photo) => photo.album.slug === slug)
 
+/**
+ * Photos featured in the homepage gallery preview, in display order.
+ * Referenced by album slug and derivative name — run
+ * `bash scripts/build-gallery-derivatives.sh` output through
+ * lib/gallery-photos.generated.ts to find names. If a reference stops
+ * resolving (photo removed, or renumbered by a rebuild), the list is topped up
+ * from the newest albums so the homepage always has a full grid.
+ */
+const homepageHighlightRefs = [
+  { album: "ares-2025-day-2", photo: "005-2m1a5917" },
+  { album: "day2-conference", photo: "102-ares2025conference495" },
+  { album: "day1-dinner-cruise", photo: "102-ares2025dinner-cruise-1st-fl60" },
+  { album: "ares-2025-day-1", photo: "102-2m1a4990" },
+  { album: "ares-2025-day-1", photo: "199-cjv02741" },
+  { album: "day2-conference", photo: "199-ares2025conference773" },
+]
+
+const HOMEPAGE_HIGHLIGHT_COUNT = 6
+
+const resolvedHighlights = homepageHighlightRefs
+  .map(({ album, photo }) =>
+    allGalleryPhotos.find((p) => p.album.slug === album && p.thumb.endsWith(`/thumb/${photo}.webp`)),
+  )
+  .filter((photo): photo is GalleryPhoto => photo !== undefined)
+
+/** Six photos for the homepage preview grid; never short, even if a ref breaks. */
+export const homepageHighlights: GalleryPhoto[] = [
+  ...resolvedHighlights,
+  ...allGalleryPhotos.filter((photo) => !resolvedHighlights.includes(photo)),
+].slice(0, HOMEPAGE_HIGHLIGHT_COUNT)
+
 export const totalPhotoCount = allGalleryPhotos.length
 
 export const eventYearCount = new Set(galleryAlbums.map((album) => album.year)).size
