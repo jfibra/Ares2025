@@ -211,6 +211,30 @@ export const homepageHighlights: GalleryPhoto[] = [
   ...allGalleryPhotos.filter((photo) => !resolvedHighlights.includes(photo)),
 ].slice(0, HOMEPAGE_HIGHLIGHT_COUNT)
 
+/** Every ARES 2025 photo — the pool the homepage preview draws from. */
+export const ares2025Photos: GalleryPhoto[] = allGalleryPhotos.filter((photo) => photo.album.year === 2025)
+
+/**
+ * A random set of ARES 2025 photos. Call this from an effect, never during
+ * render: the server-rendered markup uses `homepageHighlights`, and randomising
+ * during render would produce a hydration mismatch.
+ */
+export const getRandomHighlights = (count = HOMEPAGE_HIGHLIGHT_COUNT): GalleryPhoto[] => {
+  const pool = ares2025Photos.length > 0 ? ares2025Photos : allGalleryPhotos
+  const wanted = Math.min(count, pool.length)
+  const picked: GalleryPhoto[] = []
+  const taken = new Set<number>()
+
+  while (picked.length < wanted) {
+    const i = Math.floor(Math.random() * pool.length)
+    if (taken.has(i)) continue
+    taken.add(i)
+    picked.push(pool[i])
+  }
+
+  return picked
+}
+
 export const totalPhotoCount = allGalleryPhotos.length
 
 export const eventYearCount = new Set(galleryAlbums.map((album) => album.year)).size

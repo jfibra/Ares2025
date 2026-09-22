@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import CustomLightbox from "./custom-lightbox"
 import CountdownTimer from "./countdown-timer"
-import { homepageHighlights } from "@/lib/gallery-albums"
+import { getRandomHighlights, homepageHighlights, type GalleryPhoto } from "@/lib/gallery-albums"
 
 const HomePage = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -37,9 +37,15 @@ const HomePage = () => {
     }
   }, [])
 
-  // Curated ARES 2025 photos; the grid and the lightbox read the same list, so
-  // clicking a tile opens that tile's photo.
-  const images = homepageHighlights
+  // Server-renders the curated ARES 2025 set, then swaps in a random pick once
+  // mounted, so the grid differs on every page load. Randomising during render
+  // would not match the server markup. The grid and the lightbox read the same
+  // list, so clicking a tile opens that tile's photo.
+  const [images, setImages] = useState<GalleryPhoto[]>(homepageHighlights)
+
+  useEffect(() => {
+    setImages(getRandomHighlights())
+  }, [])
 
   // Prevent body scroll when modal is open
   useEffect(() => {
