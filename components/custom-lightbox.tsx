@@ -8,6 +8,8 @@ interface CustomLightboxProps {
   open: boolean
   onClose: () => void
   currentImage: string
+  /** Optional label shown under the photo, e.g. "NatCon 2023 · #12" */
+  caption?: string
   onPrev: () => void
   onNext: () => void
   imageCount: number
@@ -18,6 +20,7 @@ const CustomLightbox: React.FC<CustomLightboxProps> = ({
   open,
   onClose,
   currentImage,
+  caption,
   onPrev,
   onNext,
   imageCount,
@@ -53,7 +56,7 @@ const CustomLightbox: React.FC<CustomLightboxProps> = ({
         <div className="w-full h-full flex items-center justify-center overflow-hidden">
           <img
             src={currentImage || "/placeholder.svg"}
-            alt={`Event photo ${currentIndex + 1}`}
+            alt={caption || `Event photo ${currentIndex + 1}`}
             className="max-w-full max-h-full object-contain transition-transform duration-300 ease-in-out"
             style={{ transform: `scale(${scale})` }}
           />
@@ -67,6 +70,12 @@ const CustomLightbox: React.FC<CustomLightboxProps> = ({
           <ChevronRight size={32} />
         </button>
       </div>
+
+      {caption && (
+        <div className="mt-4 text-white/90 text-sm md:text-base font-semibold bg-black/60 px-4 py-2 rounded-full">
+          {caption}
+        </div>
+      )}
 
       <div className="mt-6 flex justify-center items-center w-full gap-6">
         <button

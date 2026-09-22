@@ -1,9 +1,18 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { ChevronLeft, ChevronRight, MapPin, Play, Grid, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import CustomLightbox from "./custom-lightbox"
+import {
+  galleryAlbums,
+  getPhotosForAlbum,
+  totalPhotoCount,
+  eventYearCount,
+  type GalleryPhoto,
+} from "@/lib/gallery-albums"
+
+type AlbumFilter = "all" | string
 
 const GalleryPage = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -11,33 +20,33 @@ const GalleryPage = () => {
   const [page, setPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(12)
   const [loading, setLoading] = useState(false)
-  const [displayedImages, setDisplayedImages] = useState<string[]>([])
+  const [displayedPhotos, setDisplayedPhotos] = useState<GalleryPhoto[]>([])
   const [viewMode, setViewMode] = useState<"grid" | "masonry">("grid")
+  const [activeAlbum, setActiveAlbum] = useState<AlbumFilter>("all")
 
-  const generateImageUrls = () => {
-    const baseUrl = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/Event+Photos/Ares+Event+"
-    return Array.from({ length: 218 }, (_, i) => `${baseUrl}(${i + 1}).JPG`)
-  }
-
-  const images = generateImageUrls()
+  const photos = useMemo(() => getPhotosForAlbum(activeAlbum), [activeAlbum])
+  const activeAlbumDetails = useMemo(
+    () => (activeAlbum === "all" ? undefined : galleryAlbums.find((album) => album.slug === activeAlbum)),
+    [activeAlbum],
+  )
 
   useEffect(() => {
     const loadImages = async () => {
       setLoading(true)
-      setDisplayedImages([])
+      setDisplayedPhotos([])
 
       const startIndex = (page - 1) * itemsPerPage
       const endIndex = startIndex + itemsPerPage
-      const newImages = images.slice(startIndex, endIndex)
+      const newPhotos = photos.slice(startIndex, endIndex)
 
       await new Promise((resolve) => setTimeout(resolve, 300))
 
-      setDisplayedImages(newImages)
+      setDisplayedPhotos(newPhotos)
       setLoading(false)
     }
 
     loadImages()
-  }, [page, itemsPerPage])
+  }, [page, itemsPerPage, photos])
 
   const openLightbox = useCallback(
     (index: number) => {
@@ -48,15 +57,35 @@ const GalleryPage = () => {
   )
 
   const closeLightbox = () => setLightboxOpen(false)
-  const movePrev = () => setLightboxIndex((prevIndex) => (prevIndex + images.length - 1) % images.length)
-  const moveNext = () => setLightboxIndex((prevIndex) => (prevIndex + 1) % images.length)
+  const movePrev = () => setLightboxIndex((prevIndex) => (prevIndex + photos.length - 1) % photos.length)
+  const moveNext = () => setLightboxIndex((prevIndex) => (prevIndex + 1) % photos.length)
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
-  const totalPages = Math.ceil(images.length / itemsPerPage)
+  const handleAlbumChange = (slug: AlbumFilter) => {
+    setActiveAlbum(slug)
+    setPage(1)
+  }
+
+  const totalPages = Math.ceil(photos.length / itemsPerPage)
+  const activePhoto = photos[lightboxIndex]
+
+  // Warm the neighbouring full-size images so lightbox paging feels instant.
+  useEffect(() => {
+    if (!lightboxOpen || photos.length === 0) return
+    const neighbours = [
+      photos[(lightboxIndex + 1) % photos.length],
+      photos[(lightboxIndex + photos.length - 1) % photos.length],
+    ]
+    neighbours.forEach((photo) => {
+      if (!photo) return
+      const img = new Image()
+      img.src = photo.full
+    })
+  }, [lightboxOpen, lightboxIndex, photos])
 
   return (
     <div className="min-h-screen">
@@ -86,16 +115,16 @@ const GalleryPage = () => {
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
               <div className="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20">
-                <h3 className="text-3xl font-bold text-[#ffd700] mb-2">200+</h3>
+                <h3 className="text-3xl font-bold text-[#ffd700] mb-2">{totalPhotoCount}+</h3>
                 <p className="text-white/80">Event Photos</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20">
-                <h3 className="text-3xl font-bold text-[#ffd700] mb-2">2</h3>
-                <p className="text-white/80">Event Years</p>
+                <h3 className="text-3xl font-bold text-[#ffd700] mb-2">{galleryAlbums.length}</h3>
+                <p className="text-white/80">{galleryAlbums.length === 1 ? "Album" : "Albums"}</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20">
-                <h3 className="text-3xl font-bold text-[#ffd700] mb-2">400+</h3>
-                <p className="text-white/80">Attendees</p>
+                <h3 className="text-3xl font-bold text-[#ffd700] mb-2">{eventYearCount}</h3>
+                <p className="text-white/80">{eventYearCount === 1 ? "Event Year" : "Event Years"}</p>
               </div>
             </div>
           </div>
@@ -106,7 +135,7 @@ const GalleryPage = () => {
       <section className="py-20 bg-gradient-to-br from-white via-gray-50 to-white">
         <div className="container mx-auto px-6">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-16">
+            <div className="text-center mb-12">
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
                 Event{" "}
                 <span className="text-transparent bg-gradient-to-r from-[#e22837] to-[#0078b6] bg-clip-text">
@@ -118,6 +147,51 @@ const GalleryPage = () => {
                 Browse through our collection of professional event photography capturing the essence of ARES
               </p>
             </div>
+
+            {/* Album Filter */}
+            <div className="flex flex-wrap justify-center gap-3 mb-10">
+              <button
+                onClick={() => handleAlbumChange("all")}
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 border ${
+                  activeAlbum === "all"
+                    ? "bg-gradient-to-r from-[#e22837] to-[#0078b6] text-white border-transparent shadow-lg"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                All Photos
+                <span className="ml-2 text-xs opacity-80">{totalPhotoCount}</span>
+              </button>
+
+              {galleryAlbums.map((album) => (
+                <button
+                  key={album.slug}
+                  onClick={() => handleAlbumChange(album.slug)}
+                  className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 border ${
+                    activeAlbum === album.slug
+                      ? "bg-gradient-to-r from-[#e22837] to-[#0078b6] text-white border-transparent shadow-lg"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  {album.shortTitle}
+                  <span className="ml-2 text-xs opacity-80">{album.photos.length}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Active album details */}
+            {activeAlbumDetails && (
+              <div className="text-center mb-10 -mt-4">
+                <p className="text-gray-700 font-semibold">{activeAlbumDetails.title}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {[activeAlbumDetails.date, activeAlbumDetails.location, `${activeAlbumDetails.photos.length} photos`]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+                {activeAlbumDetails.description && (
+                  <p className="text-sm text-gray-500 mt-1">{activeAlbumDetails.description}</p>
+                )}
+              </div>
+            )}
 
             {/* Controls */}
             <div className="flex flex-col lg:flex-row justify-between items-center mb-8 gap-4">
@@ -189,26 +263,35 @@ const GalleryPage = () => {
                     : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
                 }`}
               >
-                {displayedImages.map((image, index) => (
+                {displayedPhotos.map((photo, index) => (
                   <div
-                    key={index}
+                    key={`${photo.album.slug}-${photo.indexInAlbum}`}
                     className="group cursor-pointer relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 bg-white"
                     onClick={() => openLightbox(index)}
                   >
                     <div className={`overflow-hidden ${viewMode === "grid" ? "aspect-square" : "aspect-[4/3]"}`}>
                       <img
                         src={
-                          image || "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ares-thumbnail.png"
+                          photo.thumb ||
+                          "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ares-thumbnail.png"
                         }
-                        alt={`Event Image ${(page - 1) * itemsPerPage + index + 1}`}
+                        alt={`${photo.album.title} photo ${photo.indexInAlbum}`}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         loading="lazy"
                       />
                     </div>
+
+                    {/* Album tag */}
+                    <div className="absolute top-3 left-3 z-10">
+                      <span className="inline-block bg-black/60 backdrop-blur-sm text-white text-[11px] font-semibold px-3 py-1 rounded-full border border-white/20">
+                        {photo.album.shortTitle}
+                      </span>
+                    </div>
+
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <div className="absolute bottom-4 left-4 right-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <p className="text-sm font-medium">ARES Event Photo</p>
-                      <p className="text-xs text-white/80">#{(page - 1) * itemsPerPage + index + 1}</p>
+                      <p className="text-sm font-medium">{photo.album.title}</p>
+                      <p className="text-xs text-white/80">#{photo.indexInAlbum}</p>
                     </div>
                   </div>
                 ))}
@@ -227,7 +310,7 @@ const GalleryPage = () => {
               </Button>
 
               {[...Array(Math.min(7, totalPages))].map((_, i) => {
-                let pageNum
+                let pageNum: number
                 if (totalPages <= 7) {
                   pageNum = i + 1
                 } else if (page <= 4) {
@@ -320,10 +403,11 @@ const GalleryPage = () => {
       <CustomLightbox
         open={lightboxOpen}
         onClose={closeLightbox}
-        currentImage={images[lightboxIndex] || "/placeholder.svg"}
+        currentImage={activePhoto?.full || "/placeholder.svg"}
+        caption={activePhoto ? `${activePhoto.album.title} · #${activePhoto.indexInAlbum}` : undefined}
         onPrev={movePrev}
         onNext={moveNext}
-        imageCount={images.length}
+        imageCount={photos.length}
         currentIndex={lightboxIndex}
       />
     </div>

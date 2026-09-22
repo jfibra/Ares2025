@@ -25,3 +25,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# gallery originals (full-res, 2.3GB) — derivatives in public/gallery are committed instead
+/public/albums
+
+# macOS
+.DS_Store
