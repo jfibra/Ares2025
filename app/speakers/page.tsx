@@ -7,7 +7,7 @@ import SpeakersPage from "@/components/speakers-page"
 // Enhanced metadata generation for individual speakers with poster OG images
 export async function generateMetadata({ searchParams }: { searchParams: { speaker?: string } }): Promise<Metadata> {
   const speakerSlug = searchParams.speaker
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ares2025.com"
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://asianrealestatesummit.com"
 
   if (speakerSlug) {
     // Enhanced speaker data mapping for metadata with Hollywood-style descriptions
@@ -133,11 +133,11 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
       const pageUrl = `${baseUrl}/speakers?speaker=${speakerSlug}`
 
       return {
-        title: `${speaker.name} - ${speaker.tagline} | ARES 2025`,
-        description: `${speaker.description} Speaking at the Asian Real Estate Summit 2025 in Bangkok, Thailand. Don't miss this legendary speaker!`,
+        title: `${speaker.name} - ${speaker.tagline} | ARES 2027`,
+        description: `${speaker.description} Speaking at the Asian Real Estate Summit 2027 in Bangkok, Thailand. Don't miss this legendary speaker!`,
         keywords: [
           speaker.name,
-          "ARES 2025",
+          "ARES 2027",
           "Asian Real Estate Summit",
           "Bangkok",
           "Thailand",
@@ -149,16 +149,16 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         ],
         openGraph: {
           title: `${speaker.name} - ${speaker.tagline}`,
-          description: `${speaker.description} Join us at ARES 2025 in Bangkok!`,
+          description: `${speaker.description} Join us at ARES 2027 in Bangkok!`,
           url: pageUrl,
-          siteName: "ARES 2025 - Asian Real Estate Summit",
+          siteName: "ARES 2027 - Asian Real Estate Summit",
           images: [
             {
               url: speaker.image,
               width: 400,
               height: 600,
-              alt: `${speaker.name} - ARES 2025 Featured Speaker`,
-              type: "image/png",
+              alt: `${speaker.name} - ARES 2027 Featured Speaker`,
+              type: "image/jpeg",
             },
           ],
           type: "profile",
@@ -167,7 +167,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         twitter: {
           card: "summary_large_image",
           title: `${speaker.name} - ${speaker.tagline}`,
-          description: `${speaker.description} Speaking at ARES 2025!`,
+          description: `${speaker.description} Speaking at ARES 2027!`,
           images: [speaker.image],
           creator: "@filipinohomes",
           site: "@ARES2025",
@@ -183,11 +183,11 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
   const pageUrl = `${baseUrl}/speakers`
 
   return {
-    title: "Meet the Legends - ARES 2025 Speakers | Asian Real Estate Summit",
+    title: "Meet the Legends - ARES 2027 Speakers | Asian Real Estate Summit",
     description:
-      "The most epic lineup in real estate history! Meet the industry titans, visionaries, and game-changers speaking at ARES 2025 in Bangkok, Thailand. This isn't just a conference—it's a masterclass in excellence!",
+      "The most epic lineup in real estate history! Meet the industry titans, visionaries, and game-changers speaking at ARES 2027 in Bangkok, Thailand. This isn't just a conference—it's a masterclass in excellence!",
     keywords: [
-      "ARES 2025",
+      "ARES 2027",
       "Asian Real Estate Summit",
       "Bangkok",
       "Thailand",
@@ -199,18 +199,18 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
       "Property Conference",
     ],
     openGraph: {
-      title: "Meet the Legends - ARES 2025 Speakers",
+      title: "Meet the Legends - ARES 2027 Speakers",
       description:
-        "The most epic lineup in real estate history! Industry titans, visionaries, and game-changers at ARES 2025.",
+        "The most epic lineup in real estate history! Industry titans, visionaries, and game-changers at ARES 2027.",
       url: pageUrl,
-      siteName: "ARES 2025 - Asian Real Estate Summit",
+      siteName: "ARES 2027 - Asian Real Estate Summit",
       images: [
         {
-          url: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png",
+          url: `${baseUrl}/og-image.jpg`,
           width: 1200,
           height: 630,
-          alt: "ARES 2025 - Meet the Legends",
-          type: "image/png",
+          alt: "ARES 2027 - Meet the Legends",
+          type: "image/jpeg",
         },
       ],
       type: "website",
@@ -218,9 +218,9 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
     },
     twitter: {
       card: "summary_large_image",
-      title: "Meet the Legends - ARES 2025 Speakers",
-      description: "The most epic lineup in real estate history! Join us in Bangkok for ARES 2025!",
-      images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"],
+      title: "Meet the Legends - ARES 2027 Speakers",
+      description: "The most epic lineup in real estate history! Join us in Bangkok for ARES 2027!",
+      images: [`${baseUrl}/og-image.jpg`],
       creator: "@filipinohomes",
       site: "@ARES2025",
     },
@@ -239,7 +239,7 @@ function SpeakersLoading() {
           <div className="absolute -inset-4 bg-gradient-to-r from-[#ffd700]/30 to-[#e22837]/30 rounded-2xl blur-2xl animate-pulse" />
           <img
             src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
-            alt="ARES 2025"
+            alt="ARES 2027"
             className="relative max-w-xs mx-auto h-auto filter drop-shadow-2xl"
           />
         </div>

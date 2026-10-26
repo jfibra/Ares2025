@@ -16,18 +16,18 @@ const poppins = Poppins({
   fallback: ["system-ui", "-apple-system", "Segoe UI", "Arial", "sans-serif"],
 })
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ares2025.com"
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://asianrealestatesummit.com"
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "ARES 2025 - Asian Real Estate Summit | Bangkok, Thailand",
-    template: "%s | ARES 2025",
+    default: "ARES 2027 - Asian Real Estate Summit | Bangkok, Thailand",
+    template: "%s | ARES 2027",
   },
   description:
-    "Join Asia's premier real estate summit! ARES 2025 brings together industry legends, visionaries, and game-changers in Bangkok, Thailand. July 2, 2025 - Don't miss this epic event!",
+    "Join Asia's premier real estate summit! ARES 2027 brings together industry legends, visionaries, and game-changers in Bangkok, Thailand. July 13, 2027 - Don't miss this epic event!",
   keywords: [
-    "ARES 2025",
+    "ARES 2027",
     "Asian Real Estate Summit",
     "Bangkok",
     "Thailand",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Filipino Homes", url: "https://filipinohomes.com" }],
   creator: "Filipino Homes",
-  publisher: "ARES 2025",
+  publisher: "ARES 2027",
   formatDetection: {
     email: false,
     address: false,
@@ -50,25 +50,25 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: baseUrl,
-    siteName: "ARES 2025 - Asian Real Estate Summit",
-    title: "ARES 2025 - Asian Real Estate Summit | Bangkok, Thailand",
+    siteName: "ARES 2027 - Asian Real Estate Summit",
+    title: "ARES 2027 - Asian Real Estate Summit | Bangkok, Thailand",
     description:
-      "Join Asia's premier real estate summit! Industry legends, visionaries, and game-changers in Bangkok, Thailand. July 2, 2025",
+      "Join Asia's premier real estate summit! Industry legends, visionaries, and game-changers in Bangkok, Thailand. July 13, 2027",
     images: [
       {
-        url: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg",
+        url: `${baseUrl}/og-image.jpg`,
         width: 1200,
         height: 630,
-        alt: "ARES 2025 - Asian Real Estate Summit Event Photo",
+        alt: "ARES 2027 - Asian Real Estate Summit Event Photo",
         type: "image/jpeg",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ARES 2025 - Asian Real Estate Summit",
-    description: "Join Asia's premier real estate summit in Bangkok, Thailand! July 2, 2025",
-    images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg"],
+    title: "ARES 2027 - Asian Real Estate Summit",
+    description: "Join Asia's premier real estate summit in Bangkok, Thailand! July 13, 2027",
+    images: [`${baseUrl}/og-image.jpg`],
     creator: "@filipinohomes",
     site: "@ARES2025",
   },
@@ -114,11 +114,11 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Event",
-              name: "ARES 2025 - Asian Real Estate Summit",
+              name: "ARES 2027 - Asian Real Estate Summit",
               description:
                 "Asia's premier real estate summit bringing together industry leaders, visionaries, and game-changers.",
-              startDate: "2025-07-02T09:00:00+07:00",
-              endDate: "2025-07-02T18:00:00+07:00",
+              startDate: "2027-07-13T09:00:00+07:00",
+              endDate: "2027-07-13T18:00:00+07:00",
               eventStatus: "https://schema.org/EventScheduled",
               eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
               location: {
@@ -135,7 +135,7 @@ export default function RootLayout({
                 name: "Filipino Homes",
                 url: "https://filipinohomes.com",
               },
-              image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg",
+              image: `${baseUrl}/og-image.jpg`,
               url: baseUrl,
             }),
           }}

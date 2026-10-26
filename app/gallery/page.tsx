@@ -4,7 +4,7 @@ import Footer from "@/components/footer"
 import GalleryPage from "@/components/gallery-page"
 import { galleryAlbums, totalPhotoCount } from "@/lib/gallery-albums"
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ares2025.com"
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://asianrealestatesummit.com"
 const pageUrl = `${baseUrl}/gallery`
 
 // Built from the album data so the copy can't drift as albums are added.
@@ -18,7 +18,7 @@ const shortDescription =
   `the delegates' dinner cruise.`
 
 export const metadata: Metadata = {
-  title: "ARES 2025 Gallery - Event Photos & Highlights | Asian Real Estate Summit",
+  title: "ARES Gallery - Event Photos & Highlights | Asian Real Estate Summit",
   description,
   keywords: [
     "ARES 2025 Gallery",
@@ -34,17 +34,17 @@ export const metadata: Metadata = {
     "Event Highlights",
   ],
   openGraph: {
-    title: "ARES 2025 Gallery - Event Photos & Highlights",
+    title: "ARES Gallery - Event Photos & Highlights",
     description,
     url: pageUrl,
-    siteName: "ARES 2025 - Asian Real Estate Summit",
+    siteName: "ARES 2027 - Asian Real Estate Summit",
     images: [
       {
-        url: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png",
+        url: `${baseUrl}/og-image.jpg`,
         width: 1200,
         height: 630,
-        alt: "ARES 2025 Gallery - Event Photos & Highlights",
-        type: "image/png",
+        alt: "ARES 2027 - Asian Real Estate Summit",
+        type: "image/jpeg",
       },
     ],
     type: "website",
@@ -52,9 +52,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ARES 2025 Gallery - Event Photos & Highlights",
+    title: "ARES Gallery - Event Photos & Highlights",
     description: shortDescription,
-    images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"],
+    images: [`${baseUrl}/og-image.jpg`],
     creator: "@filipinohomes",
     site: "@ARES2025",
   },

@@ -3,33 +3,33 @@ import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import SponsorsPage from "@/components/sponsors-page"
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ares2025.com"
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://asianrealestatesummit.com"
 
 export const metadata: Metadata = {
-  title: "ARES 2025 Sponsors - Asian Real Estate Summit | Bangkok, Thailand",
+  title: "ARES 2027 Sponsors - Asian Real Estate Summit | Bangkok, Thailand",
   description:
-    "Meet our prestigious sponsors and partners supporting ARES 2025. Leading real estate developers and industry partners making the Asian Real Estate Summit possible in Bangkok, Thailand.",
+    "Meet our prestigious sponsors and partners supporting ARES 2027. Leading real estate developers and industry partners making the Asian Real Estate Summit possible in Bangkok, Thailand.",
   keywords: [
-    "ARES 2025 Sponsors",
+    "ARES 2027 Sponsors",
     "Real Estate Partners",
     "Bangkok Summit Sponsors",
     "Asian Real Estate Developers",
     "Property Development Partners",
-    "ARES 2025 Supporters",
+    "ARES 2027 Supporters",
     "Real Estate Industry Partners",
   ],
   openGraph: {
-    title: "ARES 2025 Sponsors - Asian Real Estate Summit",
+    title: "ARES 2027 Sponsors - Asian Real Estate Summit",
     description:
-      "Meet our prestigious sponsors and partners supporting ARES 2025 in Bangkok, Thailand. Leading real estate developers and industry partners.",
+      "Meet our prestigious sponsors and partners supporting ARES 2027 in Bangkok, Thailand. Leading real estate developers and industry partners.",
     url: `${baseUrl}/sponsors`,
-    siteName: "ARES 2025 - Asian Real Estate Summit",
+    siteName: "ARES 2027 - Asian Real Estate Summit",
     images: [
       {
-        url: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg",
+        url: `${baseUrl}/og-image.jpg`,
         width: 1200,
         height: 630,
-        alt: "ARES 2025 Sponsors",
+        alt: "ARES 2027 Sponsors",
         type: "image/jpeg",
       },
     ],
@@ -38,9 +38,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ARES 2025 Sponsors - Asian Real Estate Summit",
-    description: "Meet our prestigious sponsors and partners supporting ARES 2025 in Bangkok, Thailand.",
-    images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg"],
+    title: "ARES 2027 Sponsors - Asian Real Estate Summit",
+    description: "Meet our prestigious sponsors and partners supporting ARES 2027 in Bangkok, Thailand.",
+    images: [`${baseUrl}/og-image.jpg`],
     creator: "@filipinohomes",
     site: "@ARES2025",
   },

@@ -3,14 +3,14 @@ import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import HomePage from "@/components/home-page"
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ares2025.com"
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://asianrealestatesummit.com"
 
 export const metadata: Metadata = {
-  title: "ARES 2025 - Asian Real Estate Summit | Bangkok, Thailand",
+  title: "ARES 2027 - Asian Real Estate Summit | Bangkok, Thailand",
   description:
-    "Welcome to ARES 2025! Join Asia's premier real estate summit featuring industry legends, visionaries, and game-changers. Bangkok, Thailand - July 2, 2025. Register now for the ultimate real estate experience!",
+    "Welcome to ARES 2027! Join Asia's premier real estate summit featuring industry legends, visionaries, and game-changers. Bangkok, Thailand - July 13, 2027. Register now for the ultimate real estate experience!",
   keywords: [
-    "ARES 2025",
+    "ARES 2027",
     "Asian Real Estate Summit",
     "Bangkok",
     "Thailand",
@@ -20,21 +20,21 @@ export const metadata: Metadata = {
     "Industry Leaders",
     "Property Investment",
     "Real Estate Professionals",
-    "July 2025",
+    "July 2027",
   ],
   openGraph: {
-    title: "ARES 2025 - Asian Real Estate Summit | Bangkok, Thailand",
+    title: "ARES 2027 - Asian Real Estate Summit | Bangkok, Thailand",
     description:
-      "Welcome to ARES 2025! Join Asia's premier real estate summit featuring industry legends and visionaries. Bangkok, Thailand - July 2, 2025",
+      "Welcome to ARES 2027! Join Asia's premier real estate summit featuring industry legends and visionaries. Bangkok, Thailand - July 13, 2027",
     url: baseUrl,
-    siteName: "ARES 2025 - Asian Real Estate Summit",
+    siteName: "ARES 2027 - Asian Real Estate Summit",
     images: [
       {
-        url: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png",
+        url: `${baseUrl}/og-image.jpg`,
         width: 1200,
         height: 630,
-        alt: "ARES 2025 - Asian Real Estate Summit",
-        type: "image/png",
+        alt: "ARES 2027 - Asian Real Estate Summit",
+        type: "image/jpeg",
       },
     ],
     type: "website",
@@ -42,9 +42,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ARES 2025 - Asian Real Estate Summit",
-    description: "Join Asia's premier real estate summit in Bangkok, Thailand! July 2, 2025",
-    images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"],
+    title: "ARES 2027 - Asian Real Estate Summit",
+    description: "Join Asia's premier real estate summit in Bangkok, Thailand! July 13, 2027",
+    images: [`${baseUrl}/og-image.jpg`],
     creator: "@filipinohomes",
     site: "@ARES2025",
   },

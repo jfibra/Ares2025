@@ -3,7 +3,7 @@ import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import AboutPage from "@/components/about-page"
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ares2025.com"
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://asianrealestatesummit.com"
 const pageUrl = `${baseUrl}/about`
 
 export const metadata: Metadata = {
@@ -28,14 +28,14 @@ export const metadata: Metadata = {
     description:
       "ARES 2027 is a global gathering of real estate leaders, brokers, entrepreneurs, and innovators in Bangkok, Thailand.",
     url: pageUrl,
-    siteName: "ARES 2025 - Asian Real Estate Summit",
+    siteName: "ARES 2027 - Asian Real Estate Summit",
     images: [
       {
-        url: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png",
+        url: `${baseUrl}/og-image.jpg`,
         width: 1200,
         height: 630,
         alt: "About Us - ARES 2027 Asian Real Estate Summit",
-        type: "image/png",
+        type: "image/jpeg",
       },
     ],
     type: "website",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "About Us - ARES 2027 Asian Real Estate Summit",
     description: "Think global. Innovate beyond. Grow together. Bangkok, July 13, 2027.",
-    images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"],
+    images: [`${baseUrl}/og-image.jpg`],
     creator: "@filipinohomes",
     site: "@ARES2025",
   },
