@@ -195,7 +195,7 @@ function Navbar() {
                 <motion.span
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.97 }}
-                  className={`shine group relative inline-flex items-center gap-2 overflow-hidden rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-shadow duration-300 hover:shadow-xl ${
+                  className={`shine group relative inline-flex items-center gap-2 overflow-hidden whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-shadow duration-300 hover:shadow-xl ${
                     pathname === "/contact-us"
                       ? "bg-gradient-to-r from-[#0078b6] to-[#005a8b]"
                       : "bg-gradient-to-r from-[#e22837] to-[#0078b6]"

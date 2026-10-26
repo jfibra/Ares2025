@@ -220,7 +220,9 @@ const HomePage = () => {
   useEffect(() => {
     const today = new Date().toDateString()
     const lastSeen = localStorage.getItem("ares-video-seen")
-    if (lastSeen === today) {
+    // `?intro=0` links straight to the page without the teaser.
+    const skip = new URLSearchParams(window.location.search).get("intro") === "0"
+    if (lastSeen === today || skip) {
       setHasSeenVideoToday(true)
       setShowVideoModal(false)
     }
