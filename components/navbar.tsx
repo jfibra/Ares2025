@@ -11,7 +11,7 @@ const LOGO_URL = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/
 
 const navItems = [
   { name: "Home", href: "/" },
-  { name: "About", href: "/about" },
+  { name: "About Us", href: "/about" },
   { name: "Speakers", href: "/speakers" },
   { name: "Gallery", href: "/gallery" },
 ]
@@ -110,7 +110,7 @@ function Navbar() {
             transition={{ duration: 0.5, ease }}
           >
             {/* Logo */}
-            <Link href="/" className="group relative z-10 flex items-center" aria-label="ARES home">
+            <Link href="/" className="group relative z-10 flex items-center" aria-label="ARES 2027 home">
               <motion.img
                 src={LOGO_URL}
                 alt="Asian Real Estate Summit"
@@ -120,6 +120,17 @@ function Navbar() {
                 transition={{ duration: 0.5, ease }}
                 whileHover={{ scale: 1.04 }}
               />
+              <motion.span
+                aria-hidden
+                initial={false}
+                animate={{ fontSize: isScrolled ? 22 : 28 }}
+                transition={{ duration: 0.5, ease }}
+                className={`ml-3 border-l pl-3 font-black leading-none tracking-tight transition-colors duration-500 ${
+                  light ? "border-white/40 text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" : "border-gray-300 text-gray-900"
+                }`}
+              >
+                2027
+              </motion.span>
             </Link>
 
             {/* Desktop links */}

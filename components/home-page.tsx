@@ -56,14 +56,14 @@ const tickerItems = [
   "Asian Real Estate Summit",
   "Bangkok, Thailand",
   "July 1 – 2, 2025",
-  "400+ Industry Professionals",
+  "1,000+ Industry Professionals",
   "12 Expert Speakers",
   "Powered by Filipino Homes",
 ]
 
 const stats = [
   {
-    value: 400,
+    value: 1000,
     suffix: "+",
     label: "Industry Professionals",
     detail: "Developers, brokers, investors and proptech leaders in one room",

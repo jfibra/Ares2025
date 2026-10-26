@@ -299,7 +299,7 @@ const SponsorsPage = () => {
               <div className="bg-gradient-to-br from-[#e22837] to-[#d41e2d] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
                 <Users className="text-white" size={32} />
               </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-2">400+</h3>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2">1,000+</h3>
               <p className="text-gray-600 font-medium">Industry Professionals</p>
             </div>
             <div className="text-center group">

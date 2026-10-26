@@ -9,7 +9,7 @@ const FOOTER_LOGO = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ar
 
 const exploreLinks = [
   { name: "Home", href: "/" },
-  { name: "About", href: "/about" },
+  { name: "About Us", href: "/about" },
   { name: "Speakers", href: "/speakers" },
   { name: "Gallery", href: "/gallery" },
   { name: "Contact Us", href: "/contact-us" },

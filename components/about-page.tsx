@@ -85,7 +85,7 @@ const AboutPage = () => {
                 className="mb-6 inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/60"
               >
                 <span className="h-px w-8 bg-gradient-to-r from-[#e22837] to-[#0078b6]" />
-                About ARES
+                About Us
               </motion.p>
 
               <motion.h1
@@ -94,9 +94,9 @@ const AboutPage = () => {
                 transition={{ duration: 0.8, delay: 0.1, ease: EASE_OUT }}
                 className="text-5xl font-black leading-[1.02] tracking-tight md:text-6xl xl:text-7xl"
               >
-                Where Asian real estate
+                Where the best in
                 <br />
-                <span className="gradient-text">comes together.</span>
+                real estate <span className="gradient-text">come together.</span>
               </motion.h1>
 
               <motion.p
@@ -105,8 +105,9 @@ const AboutPage = () => {
                 transition={{ duration: 0.8, delay: 0.25, ease: EASE_OUT }}
                 className="mt-6 max-w-xl text-lg leading-relaxed text-white/70 md:text-xl"
               >
-                The Asian Real Estate Summit brings together industry leaders, innovators, and visionaries to shape
-                the future of real estate across the region.
+                ARES 2027 is more than a summit. It is a global gathering of real estate leaders, brokers,
+                entrepreneurs, and innovators who believe the future of real estate is built through collaboration,
+                innovation, and continuous learning.
               </motion.p>
 
               <motion.div
@@ -137,7 +138,7 @@ const AboutPage = () => {
                 className="mt-10 flex items-center gap-2 text-sm text-white/50"
               >
                 <MapPin size={14} className="text-[#ffd700]" />
-                Bangkok, Thailand · Biennial summit
+                Bangkok, Thailand · July 13, 2027
               </motion.p>
             </div>
 
@@ -181,6 +182,95 @@ const AboutPage = () => {
           <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/60">Explore</span>
           <ChevronDown size={22} className="text-white/70 motion-safe:animate-bounce" />
         </motion.div>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* ARES 2027 STATEMENT (highlighted)                                    */}
+      {/* ------------------------------------------------------------------ */}
+      <section className="relative overflow-hidden bg-white py-20 md:py-28">
+        <div className="container relative z-10 mx-auto px-4 sm:px-6">
+          <Reveal>
+            <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[32px] bg-[#0b0f19] text-white shadow-[0_40px_100px_rgba(15,23,42,0.25)]">
+              {/* Brand gradient edge + glows */}
+              <div aria-hidden className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#e22837] via-[#672e91] to-[#0078b6]" />
+              <div aria-hidden className="dot-grid absolute inset-0 opacity-20" />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-[#0078b6]/30 blur-[100px]"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-[#e22837]/25 blur-[100px]"
+              />
+
+              <div className="relative grid gap-10 p-8 sm:p-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:p-16">
+                {/* Left: event lockup */}
+                <div className="flex flex-col justify-between gap-10">
+                  <div>
+                    <p className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/60">
+                      <span className="h-px w-8 bg-gradient-to-r from-[#ffd700] to-[#e22837]" />
+                      ARES 2027
+                    </p>
+                    <h2 className="mt-5 text-3xl font-black leading-[1.05] tracking-tight sm:text-4xl lg:text-5xl">
+                      Asian Real Estate <span className="gradient-text">Summit</span>
+                    </h2>
+                    <dl className="mt-8 grid grid-cols-2 gap-6 border-t border-white/10 pt-6">
+                      <div>
+                        <dt className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/50">Where</dt>
+                        <dd className="mt-2 text-lg font-bold">Bangkok, Thailand</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/50">When</dt>
+                        <dd className="mt-2 text-lg font-bold">July 13, 2027</dd>
+                      </div>
+                    </dl>
+                  </div>
+
+                  {/* Tagline */}
+                  <div className="flex flex-wrap gap-2">
+                    {["Think global.", "Innovate beyond.", "Grow together."].map((word, i) => (
+                      <span
+                        key={word}
+                        className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-bold uppercase tracking-wider"
+                        style={{
+                          color: ["#ffd700", "#ffffff", "#5fc4ff"][i],
+                        }}
+                      >
+                        {word}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right: statement */}
+                <div className="space-y-6 text-base leading-relaxed text-white/80 sm:text-lg">
+                  <p className="text-xl font-semibold leading-snug text-white sm:text-2xl">
+                    Building on the success of ARES 2023 and 2025, this biennial event brings together international
+                    speakers, groundbreaking technologies, successful business systems, and fresh ideas from real estate
+                    markets around the world.
+                  </p>
+                  <p>
+                    Discover new opportunities, explore international markets, embrace emerging technologies, build
+                    global partnerships, and strengthen the bonds that unite our team.
+                  </p>
+                  <p className="border-l-2 border-[#ffd700] pl-5 italic text-white/90">
+                    Because growth happens when we look beyond what we know, learn from the best, and dare to think
+                    beyond boundaries.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-4 pt-2">
+                    <Link
+                      href="/ares-2027-interest"
+                      className="group inline-flex min-h-[48px] items-center gap-3 rounded-full bg-[#ffd700] px-6 text-sm font-semibold text-gray-900 transition-colors hover:bg-white"
+                    >
+                      Register your interest
+                      <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
       </section>
 
       {/* ------------------------------------------------------------------ */}

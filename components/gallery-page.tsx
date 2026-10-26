@@ -20,6 +20,22 @@ type AlbumFilter = "all" | string
 const EASE_OUT = [0.22, 1, 0.36, 1] as const
 /** Photos revealed per "Show more" click. */
 const PAGE_SIZE = 24
+
+/** Recap videos, newest first. */
+const recaps = [
+  {
+    year: 2025,
+    src: "/recap-2025.mp4",
+    poster: "/recap-2025-poster.jpg",
+    text: "Thank you to our corporate sponsors, speakers and delegates for making the Asian Real Estate Summit 2025 an unforgettable success. Two days in Bangkok brought together a world-class speaker lineup, a conference packed with practical insight, and a dinner cruise that turned connections into friendships.",
+  },
+  {
+    year: 2023,
+    src: "https://leuteriorealty.com/videos/ARES2023.mp4",
+    poster: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ares-thumbnail.png",
+    text: "Thank you to our corporate sponsors, speakers and delegates for making the Asian Real Estate Summit 2023 an outstanding success. Over 400 practitioners and a dozen speakers filled two days with insight that is still shaping the industry.",
+  },
+]
 /** Only the first batch gets a staggered entrance; later batches fade in together. */
 const STAGGER_LIMIT = 16
 
@@ -469,7 +485,7 @@ const GalleryPage = () => {
       </section>
 
       {/* ------------------------------------------------------------------ */}
-      {/* HIGHLIGHTS VIDEO                                                     */}
+      {/* RECAP VIDEOS                                                         */}
       {/* ------------------------------------------------------------------ */}
       <section className="relative overflow-hidden bg-[#0b0f19] py-20 text-white md:py-28">
         <div aria-hidden className="dot-grid absolute inset-0 opacity-30" />
@@ -477,46 +493,48 @@ const GalleryPage = () => {
           aria-hidden
           className="pointer-events-none absolute -right-32 top-0 h-[26rem] w-[26rem] rounded-full bg-[#0078b6]/20 blur-[120px]"
         />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-32 bottom-0 h-[26rem] w-[26rem] rounded-full bg-[#e22837]/20 blur-[120px]"
+        />
 
-        <div className="container relative z-10 mx-auto px-4 sm:px-6">
-          <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
-            <Reveal>
-              <p className="mb-4 inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/60">
-                <span className="h-px w-8 bg-gradient-to-r from-[#ffd700] to-[#e22837]" />
-                Watch the recap
-              </p>
-              <h2 className="text-3xl font-bold leading-tight md:text-4xl">
-                ARES 2023 <span className="gradient-text">highlights</span>
-              </h2>
-              <p className="mt-2 flex items-center gap-2 text-sm text-white/60">
-                <MapPin size={14} className="text-[#ffd700]" />
-                Bangkok, Thailand
-              </p>
-              <p className="mt-6 leading-relaxed text-white/75">
-                Thank you to our corporate sponsors, speakers and delegates for making the Asian Real Estate Summit
-                2023 an outstanding success. Over 400 practitioners and a dozen speakers filled two days with
-                insight that is still shaping the industry.
-              </p>
-            </Reveal>
+        <div className="container relative z-10 mx-auto space-y-24 px-4 sm:px-6 md:space-y-32">
+          {recaps.map((recap, i) => (
+            <div
+              key={recap.year}
+              className={`mx-auto grid max-w-7xl items-center gap-12 lg:gap-16 ${
+                i % 2 === 0 ? "lg:grid-cols-[0.8fr_1.2fr]" : "lg:grid-cols-[1.2fr_0.8fr]"
+              }`}
+            >
+              <Reveal className={i % 2 === 0 ? "" : "lg:order-2"}>
+                <p className="mb-4 inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/60">
+                  <span className="h-px w-8 bg-gradient-to-r from-[#ffd700] to-[#e22837]" />
+                  Watch the recap
+                </p>
+                <h2 className="text-3xl font-bold leading-tight md:text-4xl">
+                  ARES {recap.year} <span className="gradient-text">highlights</span>
+                </h2>
+                <p className="mt-2 flex items-center gap-2 text-sm text-white/60">
+                  <MapPin size={14} className="text-[#ffd700]" />
+                  Bangkok, Thailand
+                </p>
+                <p className="mt-6 leading-relaxed text-white/75">{recap.text}</p>
+              </Reveal>
 
-            <Reveal direction="left" amount={0.2}>
-              <div className="group relative overflow-hidden rounded-3xl border border-white/10 bg-black shadow-[0_30px_80px_rgba(0,0,0,0.5)]">
-                <video
-                  controls
-                  preload="none"
-                  className="aspect-video h-auto w-full"
-                  poster="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ares-thumbnail.png"
-                >
-                  <source src="https://leuteriorealty.com/videos/ARES2023.mp4" type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
-                <div className="pointer-events-none absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest backdrop-blur-sm">
-                  <Play size={12} className="text-[#ffd700]" />
-                  Official recap
+              <Reveal direction={i % 2 === 0 ? "left" : "right"} amount={0.2} className={i % 2 === 0 ? "" : "lg:order-1"}>
+                <div className="group relative overflow-hidden rounded-3xl border border-white/10 bg-black shadow-[0_30px_80px_rgba(0,0,0,0.5)]">
+                  <video controls preload="none" playsInline className="aspect-video h-auto w-full" poster={recap.poster}>
+                    <source src={recap.src} type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                  <div className="pointer-events-none absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest backdrop-blur-sm">
+                    <Play size={12} className="text-[#ffd700]" />
+                    Official recap
+                  </div>
                 </div>
-              </div>
-            </Reveal>
-          </div>
+              </Reveal>
+            </div>
+          ))}
         </div>
       </section>
 
