@@ -35,7 +35,13 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import CustomLightbox from "./custom-lightbox"
 import { Reveal, Stagger, staggerItem, SplitText, Counter, TiltCard, Magnetic, Marquee, Particles } from "./motion"
-import { getRandomHighlights, homepageHighlights, totalPhotoCount, type GalleryPhoto } from "@/lib/gallery-albums"
+import {
+  ares2025Photos,
+  getRandomHighlights,
+  homepageHighlights,
+  totalPhotoCount,
+  type GalleryPhoto,
+} from "@/lib/gallery-albums"
 
 // Served from /public: the original S3 teaser was 86 MB (14 Mbps); the 720p
 // re-encode is a fraction of that, with a faststart header so playback begins
@@ -338,11 +344,26 @@ const HomePage = () => {
     setCurrentImageIndex(index)
     setLightboxOpen(true)
   }
-  const handleLightboxClose = () => setLightboxOpen(false)
-  const handleLightboxPrev = () =>
+  // A hero tile opens its own photo; paging from there continues through the
+  // homepage grid.
+  const [heroLightboxPhoto, setHeroLightboxPhoto] = useState<GalleryPhoto | null>(null)
+  const lightboxPhoto = heroLightboxPhoto ?? images[currentImageIndex]
+  const openHeroPhoto = (photo: GalleryPhoto) => {
+    setHeroLightboxPhoto(photo)
+    setLightboxOpen(true)
+  }
+  const handleLightboxClose = () => {
+    setLightboxOpen(false)
+    setHeroLightboxPhoto(null)
+  }
+  const handleLightboxPrev = () => {
+    setHeroLightboxPhoto(null)
     setCurrentImageIndex((prevIndex) => (prevIndex === 0 ? images.length - 1 : prevIndex - 1))
-  const handleLightboxNext = () =>
+  }
+  const handleLightboxNext = () => {
+    setHeroLightboxPhoto(null)
     setCurrentImageIndex((prevIndex) => (prevIndex === images.length - 1 ? 0 : prevIndex + 1))
+  }
 
   // ---- Contact form -----------------------------------------------------------
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -374,7 +395,47 @@ const HomePage = () => {
     }
   }
 
-  const heroCards = images.slice(0, 3)
+  // ---- Hero slideshow ---------------------------------------------------------
+  // Three tiles; every second one of them (in turn) crossfades to a fresh
+  // photo, so each tile changes every three seconds. Paused while the intro is
+  // open, while the tab is hidden, and for people who prefer reduced motion.
+  const [heroCards, setHeroCards] = useState<GalleryPhoto[]>(() => homepageHighlights.slice(0, 3))
+  useEffect(() => {
+    setHeroCards(images.slice(0, 3))
+    // Seed from the random pick once; the slideshow takes over from there.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const heroCardsRef = useRef<GalleryPhoto[]>(heroCards)
+  heroCardsRef.current = heroCards
+  useEffect(() => {
+    if (reduce || introOpen) return
+    let tile = 0
+    let cancelled = false
+    const tick = () => {
+      if (document.hidden) return
+      const pool = ares2025Photos
+      let next: GalleryPhoto
+      do {
+        next = pool[Math.floor(Math.random() * pool.length)]
+      } while (heroCardsRef.current.some((p) => p.thumb === next.thumb))
+      const slot = tile
+      tile = (tile + 1) % 3
+      // Decode first so the crossfade never shows a blank tile.
+      const img = new Image()
+      img.src = next.thumb
+      const swap = () => {
+        if (cancelled) return
+        setHeroCards((cards) => cards.map((p, i) => (i === slot ? next : p)))
+      }
+      if (img.decode) img.decode().then(swap, swap)
+      else img.onload = swap
+    }
+    const id = window.setInterval(tick, 1000)
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+    }
+  }, [reduce, introOpen])
 
   return (
     <div className="flex-grow overflow-hidden">
@@ -719,9 +780,9 @@ const HomePage = () => {
               <div className="grid grid-cols-2 grid-rows-[240px_180px] gap-3">
                 {heroCards.map((photo, i) => (
                   <motion.button
-                    key={photo.thumb}
+                    key={i}
                     type="button"
-                    onClick={() => handleImageClick(i)}
+                    onClick={() => openHeroPhoto(photo)}
                     aria-label={`Open photo from ${photo.album.title}`}
                     initial={{ opacity: 0, scale: 0.94 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -730,15 +791,22 @@ const HomePage = () => {
                       i === 0 ? "col-span-2" : ""
                     }`}
                   >
-                    <img
-                      src={photo.thumb}
-                      alt=""
-                      loading="eager"
-                      decoding="async"
-                      className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                    />
+                    <AnimatePresence initial={false}>
+                      <motion.img
+                        key={photo.thumb}
+                        src={photo.thumb}
+                        alt=""
+                        loading="eager"
+                        decoding="async"
+                        initial={{ opacity: 0, scale: 1.06 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                      />
+                    </AnimatePresence>
                     <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-                    <span className="pointer-events-none absolute bottom-3 left-3 translate-y-2 text-xs font-semibold text-white opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+                    <span className="pointer-events-none absolute bottom-3 left-3 z-10 translate-y-2 text-xs font-semibold text-white opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
                       {photo.album.shortTitle}
                     </span>
                   </motion.button>
@@ -1188,12 +1256,8 @@ const HomePage = () => {
       <CustomLightbox
         open={lightboxOpen}
         onClose={handleLightboxClose}
-        currentImage={images[currentImageIndex]?.full || ""}
-        caption={
-          images[currentImageIndex]
-            ? `${images[currentImageIndex].album.title} · #${images[currentImageIndex].indexInAlbum}`
-            : undefined
-        }
+        currentImage={lightboxPhoto?.full || ""}
+        caption={lightboxPhoto ? `${lightboxPhoto.album.title} · #${lightboxPhoto.indexInAlbum}` : undefined}
         onPrev={handleLightboxPrev}
         onNext={handleLightboxNext}
         imageCount={images.length}
