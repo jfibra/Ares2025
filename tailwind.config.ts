@@ -71,6 +71,26 @@ const config: Config = {
   			sm: 'calc(var(--radius) - 4px)'
   		},
   		keyframes: {
+  			ticker: {
+  				from: { transform: 'translateX(0)' },
+  				to: { transform: 'translateX(-50%)' }
+  			},
+  			'gradient-x': {
+  				'0%, 100%': { backgroundPosition: '0% 50%' },
+  				'50%': { backgroundPosition: '100% 50%' }
+  			},
+  			'float-slow': {
+  				'0%, 100%': { transform: 'translate3d(0, 0, 0) scale(1)' },
+  				'50%': { transform: 'translate3d(0, -24px, 0) scale(1.04)' }
+  			},
+  			'spin-slow': {
+  				from: { transform: 'rotate(0deg)' },
+  				to: { transform: 'rotate(360deg)' }
+  			},
+  			shimmer: {
+  				from: { transform: 'translateX(-150%) skewX(-20deg)' },
+  				to: { transform: 'translateX(250%) skewX(-20deg)' }
+  			},
   			'accordion-down': {
   				from: {
   					height: '0'
@@ -89,6 +109,11 @@ const config: Config = {
   			}
   		},
   		animation: {
+  			ticker: 'ticker 28s linear infinite',
+  			'gradient-x': 'gradient-x 6s ease infinite',
+  			'float-slow': 'float-slow 9s ease-in-out infinite',
+  			'spin-slow': 'spin-slow 24s linear infinite',
+  			shimmer: 'shimmer 2.4s ease-in-out infinite',
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
   		}

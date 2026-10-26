@@ -9,7 +9,7 @@ const pageUrl = `${baseUrl}/ares-2025-countdown-contest`
 export const metadata: Metadata = {
   title: "ARES 2025 Countdown Contest - Share Your Excitement & Win Prizes!",
   description:
-    "🎉 Join the ARES 2025 Countdown Contest! Share your excitement for the Asian Real Estate Summit and win amazing prizes. Contest entry form available now - don't miss out!",
+    "Join the ARES 2025 Countdown Contest! Share your excitement for the Asian Real Estate Summit and win amazing prizes. Contest entry form available now - don't miss out!",
   keywords: [
     "ARES 2025",
     "Countdown Contest",
@@ -23,9 +23,9 @@ export const metadata: Metadata = {
     "Win Prizes",
   ],
   openGraph: {
-    title: "🎉 ARES 2025 Countdown Contest - Win Amazing Prizes!",
+    title: "ARES 2025 Countdown Contest - Win Amazing Prizes!",
     description:
-      "Join the ARES 2025 Countdown Contest! Share your excitement for the Asian Real Estate Summit and win amazing prizes. Enter now! 🏆",
+      "Join the ARES 2025 Countdown Contest! Share your excitement for the Asian Real Estate Summit and win amazing prizes. Enter now!",
     url: pageUrl,
     siteName: "ARES 2025 - Asian Real Estate Summit",
     images: [
@@ -42,8 +42,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "🎉 ARES 2025 Countdown Contest - Win Amazing Prizes!",
-    description: "Join the countdown contest and win amazing prizes! Share your excitement for ARES 2025! 🏆",
+    title: "ARES 2025 Countdown Contest - Win Amazing Prizes!",
+    description: "Join the countdown contest and win amazing prizes! Share your excitement for ARES 2025!",
     images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/EVENT+COUNTDOWN.png"],
     creator: "@filipinohomes",
     site: "@ARES2025",

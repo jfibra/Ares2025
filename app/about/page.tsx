@@ -9,7 +9,7 @@ const pageUrl = `${baseUrl}/about`
 export const metadata: Metadata = {
   title: "About ARES 2025 - Asian Real Estate Summit Mission & Vision",
   description:
-    "🌟 Discover the mission behind ARES 2025! Learn about Asia's premier real estate summit, our vision for the industry, and why Bangkok, Thailand is the perfect destination for real estate excellence.",
+    "Discover the mission behind ARES 2025! Learn about Asia's premier real estate summit, our vision for the industry, and why Bangkok, Thailand is the perfect destination for real estate excellence.",
   keywords: [
     "About ARES 2025",
     "Asian Real Estate Summit",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "About ARES 2025 - Asian Real Estate Summit Mission & Vision",
     description:
-      "🌟 Discover the mission behind ARES 2025! Learn about Asia's premier real estate summit and our vision for the industry.",
+      "Discover the mission behind ARES 2025! Learn about Asia's premier real estate summit and our vision for the industry.",
     url: pageUrl,
     siteName: "ARES 2025 - Asian Real Estate Summit",
     images: [
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "About ARES 2025 - Asian Real Estate Summit",
-    description: "🌟 Discover the mission behind Asia's premier real estate summit! 🚀",
+    description: "Discover the mission behind Asia's premier real estate summit!",
     images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"],
     creator: "@filipinohomes",
     site: "@ARES2025",

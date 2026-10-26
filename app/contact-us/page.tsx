@@ -9,7 +9,7 @@ const pageUrl = `${baseUrl}/contact-us`
 export const metadata: Metadata = {
   title: "Contact ARES 2025 - Get in Touch | Asian Real Estate Summit",
   description:
-    "📞 Contact ARES 2025! Get in touch for registration, sponsorship opportunities, or any questions about the Asian Real Estate Summit in Bangkok, Thailand. We're here to help!",
+    "Contact ARES 2025! Get in touch for registration, sponsorship opportunities, or any questions about the Asian Real Estate Summit in Bangkok, Thailand. We're here to help!",
   keywords: [
     "Contact ARES 2025",
     "Asian Real Estate Summit",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     "Event Inquiries",
   ],
   openGraph: {
-    title: "📞 Contact ARES 2025 - Get in Touch",
+    title: "Contact ARES 2025 - Get in Touch",
     description:
       "Contact ARES 2025 for registration, sponsorship opportunities, or any questions about Asia's premier real estate summit!",
     url: pageUrl,
@@ -42,8 +42,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "📞 Contact ARES 2025 - Get in Touch",
-    description: "Contact us for registration, sponsorship, or any questions about ARES 2025! 🚀",
+    title: "Contact ARES 2025 - Get in Touch",
+    description: "Contact us for registration, sponsorship, or any questions about ARES 2025!",
     images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"],
     creator: "@filipinohomes",
     site: "@ARES2025",

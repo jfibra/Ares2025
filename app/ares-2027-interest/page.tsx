@@ -9,7 +9,7 @@ const pageUrl = `${baseUrl}/ares-2027-interest`
 export const metadata: Metadata = {
   title: "ARES 2027 Interest Form - Join the Future of Asian Real Estate",
   description:
-    "🚀 Be part of ARES 2027! Register your interest for the next Asian Real Estate Summit and be the first to know about this groundbreaking event. Secure your spot in the future!",
+    "Be part of ARES 2027! Register your interest for the next Asian Real Estate Summit and be the first to know about this groundbreaking event. Secure your spot in the future!",
   keywords: [
     "ARES 2027",
     "Asian Real Estate Summit",
@@ -23,9 +23,9 @@ export const metadata: Metadata = {
     "Networking Event",
   ],
   openGraph: {
-    title: "🚀 ARES 2027 - Join the Future of Asian Real Estate",
+    title: "ARES 2027 - Join the Future of Asian Real Estate",
     description:
-      "Register your interest for ARES 2027 and be part of the next revolutionary Asian Real Estate Summit. The future starts here! 🌟",
+      "Register your interest for ARES 2027 and be part of the next revolutionary Asian Real Estate Summit. The future starts here!",
     url: pageUrl,
     siteName: "ARES 2025 - Asian Real Estate Summit",
     images: [
@@ -42,8 +42,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "🚀 ARES 2027 - Join the Future of Asian Real Estate",
-    description: "Register your interest for ARES 2027! Be part of the next revolutionary summit! 🌟",
+    title: "ARES 2027 - Join the Future of Asian Real Estate",
+    description: "Register your interest for ARES 2027! Be part of the next revolutionary summit!",
     images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"],
     creator: "@filipinohomes",
     site: "@ARES2025",

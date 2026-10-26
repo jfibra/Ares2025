@@ -3,189 +3,328 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Facebook, Twitter, Menu, X } from "lucide-react"
+import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion"
+import { Facebook, Twitter, ArrowUpRight, MapPin } from "lucide-react"
 import ScrollToTop from "./scroll-to-top"
+
+const LOGO_URL = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
 
 const navItems = [
   { name: "Home", href: "/" },
   { name: "About", href: "/about" },
   { name: "Speakers", href: "/speakers" },
   { name: "Gallery", href: "/gallery" },
-  { name: "Contact Us", href: "/contact-us" },
 ]
+
+const socials = [
+  { name: "Facebook", href: "https://facebook.com", icon: Facebook },
+  { name: "Twitter", href: "https://twitter.com", icon: Twitter },
+]
+
+const ease = [0.22, 1, 0.36, 1] as const
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [hidden, setHidden] = useState(false)
+  const [hovered, setHovered] = useState<string | null>(null)
   const pathname = usePathname()
+  const { scrollY } = useScroll()
+
+  // Solid glass once past the top; tuck away while scrolling down, pop back on scroll up.
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    const prev = scrollY.getPrevious() ?? 0
+    setIsScrolled(latest > 40)
+    if (isOpen) return
+    setHidden(latest > prev && latest > 240)
+  })
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth > 768 && isOpen) {
-        setIsOpen(false)
-      }
+      if (window.innerWidth > 768 && isOpen) setIsOpen(false)
     }
-
-    const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setIsScrolled(true)
-      } else {
-        setIsScrolled(false)
-      }
-    }
-
     window.addEventListener("resize", handleResize)
-    window.addEventListener("scroll", handleScroll)
-
-    return () => {
-      window.removeEventListener("resize", handleResize)
-      window.removeEventListener("scroll", handleScroll)
-    }
+    return () => window.removeEventListener("resize", handleResize)
   }, [isOpen])
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden"
-    } else {
+    document.body.style.overflow = isOpen ? "hidden" : "visible"
+    return () => {
       document.body.style.overflow = "visible"
     }
   }, [isOpen])
 
   useEffect(() => {
-    // Scroll to top when pathname changes
+    // Close the menu and scroll to top when the route changes
+    setIsOpen(false)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }, [pathname])
 
+  useEffect(() => {
+    if (!isOpen) return
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setIsOpen(false)
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [isOpen])
+
+  const light = !isScrolled && !isOpen // white text over the hero
+  const activeKey = hovered ?? pathname
+
   return (
     <>
-      <nav
-        className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-400 ${
-          isScrolled ? "mt-0" : "mt-12"
-        } shadow-lg`}
+      {/* Soft scrim so white nav text stays legible over any hero */}
+      <div
+        aria-hidden
+        className={`pointer-events-none fixed inset-x-0 top-0 z-[999] h-40 bg-gradient-to-b from-black/60 to-transparent transition-opacity duration-500 ${
+          light ? "opacity-100" : "opacity-0"
+        }`}
+      />
+
+      <motion.header
+        className={`fixed inset-x-0 top-0 ${isOpen ? "z-[1002]" : "z-[1000]"}`}
+        initial={false}
+        animate={{ y: hidden && !isOpen ? -120 : 0 }}
+        transition={{ duration: 0.45, ease }}
       >
-        {/* Main navbar container */}
-        <div className="max-w-6xl mx-auto relative">
-          {/* Background that extends left */}
-          <div
-            className={`absolute top-0 right-full w-screen h-full bg-gradient-to-r from-white to-gray-50 ${
-              isScrolled ? "shadow-lg" : ""
+        <motion.div
+          className="mx-auto"
+          initial={false}
+          animate={{
+            maxWidth: isScrolled ? 1180 : 1400,
+            marginTop: isScrolled ? 12 : 0,
+            paddingLeft: isScrolled ? 12 : 0,
+            paddingRight: isScrolled ? 12 : 0,
+          }}
+          transition={{ duration: 0.5, ease }}
+        >
+          <motion.nav
+            aria-label="Main"
+            className={`relative flex items-center justify-between px-4 md:px-6 ${
+              isScrolled && !isOpen ? "glass-light" : ""
             }`}
-          />
+            initial={false}
+            animate={{
+              height: isScrolled ? 68 : 88,
+              borderRadius: isScrolled ? 999 : 0,
+            }}
+            transition={{ duration: 0.5, ease }}
+          >
+            {/* Logo */}
+            <Link href="/" className="group relative z-10 flex items-center" aria-label="ARES home">
+              <motion.img
+                src={LOGO_URL}
+                alt="Asian Real Estate Summit"
+                className={`w-auto transition-[filter] duration-500 ${light ? "drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" : ""}`}
+                initial={false}
+                animate={{ height: isScrolled ? 44 : 60 }}
+                transition={{ duration: 0.5, ease }}
+                whileHover={{ scale: 1.04 }}
+              />
+            </Link>
 
-          {/* Main navbar content */}
-          <div className="bg-gradient-to-r from-white to-gray-50 border-b border-gray-200 relative">
-            <div className="flex justify-between items-center h-20 pl-4">
-              <div className="flex-shrink-0 z-10">
-                <Link href="/" className="block transition-transform hover:scale-105">
-                  <img
-                    src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
-                    alt="Asian Real Estate Summit"
-                    className="h-20 w-auto"
-                  />
-                </Link>
-              </div>
-
-              {/* Desktop Menu with Social Icons */}
-              <div className="hidden md:flex items-center">
-                <div className="flex items-center gap-1 mr-4">
-                  {navItems.map((item) => (
+            {/* Desktop links */}
+            <ul
+              className="relative hidden items-center gap-1 md:flex"
+              onMouseLeave={() => setHovered(null)}
+            >
+              {navItems.map((item) => {
+                const active = pathname === item.href
+                const highlighted = activeKey === item.href
+                return (
+                  <li key={item.href} className="relative">
                     <Link
-                      key={item.name}
                       href={item.href}
-                      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 relative overflow-hidden ${
-                        pathname === item.href
-                          ? "bg-gradient-to-r from-[#0078b6] to-[#005a8b] text-white shadow-lg"
-                          : "text-gray-700 hover:text-[#0078b6] hover:bg-gray-100"
+                      onMouseEnter={() => setHovered(item.href)}
+                      className={`relative block rounded-full px-4 py-2 text-sm font-semibold tracking-wide transition-colors duration-300 ${
+                        light
+                          ? active
+                            ? "text-white"
+                            : "text-white/80 hover:text-white"
+                          : active
+                            ? "text-[#0078b6]"
+                            : "text-gray-700 hover:text-gray-900"
                       }`}
                     >
+                      {highlighted && (
+                        <motion.span
+                          layoutId="nav-pill"
+                          className={`absolute inset-0 -z-10 rounded-full ${
+                            light ? "bg-white/15 ring-1 ring-white/25" : "bg-[#0078b6]/10"
+                          }`}
+                          transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                        />
+                      )}
                       {item.name}
+                      {active && (
+                        <motion.span
+                          layoutId="nav-dot"
+                          className={`absolute -bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full ${
+                            light ? "bg-[#ffd700]" : "bg-[#e22837]"
+                          }`}
+                          transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                        />
+                      )}
                     </Link>
-                  ))}
-                </div>
+                  </li>
+                )
+              })}
+            </ul>
 
-                {/* Social Icons - positioned as part of navigation */}
-                <div className="flex flex-col">
-                  <a
-                    href="https://facebook.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-12 h-10 bg-gradient-to-br from-[#1877f2] to-[#0d5dbf] text-white flex items-center justify-center hover:from-[#0d5dbf] hover:to-[#1877f2] transition-all duration-300 hover:scale-105 relative overflow-hidden group"
-                  >
-                    <Facebook size={18} />
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
-                  </a>
-                  <a
-                    href="https://twitter.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-12 h-10 bg-gradient-to-br from-[#1da1f2] to-[#0d8bd9] text-white flex items-center justify-center hover:from-[#0d8bd9] hover:to-[#1da1f2] transition-all duration-300 hover:scale-105 relative overflow-hidden group"
-                  >
-                    <Twitter size={18} />
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
-                  </a>
-                </div>
-              </div>
-
-              {/* Mobile Menu Button */}
-              <div className="md:hidden z-10">
-                <button
-                  onClick={() => setIsOpen(!isOpen)}
-                  className="p-2 text-gray-700 hover:text-[#0078b6] transition-colors"
-                  aria-label="Toggle navigation"
+            {/* Right cluster: socials + CTA */}
+            <div className="hidden items-center gap-2 md:flex">
+              {socials.map(({ name, href, icon: Icon }) => (
+                <motion.a
+                  key={name}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={name}
+                  whileHover={{ y: -2, scale: 1.08 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`grid h-10 w-10 place-items-center rounded-full border transition-colors duration-300 ${
+                    light
+                      ? "border-white/25 bg-white/10 text-white hover:bg-white/20"
+                      : "border-gray-200 bg-white text-gray-600 hover:border-[#0078b6]/40 hover:text-[#0078b6]"
+                  }`}
                 >
-                  {isOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
-              </div>
+                  <Icon size={16} />
+                </motion.a>
+              ))}
+
+              <Link href="/contact-us" className="ml-2">
+                <motion.span
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
+                  className={`shine group relative inline-flex items-center gap-2 overflow-hidden rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-shadow duration-300 hover:shadow-xl ${
+                    pathname === "/contact-us"
+                      ? "bg-gradient-to-r from-[#0078b6] to-[#005a8b]"
+                      : "bg-gradient-to-r from-[#e22837] to-[#0078b6]"
+                  }`}
+                >
+                  Contact Us
+                  <ArrowUpRight
+                    size={16}
+                    className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                  />
+                </motion.span>
+              </Link>
             </div>
-          </div>
 
-          {/* Background that extends right only when scrolled */}
-          {isScrolled && (
-            <div className="absolute top-0 left-full w-screen h-full bg-gradient-to-r from-white to-gray-50 shadow-lg" />
-          )}
-        </div>
-      </nav>
-
-      {/* Mobile Sidebar */}
-      <div
-        className={`fixed top-0 right-0 w-80 h-full bg-white z-[1001] transform transition-transform duration-400 shadow-2xl ${
-          isOpen ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <button
-            onClick={() => setIsOpen(false)}
-            className="p-2 text-[#0078b6] hover:bg-gray-100 rounded-lg transition-colors"
-            aria-label="Close navigation"
-          >
-            <X size={24} />
-          </button>
-        </div>
-        <div className="py-6">
-          {navItems.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`block px-6 py-4 text-lg font-semibold transition-all duration-300 border-l-4 ${
-                pathname === item.href
-                  ? "text-[#0078b6] bg-gradient-to-r from-blue-50 to-red-50 border-l-[#e22837]"
-                  : "text-gray-700 border-l-transparent hover:text-[#0078b6] hover:border-l-[#0078b6] hover:bg-gray-50"
+            {/* Mobile toggle: two bars that morph into an X */}
+            <button
+              onClick={() => setIsOpen((v) => !v)}
+              aria-label={isOpen ? "Close navigation" : "Open navigation"}
+              aria-expanded={isOpen}
+              className={`relative z-[1002] grid h-11 w-11 place-items-center rounded-full border transition-colors duration-300 md:hidden ${
+                light || isOpen ? "border-white/25 bg-white/10 text-white" : "border-gray-200 bg-white text-gray-800"
               }`}
-              onClick={() => setIsOpen(false)}
             >
-              {item.name}
-            </Link>
-          ))}
-        </div>
-      </div>
+              <span className="relative block h-4 w-5">
+                <motion.span
+                  className="absolute left-0 top-0 block h-0.5 w-5 rounded-full bg-current"
+                  animate={isOpen ? { y: 7, rotate: 45 } : { y: 0, rotate: 0 }}
+                  transition={{ duration: 0.3, ease }}
+                />
+                <motion.span
+                  className="absolute left-0 top-[7px] block h-0.5 w-5 rounded-full bg-current"
+                  animate={isOpen ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }}
+                  transition={{ duration: 0.2 }}
+                />
+                <motion.span
+                  className="absolute left-0 top-[14px] block h-0.5 w-5 rounded-full bg-current"
+                  animate={isOpen ? { y: -7, rotate: -45 } : { y: 0, rotate: 0 }}
+                  transition={{ duration: 0.3, ease }}
+                />
+              </span>
+            </button>
+          </motion.nav>
+        </motion.div>
+      </motion.header>
 
-      {/* Overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-40 z-[1000] backdrop-blur-sm"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      {/* Mobile full-screen menu */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            key="mobile-menu"
+            className="fixed inset-0 z-[1001] flex flex-col overflow-hidden bg-gradient-to-br from-[#0b1220] via-[#0f172a] to-black text-white md:hidden"
+            initial={{ clipPath: "circle(0% at calc(100% - 44px) 44px)" }}
+            animate={{ clipPath: "circle(150% at calc(100% - 44px) 44px)" }}
+            exit={{ clipPath: "circle(0% at calc(100% - 44px) 44px)" }}
+            transition={{ duration: 0.6, ease }}
+          >
+            <div className="dot-grid absolute inset-0 opacity-60" />
+            <div className="pointer-events-none absolute -left-20 top-1/3 h-72 w-72 rounded-full bg-[#0078b6]/40 blur-[100px]" />
+            <div className="pointer-events-none absolute -right-20 bottom-10 h-72 w-72 rounded-full bg-[#e22837]/40 blur-[100px]" />
+
+            {/* Spacer under the header, which stays on top while the menu is open */}
+            <div className="h-[88px]" />
+
+            <nav aria-label="Mobile" className="relative flex flex-1 flex-col justify-center px-8">
+              <ul className="space-y-2">
+                {[...navItems, { name: "Contact Us", href: "/contact-us" }].map((item, i) => {
+                  const active = pathname === item.href
+                  return (
+                    <motion.li
+                      key={item.href}
+                      initial={{ opacity: 0, x: 40 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: 0.15 + i * 0.07, duration: 0.5, ease }}
+                    >
+                      <Link
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className="group flex items-center justify-between py-3"
+                      >
+                        <span className="flex items-baseline gap-4">
+                          <span className="text-xs font-semibold tabular-nums text-white/40">0{i + 1}</span>
+                          <span
+                            className={`text-4xl font-black tracking-tight transition-colors ${
+                              active ? "gradient-text" : "text-white group-hover:text-white/80"
+                            }`}
+                          >
+                            {item.name}
+                          </span>
+                        </span>
+                        <ArrowUpRight
+                          className="text-white/40 transition-all duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-white"
+                          size={22}
+                        />
+                      </Link>
+                    </motion.li>
+                  )
+                })}
+              </ul>
+            </nav>
+
+            <motion.div
+              className="relative flex items-center justify-between border-t border-white/10 px-8 py-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+            >
+              <p className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/60">
+                <MapPin size={14} className="text-[#ffd700]" /> Bangkok · July 1–2, 2025
+              </p>
+              <div className="flex gap-2">
+                {socials.map(({ name, href, icon: Icon }) => (
+                  <a
+                    key={name}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={name}
+                    className="grid h-10 w-10 place-items-center rounded-full border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20"
+                  >
+                    <Icon size={16} />
+                  </a>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <ScrollToTop />
     </>

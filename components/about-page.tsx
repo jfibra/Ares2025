@@ -1,184 +1,309 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Users, Target, Award, Globe, ArrowRight, CheckCircle } from "lucide-react"
+import { motion } from "framer-motion"
+import { Users, Target, Award, Globe, ArrowRight, ChevronDown, MapPin } from "lucide-react"
+import { Reveal, Stagger, staggerItem } from "./motion"
+import { homepageHighlights } from "@/lib/gallery-albums"
+
+const EASE_OUT = [0.22, 1, 0.36, 1] as const
+
+const features = [
+  {
+    icon: Users,
+    title: "Industry Leaders",
+    description: "Connect with top executives, developers, and innovators from across Asia's real estate sector.",
+    from: "#e22837",
+    to: "#672e91",
+  },
+  {
+    icon: Target,
+    title: "Strategic Insights",
+    description: "Gain valuable market intelligence and strategic perspectives to drive your business forward.",
+    from: "#0078b6",
+    to: "#672e91",
+  },
+  {
+    icon: Award,
+    title: "Expert Knowledge",
+    description: "Learn from renowned speakers sharing their expertise and best practices.",
+    from: "#f59e0b",
+    to: "#e22837",
+  },
+  {
+    icon: Globe,
+    title: "Regional Network",
+    description: "Build lasting connections with professionals from Thailand, the Philippines, and beyond.",
+    from: "#672e91",
+    to: "#0078b6",
+  },
+]
+
+// "What Makes ARES Special" copy, presented as a numbered list.
+const pillars = [
+  {
+    title: "A transformative experience",
+    text: "ARES is more than just a conference. It's a transformative experience that brings together the brightest minds in Asian real estate. Our biennial summit creates an unparalleled opportunity for learning, networking, and business development.",
+  },
+  {
+    title: "A curated lineup",
+    text: "We carefully curate our speaker lineup to include industry pioneers, successful entrepreneurs, and innovative thought leaders who share practical insights and actionable strategies.",
+  },
+  {
+    title: "Sessions built for value",
+    text: "From interactive workshops to panel discussions, every session is designed to provide maximum value and foster meaningful connections that extend far beyond the event.",
+  },
+]
+
+/** Three real event photos for the hero: one tall, two stacked beside it. */
+const heroPhotos = homepageHighlights.slice(0, 3)
 
 const AboutPage = () => {
-  const [isVisible, setIsVisible] = useState(false)
-
-  useEffect(() => {
-    setIsVisible(true)
-  }, [])
-
-  const features = [
-    {
-      icon: <Users className="w-8 h-8" />,
-      title: "Industry Leaders",
-      description: "Connect with top executives, developers, and innovators from across Asia's real estate sector.",
-    },
-    {
-      icon: <Target className="w-8 h-8" />,
-      title: "Strategic Insights",
-      description: "Gain valuable market intelligence and strategic perspectives to drive your business forward.",
-    },
-    {
-      icon: <Award className="w-8 h-8" />,
-      title: "Expert Knowledge",
-      description: "Learn from 12 renowned speakers sharing their expertise and best practices.",
-    },
-    {
-      icon: <Globe className="w-8 h-8" />,
-      title: "Regional Network",
-      description: "Build lasting connections with professionals from Thailand, Philippines, and beyond.",
-    },
-  ]
-
-  const sponsors = [
-    { name: "Cebu Landmasters", image: "/cebulandmasters.webp" },
-    { name: "Weecomm", image: "/weecomm.webp" },
-    { name: "Filinvest", image: "/filinvest.webp" },
-    { name: "BE Residences", image: "/beresidences.webp" },
-    { name: "Grandland", image: "/grandland.webp" },
-  ]
-
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section
-        className="min-h-screen flex items-center justify-center relative overflow-hidden bg-cover bg-center bg-fixed"
-        style={{ backgroundImage: "url(/bangkok.png)" }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-slate-800/80 to-black/70" />
+    <div className="min-h-screen bg-white font-sans text-gray-900">
+      {/* ------------------------------------------------------------------ */}
+      {/* HERO                                                                 */}
+      {/* ------------------------------------------------------------------ */}
+      <section className="relative overflow-hidden bg-[#0b0f19] text-white">
+        <div aria-hidden className="dot-grid absolute inset-0 opacity-30" />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-40 top-0 h-[28rem] w-[28rem] rounded-full bg-[#0078b6]/25 blur-[120px]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-32 bottom-0 h-[26rem] w-[26rem] rounded-full bg-[#e22837]/20 blur-[120px]"
+        />
 
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#ffd700]/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#e22837]/10 rounded-full blur-3xl animate-pulse delay-1000" />
-        </div>
+        <div className="container relative z-10 mx-auto px-4 pb-16 pt-32 sm:px-6 md:pb-24 md:pt-40">
+          <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+            <div>
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: EASE_OUT }}
+                className="mb-6 inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/60"
+              >
+                <span className="h-px w-8 bg-gradient-to-r from-[#e22837] to-[#0078b6]" />
+                About ARES
+              </motion.p>
 
-        <div className="container mx-auto px-6 mt-20 relative z-10">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            <div
-              className={`transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"}`}
-            >
-              <h1 className="text-5xl md:text-7xl font-black text-transparent bg-gradient-to-r from-[#ffd700] via-white to-[#ffd700] bg-clip-text leading-tight mb-6">
-                ABOUT ARES
-              </h1>
-              <div className="w-24 h-1 bg-gradient-to-r from-[#e22837] to-[#0078b6] mx-auto rounded-full mb-8" />
-              <p className="text-xl md:text-2xl text-white/80 leading-relaxed max-w-3xl mx-auto">
-                Asia's premier real estate summit bringing together industry leaders, innovators, and visionaries to
-                shape the future of real estate across the region.
-              </p>
-            </div>
+              <motion.h1
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.1, ease: EASE_OUT }}
+                className="text-5xl font-black leading-[1.02] tracking-tight md:text-6xl xl:text-7xl"
+              >
+                Where Asian real estate
+                <br />
+                <span className="gradient-text">comes together.</span>
+              </motion.h1>
 
-            <div
-              className={`flex flex-col sm:flex-row gap-6 justify-center items-center transition-all duration-1000 delay-300 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"}`}
-            >
-              <Link href="/speakers">
-                <Button className="bg-gradient-to-r from-[#e22837] to-[#0078b6] hover:from-[#d41e2d] hover:to-[#005a8b] text-white px-8 py-4 text-lg font-semibold rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 group">
-                  Meet Our Speakers
-                  <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={20} />
-                </Button>
-              </Link>
-              <Link href="/gallery">
-                <Button
-                  variant="outline"
-                  className="border-2 border-white/30 text-black bg-white hover:bg-white/10 px-8 py-4 text-lg font-semibold rounded-full backdrop-blur-sm transition-all duration-300 hover:scale-105"
+              <motion.p
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.25, ease: EASE_OUT }}
+                className="mt-6 max-w-xl text-lg leading-relaxed text-white/70 md:text-xl"
+              >
+                The Asian Real Estate Summit brings together industry leaders, innovators, and visionaries to shape
+                the future of real estate across the region.
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.4, ease: EASE_OUT }}
+                className="mt-10 flex flex-wrap items-center gap-4"
+              >
+                <Link
+                  href="/speakers"
+                  className="group inline-flex min-h-[48px] items-center gap-3 rounded-full bg-white px-6 text-sm font-semibold text-gray-900 transition-colors hover:bg-[#ffd700]"
                 >
-                  View Gallery
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Mission Section */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-6">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                Our{" "}
-                <span className="text-transparent bg-gradient-to-r from-[#e22837] to-[#0078b6] bg-clip-text">
-                  Mission
-                </span>
-              </h2>
-              <div className="w-20 h-1 bg-gradient-to-r from-[#e22837] to-[#0078b6] mx-auto rounded-full mb-8" />
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                To create a dynamic platform for knowledge exchange, networking, and collaboration among real estate
-                professionals across Asia.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-              {features.map((feature, index) => (
-                <div key={index} className="text-center group">
-                  <div className="bg-gradient-to-br from-[#e22837] to-[#0078b6] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white group-hover:scale-110 transition-transform duration-300">
-                    {feature.icon}
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-                  <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
-              <div className="space-y-6">
-                <h3 className="text-3xl font-bold text-gray-900 mb-6">What Makes ARES Special</h3>
-                <div className="space-y-6 text-gray-700 text-lg leading-relaxed">
-                  <p>
-                    ARES is more than just a conference—it's a transformative experience that brings together the
-                    brightest minds in Asian real estate. Our biennial summit creates an unparalleled opportunity for
-                    learning, networking, and business development.
-                  </p>
-                  <p>
-                    We carefully curate our speaker lineup to include industry pioneers, successful entrepreneurs, and
-                    innovative thought leaders who share practical insights and actionable strategies.
-                  </p>
-                  <p>
-                    From interactive workshops to panel discussions, every session is designed to provide maximum value
-                    and foster meaningful connections that extend far beyond the event.
-                  </p>
-                </div>
-              </div>
-              <div className="relative">
-                <div className="absolute -inset-6 bg-gradient-to-r from-[#e22837]/20 to-[#0078b6]/20 rounded-3xl blur-2xl" />
-                <img
-                  src="https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg"
-                  alt="ARES Mission"
-                  className="relative w-full h-full object-cover rounded-3xl shadow-2xl"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Achievements Section */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-white">
-        <div className="container mx-auto px-6">
-          <div className="max-w-6xl mx-auto">
-
-            <div className="text-center">
-              <div className="bg-gradient-to-r from-[#e22837]/10 to-[#0078b6]/10 p-8 rounded-3xl border border-gray-200">
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Ready for ARES 2025?</h3>
-                <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-                  Join us in Bangkok for an even bigger and better summit. Register now to secure your spot at Asia's
-                  most prestigious real estate event.
-                </p>
-                <Link href="/contact-us">
-                  <Button className="bg-gradient-to-r from-[#e22837] to-[#0078b6] hover:from-[#d41e2d] hover:to-[#005a8b] text-white px-8 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    Get in Touch
-                  </Button>
+                  Meet the speakers
+                  <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
                 </Link>
-              </div>
+                <Link
+                  href="/gallery"
+                  className="inline-flex min-h-[48px] items-center rounded-full border border-white/25 px-6 text-sm font-semibold text-white transition-colors hover:border-white hover:bg-white/10"
+                >
+                  View the gallery
+                </Link>
+              </motion.div>
+
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+                className="mt-10 flex items-center gap-2 text-sm text-white/50"
+              >
+                <MapPin size={14} className="text-[#ffd700]" />
+                Bangkok, Thailand · Biennial summit
+              </motion.p>
             </div>
+
+            {/* Photos */}
+            <motion.div
+              initial="hidden"
+              animate="show"
+              variants={{ hidden: {}, show: { transition: { staggerChildren: 0.1, delayChildren: 0.3 } } }}
+              className="grid aspect-[4/3] grid-cols-2 grid-rows-2 gap-3 lg:aspect-auto lg:h-[520px]"
+            >
+              {heroPhotos.map((photo, i) => (
+                <motion.div
+                  key={photo.thumb}
+                  variants={{
+                    hidden: { opacity: 0, scale: 0.94, y: 16 },
+                    show: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.7, ease: EASE_OUT } },
+                  }}
+                  className={`overflow-hidden rounded-2xl bg-white/5 ${i === 0 ? "row-span-2" : ""}`}
+                >
+                  <img
+                    src={i === 0 ? photo.full : photo.thumb}
+                    alt=""
+                    loading={i === 0 ? "eager" : "lazy"}
+                    decoding="async"
+                    className="h-full w-full object-cover"
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Scroll cue */}
+        <motion.div
+          aria-hidden
+          className="absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-2 md:flex"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.4, duration: 0.8 }}
+        >
+          <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/60">Explore</span>
+          <ChevronDown size={22} className="text-white/70 motion-safe:animate-bounce" />
+        </motion.div>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* MISSION + FEATURES                                                   */}
+      {/* ------------------------------------------------------------------ */}
+      <section className="relative overflow-hidden bg-gray-50 py-24 md:py-32">
+        <div
+          aria-hidden
+          className="absolute inset-0 [background-image:linear-gradient(to_right,rgba(15,23,42,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.05)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_75%)]"
+        />
+
+        <div className="container relative z-10 mx-auto px-4 sm:px-6">
+          <div className="mx-auto mb-16 max-w-3xl text-center md:mb-20">
+            <Reveal>
+              <p className="mb-5 inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-[#0078b6]">
+                <span className="h-px w-8 bg-gradient-to-r from-[#e22837] to-[#0078b6]" />
+                Our mission
+                <span className="h-px w-8 bg-gradient-to-r from-[#0078b6] to-[#e22837]" />
+              </p>
+              <h2 className="text-3xl font-bold leading-snug tracking-tight text-gray-900 md:text-4xl lg:text-[2.75rem] lg:leading-[1.2]">
+                To create a dynamic platform for knowledge exchange, networking, and collaboration among real estate
+                professionals <span className="gradient-text-brand">across Asia.</span>
+              </h2>
+            </Reveal>
+          </div>
+
+          <Stagger className="mx-auto grid max-w-6xl grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4" amount={0.15}>
+            {features.map(({ icon: Icon, title, description, from, to }, i) => (
+              <motion.div key={title} variants={staggerItem} className="h-full">
+                <div className="group relative h-full overflow-hidden rounded-[28px] border border-gray-200/80 bg-white p-7 transition-all duration-500 hover:-translate-y-1.5 hover:border-transparent hover:shadow-[0_30px_70px_rgba(15,23,42,0.12)] md:p-8">
+                  {/* Soft colour wash that appears on hover */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-0 blur-3xl transition-opacity duration-700 group-hover:opacity-20"
+                    style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+                  />
+
+                  {/* Large faint index */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute right-6 top-4 text-6xl font-black leading-none tracking-tight text-gray-100 transition-colors duration-500 group-hover:text-gray-200/80"
+                  >
+                    0{i + 1}
+                  </span>
+
+                  <div
+                    className="relative grid h-14 w-14 place-items-center rounded-2xl text-white shadow-[0_12px_30px_rgba(15,23,42,0.18)] transition-transform duration-500 group-hover:-translate-y-1 group-hover:rotate-[-6deg]"
+                    style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+                  >
+                    <Icon size={24} />
+                  </div>
+
+                  <h3 className="relative mt-8 text-xl font-bold text-gray-900">{title}</h3>
+                  <p className="relative mt-3 leading-relaxed text-gray-600">{description}</p>
+
+                  {/* Accent rule that grows on hover */}
+                  <span
+                    aria-hidden
+                    className="absolute bottom-0 left-7 right-7 h-[3px] origin-left scale-x-0 rounded-t-full transition-transform duration-500 ease-out group-hover:scale-x-100 md:left-8 md:right-8"
+                    style={{ background: `linear-gradient(90deg, ${from}, ${to})` }}
+                  />
+                </div>
+              </motion.div>
+            ))}
+          </Stagger>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* WHAT MAKES ARES SPECIAL                                              */}
+      {/* ------------------------------------------------------------------ */}
+      <section className="relative overflow-hidden bg-[#0b0f19] py-20 text-white md:py-28">
+        <div aria-hidden className="dot-grid absolute inset-0 opacity-30" />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-32 top-1/3 h-[26rem] w-[26rem] rounded-full bg-[#0078b6]/20 blur-[120px]"
+        />
+
+        <div className="container relative z-10 mx-auto px-4 sm:px-6">
+          <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1fr_0.8fr] lg:gap-20">
+            <div>
+              <Reveal>
+                <p className="mb-4 inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/60">
+                  <span className="h-px w-8 bg-gradient-to-r from-[#ffd700] to-[#e22837]" />
+                  Why ARES
+                </p>
+                <h2 className="text-3xl font-bold leading-tight md:text-4xl lg:text-5xl">
+                  What makes ARES <span className="gradient-text">special</span>
+                </h2>
+              </Reveal>
+
+              <ol className="mt-12 divide-y divide-white/10 border-y border-white/10">
+                {pillars.map(({ title, text }, i) => (
+                  <Reveal key={title} as="li" delay={i * 0.08} className="grid gap-4 py-8 sm:grid-cols-[4rem_1fr]">
+                    <span className="text-sm font-semibold tabular-nums tracking-widest text-[#ffd700]">0{i + 1}</span>
+                    <div>
+                      <h3 className="text-xl font-bold">{title}</h3>
+                      <p className="mt-3 leading-relaxed text-white/70">{text}</p>
+                    </div>
+                  </Reveal>
+                ))}
+              </ol>
+            </div>
+
+            {/* Poster */}
+            <Reveal direction="left" amount={0.2} className="lg:sticky lg:top-28 lg:self-start">
+              <div className="relative overflow-hidden rounded-3xl border border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.5)]">
+                <img
+                  src="/about-mission.jpg"
+                  alt="ARES 2027 Asian Real Estate Summit poster"
+                  loading="lazy"
+                  decoding="async"
+                  className="aspect-[4/5] w-full object-cover sm:aspect-[5/4] lg:aspect-[4/5]"
+                />
+                <span className="absolute left-4 top-4 inline-flex items-center rounded-full bg-black/50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest backdrop-blur-sm">
+                  Biennial summit
+                </span>
+              </div>
+            </Reveal>
           </div>
         </div>
       </section>
+
     </div>
   )
 }

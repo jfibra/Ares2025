@@ -29,32 +29,32 @@ export default function NotFound() {
       <div className="fixed inset-0 pointer-events-none z-20">
         <div className="absolute top-[10%] left-[5%] w-20 h-20 opacity-20 animate-float">
           <div className="w-full h-full bg-gradient-to-br from-[#ffd700] to-[#f59e0b] rounded-full flex items-center justify-center">
-            <span className="text-2xl">🏛️</span>
+            <span className="text-2xl"></span>
           </div>
         </div>
         <div className="absolute top-[15%] right-[8%] w-16 h-16 opacity-25 animate-float delay-1000">
           <div className="w-full h-full bg-gradient-to-br from-[#e22837] to-[#d41e2d] rounded-full flex items-center justify-center">
-            <span className="text-xl">🐘</span>
+            <span className="text-xl"></span>
           </div>
         </div>
         <div className="absolute top-1/2 left-[3%] w-18 h-18 opacity-20 animate-bounce">
           <div className="w-full h-full bg-gradient-to-br from-[#0078b6] to-[#005a8b] rounded-full flex items-center justify-center">
-            <span className="text-lg">🏮</span>
+            <span className="text-lg"></span>
           </div>
         </div>
         <div className="absolute top-[60%] right-[5%] w-14 h-14 opacity-25 animate-bounce delay-500">
           <div className="w-full h-full bg-gradient-to-br from-[#ffd700] to-[#f59e0b] rounded-full flex items-center justify-center">
-            <span className="text-lg">🌸</span>
+            <span className="text-lg"></span>
           </div>
         </div>
         <div className="absolute bottom-[15%] left-[10%] w-16 h-16 opacity-20 animate-float delay-2000">
           <div className="w-full h-full bg-gradient-to-br from-[#e22837] to-[#0078b6] rounded-full flex items-center justify-center">
-            <span className="text-lg">🏯</span>
+            <span className="text-lg"></span>
           </div>
         </div>
         <div className="absolute bottom-[20%] right-[12%] w-12 h-12 opacity-30 animate-float delay-3000">
           <div className="w-full h-full bg-gradient-to-br from-[#0078b6] to-[#e22837] rounded-full flex items-center justify-center">
-            <span className="text-sm">🎋</span>
+            <span className="text-sm"></span>
           </div>
         </div>
       </div>
@@ -89,7 +89,7 @@ export default function NotFound() {
             </div>
 
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 font-sans">Oops! Page Not Found</h2>
-            <p className="text-xl text-white/80 mb-2">{"Looks like you've wandered off the path to Bangkok! 🇹🇭"}</p>
+            <p className="text-xl text-white/80 mb-2">{"Looks like you've wandered off the path to Bangkok!"}</p>
             <p className="text-lg text-white/70 mb-8 max-w-2xl mx-auto">
               {
                 "The page you're looking for doesn't exist, but don't worry - ARES 2025 is still happening and we're here to help you find your way back to the summit!"
@@ -114,7 +114,7 @@ export default function NotFound() {
                 <span className="font-semibold">July 2, 2025</span>
               </div>
             </div>
-            <p className="text-[#ffd700] font-bold text-lg mt-4">🌟 Asia's Premier Real Estate Summit 🌟</p>
+            <p className="text-[#ffd700] font-bold text-lg mt-4">Asia's Premier Real Estate Summit</p>
           </div>
 
           {/* Action Buttons */}
@@ -185,7 +185,7 @@ export default function NotFound() {
               isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"
             }`}
           >
-            <p className="text-2xl mb-2">🙏</p>
+            <p className="text-2xl mb-2"></p>
             <p className="text-white/70 italic">"สวัสดี" - See you in Bangkok for ARES 2025!</p>
           </div>
         </div>

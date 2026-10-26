@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     template: "%s | ARES 2025",
   },
   description:
-    "🌟 Join Asia's premier real estate summit! ARES 2025 brings together industry legends, visionaries, and game-changers in Bangkok, Thailand. July 2, 2025 - Don't miss this epic event!",
+    "Join Asia's premier real estate summit! ARES 2025 brings together industry legends, visionaries, and game-changers in Bangkok, Thailand. July 2, 2025 - Don't miss this epic event!",
   keywords: [
     "ARES 2025",
     "Asian Real Estate Summit",
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     siteName: "ARES 2025 - Asian Real Estate Summit",
     title: "ARES 2025 - Asian Real Estate Summit | Bangkok, Thailand",
     description:
-      "🌟 Join Asia's premier real estate summit! Industry legends, visionaries, and game-changers in Bangkok, Thailand. July 2, 2025",
+      "Join Asia's premier real estate summit! Industry legends, visionaries, and game-changers in Bangkok, Thailand. July 2, 2025",
     images: [
       {
         url: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg",
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "ARES 2025 - Asian Real Estate Summit",
-    description: "🌟 Join Asia's premier real estate summit in Bangkok, Thailand! July 2, 2025 🚀",
+    description: "Join Asia's premier real estate summit in Bangkok, Thailand! July 2, 2025",
     images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES+1.jpg"],
     creator: "@filipinohomes",
     site: "@ARES2025",

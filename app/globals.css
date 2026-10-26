@@ -378,3 +378,145 @@ footer {
     gap: 1.25rem;
   }
 }
+
+/* ---------- Landing page motion & surface styles ---------- */
+
+/* Frosted glass panel used on the hero and dark sections */
+.glass {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* Subtle dot grid laid over dark sections */
+.dot-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+/* Animated gradient text */
+.gradient-text {
+  background-image: linear-gradient(90deg, #ffd700, #f59e0b, #e22837, #ffd700);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-x 6s ease infinite;
+}
+
+.gradient-text-brand {
+  background-image: linear-gradient(90deg, #e22837, #672e91, #0078b6, #e22837);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-x 8s ease infinite;
+}
+
+/* Rotating conic glow used as an animated border */
+.conic-border {
+  position: relative;
+  isolation: isolate;
+}
+.conic-border::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from 0deg, #e22837, #ffd700, #0078b6, #672e91, #e22837);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spin-slow 8s linear infinite;
+  z-index: -1;
+}
+.conic-border::after {
+  content: "";
+  position: absolute;
+  inset: -24px;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg, #e22837, #ffd700, #0078b6, #672e91, #e22837);
+  filter: blur(40px);
+  opacity: 0.35;
+  animation: spin-slow 8s linear infinite;
+  z-index: -2;
+}
+
+/* Shine sweep for buttons: add .shine to a relative overflow-hidden element */
+.shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: translateX(-150%) skewX(-20deg);
+  pointer-events: none;
+}
+.shine:hover::after {
+  animation: shimmer 0.9s ease-out;
+}
+
+/* Scroll cue at the bottom of the hero */
+.scroll-cue {
+  width: 26px;
+  height: 42px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  position: relative;
+}
+.scroll-cue::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  width: 4px;
+  height: 8px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: #fff;
+  animation: scroll-cue 1.8s ease-in-out infinite;
+}
+@keyframes scroll-cue {
+  0% { transform: translateY(0); opacity: 1; }
+  70% { transform: translateY(14px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 0; }
+}
+
+/* Photo card hover caption slides up from the bottom */
+.photo-caption {
+  transform: translateY(100%);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.group:hover .photo-caption {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gradient-text,
+  .gradient-text-brand,
+  .conic-border::before,
+  .conic-border::after,
+  .scroll-cue::after,
+  .animate-float {
+    animation: none !important;
+  }
+  .photo-caption {
+    transform: none;
+  }
+}
+
+/* Floating white glass bar used by the header once the page is scrolled */
+.glass-light {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}

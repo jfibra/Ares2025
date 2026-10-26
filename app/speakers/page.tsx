@@ -29,7 +29,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Anthony+Leuterio.png",
         tagline: "The Visionary Who Built an Empire",
         description:
-          "🌟 THE LEGEND HIMSELF - From humble beginnings to 2024 International REALTOR® of the Year, Anthony has built the Philippines' largest real estate network with 30,000+ agents. When Anthony speaks, the industry listens.",
+          "THE LEGEND HIMSELF - From humble beginnings to 2024 International REALTOR® of the Year, Anthony has built the Philippines' largest real estate network with 30,000+ agents. When Anthony speaks, the industry listens.",
       },
       "may-antonette-leuterio": {
         name: "May Antonette Leuterio",
@@ -39,7 +39,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
           "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/May+Antonette+Leuterio.png",
         tagline: "The Rental Revolution Leader",
         description:
-          "🚀 THE RENTAL REVOLUTION LEADER - Managing Director of Rent.ph, the country's premier rental platform serving thousands of OFWs and property owners with excellence.",
+          "THE RENTAL REVOLUTION LEADER - Managing Director of Rent.ph, the country's premier rental platform serving thousands of OFWs and property owners with excellence.",
       },
       "cesar-wee-jr": {
         name: "Cesar Wee Jr.",
@@ -48,7 +48,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Cesar+Wee+Jr..png",
         tagline: "The Community Builder Extraordinaire",
         description:
-          "🏗️ THE COMMUNITY ARCHITECT - President of WeeComm, crafting communities that breathe with authentic Filipino spirit. Building homes that nurture dreams and create legacies.",
+          "THE COMMUNITY ARCHITECT - President of WeeComm, crafting communities that breathe with authentic Filipino spirit. Building homes that nurture dreams and create legacies.",
       },
       "jose-joe-soberano-iii": {
         name: "Jose 'Joe' R. Soberano III",
@@ -57,7 +57,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Joe+Soberano.png",
         tagline: "The Visayas Kingmaker",
         description:
-          "👑 THE VISAYAS KINGMAKER - 2023 Real Estate Personality of the Year with 100+ projects across 16 cities in VisMin. The mastermind who transformed entire regions.",
+          "THE VISAYAS KINGMAKER - 2023 Real Estate Personality of the Year with 100+ projects across 16 cities in VisMin. The mastermind who transformed entire regions.",
       },
       "carson-choa": {
         name: "Carson Choa",
@@ -66,7 +66,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Carson+Choa.png",
         tagline: "The Operations Mastermind",
         description:
-          "⚙️ THE OPERATIONS MASTERMIND - COO who transformed WeeComm into a national powerhouse. The strategic genius who turns vision into reality with heart and purpose.",
+          "THE OPERATIONS MASTERMIND - COO who transformed WeeComm into a national powerhouse. The strategic genius who turns vision into reality with heart and purpose.",
       },
       "samantha-manigsaca": {
         name: "Samantha Manigsaca",
@@ -76,7 +76,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
           "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Samantha+Manigsaca.png",
         tagline: "The Hospitality Innovator",
         description:
-          "✨ THE HOSPITALITY INNOVATOR - AVP bringing five-star hotel service to residential living. Pioneering luxury developments where every day feels like a premium vacation.",
+          "THE HOSPITALITY INNOVATOR - AVP bringing five-star hotel service to residential living. Pioneering luxury developments where every day feels like a premium vacation.",
       },
       "dr-sopon-pornchokchai": {
         name: "Dr. Sopon Pornchokchai",
@@ -86,7 +86,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
           "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Dr.+Sopon+Pornchokchai.png",
         tagline: "The Valuation Virtuoso",
         description:
-          "🎓 THE VALUATION VIRTUOSO - 40+ years expertise across 30+ countries. World Bank advisor who literally wrote the book on Asian property valuation.",
+          "THE VALUATION VIRTUOSO - 40+ years expertise across 30+ countries. World Bank advisor who literally wrote the book on Asian property valuation.",
       },
       "azela-honor": {
         name: "Azela Honor",
@@ -95,7 +95,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Azela+Honor.png",
         tagline: "The Next-Gen Champion",
         description:
-          "🌟 THE NEXT-GEN CHAMPION - Dynamic Team Leader representing the perfect fusion of traditional relationship-building with cutting-edge digital mastery.",
+          "THE NEXT-GEN CHAMPION - Dynamic Team Leader representing the perfect fusion of traditional relationship-building with cutting-edge digital mastery.",
       },
       "george-sarmago": {
         name: "George Sarmago",
@@ -104,7 +104,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/George+Sarmago.png",
         tagline: "The Strategic Innovator",
         description:
-          "🎯 THE STRATEGIC INNOVATOR - Master tactician whose innovative approaches have shaped the modern Philippine property landscape with decades of expertise.",
+          "THE STRATEGIC INNOVATOR - Master tactician whose innovative approaches have shaped the modern Philippine property landscape with decades of expertise.",
       },
       "gilbert-monecillo": {
         name: "Gilbert Monecillo",
@@ -113,7 +113,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         image: "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Gilbert+Monecillo.png",
         tagline: "The Solutions Architect",
         description:
-          "🔧 THE SOLUTIONS ARCHITECT - The professional who finds paths forward when challenges seem insurmountable, turning market obstacles into opportunities.",
+          "THE SOLUTIONS ARCHITECT - The professional who finds paths forward when challenges seem insurmountable, turning market obstacles into opportunities.",
       },
       "alejandro-manalac": {
         name: "Alejandro Mañalac",
@@ -123,7 +123,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
           "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/ARES_2025_Speakers/Alejandro+Ma%C3%B1alac.png",
         tagline: "The Market Visionary",
         description:
-          "🔮 THE MARKET VISIONARY - Market specialist with the rare gift of seeing opportunities before they become obvious, identifying emerging trends others miss.",
+          "THE MARKET VISIONARY - Market specialist with the rare gift of seeing opportunities before they become obvious, identifying emerging trends others miss.",
       },
     }
 
@@ -148,8 +148,8 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
           "Property Expert",
         ],
         openGraph: {
-          title: `🌟 ${speaker.name} - ${speaker.tagline}`,
-          description: `${speaker.description} Join us at ARES 2025 in Bangkok! 🇹🇭`,
+          title: `${speaker.name} - ${speaker.tagline}`,
+          description: `${speaker.description} Join us at ARES 2025 in Bangkok!`,
           url: pageUrl,
           siteName: "ARES 2025 - Asian Real Estate Summit",
           images: [
@@ -166,8 +166,8 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
         },
         twitter: {
           card: "summary_large_image",
-          title: `🌟 ${speaker.name} - ${speaker.tagline}`,
-          description: `${speaker.description} Speaking at ARES 2025! 🚀`,
+          title: `${speaker.name} - ${speaker.tagline}`,
+          description: `${speaker.description} Speaking at ARES 2025!`,
           images: [speaker.image],
           creator: "@filipinohomes",
           site: "@ARES2025",
@@ -185,7 +185,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
   return {
     title: "Meet the Legends - ARES 2025 Speakers | Asian Real Estate Summit",
     description:
-      "🎬 The most epic lineup in real estate history! Meet the industry titans, visionaries, and game-changers speaking at ARES 2025 in Bangkok, Thailand. This isn't just a conference—it's a masterclass in excellence!",
+      "The most epic lineup in real estate history! Meet the industry titans, visionaries, and game-changers speaking at ARES 2025 in Bangkok, Thailand. This isn't just a conference—it's a masterclass in excellence!",
     keywords: [
       "ARES 2025",
       "Asian Real Estate Summit",
@@ -201,7 +201,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
     openGraph: {
       title: "Meet the Legends - ARES 2025 Speakers",
       description:
-        "🎬 The most epic lineup in real estate history! Industry titans, visionaries, and game-changers at ARES 2025.",
+        "The most epic lineup in real estate history! Industry titans, visionaries, and game-changers at ARES 2025.",
       url: pageUrl,
       siteName: "ARES 2025 - Asian Real Estate Summit",
       images: [
@@ -219,7 +219,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { speak
     twitter: {
       card: "summary_large_image",
       title: "Meet the Legends - ARES 2025 Speakers",
-      description: "🎬 The most epic lineup in real estate history! Join us in Bangkok for ARES 2025! 🚀",
+      description: "The most epic lineup in real estate history! Join us in Bangkok for ARES 2025!",
       images: ["https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"],
       creator: "@filipinohomes",
       site: "@ARES2025",
