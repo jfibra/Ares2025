@@ -968,7 +968,7 @@ const HomePage = () => {
           <div className="mb-16 text-center">
             <Reveal>
               <h2 className="mb-6 text-4xl font-bold text-white md:text-5xl">
-                Experience <span className="gradient-text">ARES 2025</span>
+                Experience <span className="gradient-text">ARES 2027</span>
               </h2>
             </Reveal>
             <Reveal delay={0.1}>

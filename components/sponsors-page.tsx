@@ -488,7 +488,7 @@ const SponsorsPage = () => {
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
               Experience{" "}
               <span className="text-transparent bg-gradient-to-r from-[#ffd700] to-[#f59e0b] bg-clip-text">
-                ARES 2025
+                ARES 2027
               </span>
             </h2>
             <p className="text-xl text-white/80 max-w-3xl mx-auto">
