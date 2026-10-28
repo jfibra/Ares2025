@@ -674,6 +674,7 @@ const HomePage = () => {
               loop
               playsInline
               preload="auto"
+              data-music-ignore
             />
           )}
         </motion.div>

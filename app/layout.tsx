@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Poppins } from "next/font/google"
 import "./globals.css"
 import AnalyticsWrapper from "@/components/analytics-wrapper"
+import BackgroundMusic from "@/components/background-music"
 import { Suspense } from "react"
 
 const poppins = Poppins({
@@ -148,6 +149,7 @@ export default function RootLayout({
           {children}
           <AnalyticsWrapper />
         </Suspense>
+        <BackgroundMusic />
       </body>
     </html>
   )
