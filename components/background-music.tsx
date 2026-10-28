@@ -6,7 +6,6 @@ import {
   pauseForVideo,
   playMusic,
   resumeAfterVideo,
-  userStoppedMusic,
 } from "@/lib/background-music"
 import MusicToggle from "@/components/music-toggle"
 
@@ -26,7 +25,7 @@ export default function BackgroundMusic() {
     if (!audio) return
 
     const tryPlay = () => {
-      if (userStoppedMusic() || anyVideoPlaying()) return
+      if (anyVideoPlaying()) return
       void playMusic()
     }
 
