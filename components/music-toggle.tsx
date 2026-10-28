@@ -8,7 +8,8 @@ type Props = {
 }
 
 export default function MusicToggle({ className = "" }: Props) {
-  const { muted } = useMusicState()
+  const { muted, playing } = useMusicState()
+  const silent = muted || !playing
   return (
     <button
       type="button"
@@ -17,11 +18,12 @@ export default function MusicToggle({ className = "" }: Props) {
         toggleMute()
       }}
       aria-pressed={muted}
+      data-playing={playing}
       aria-label={muted ? "Unmute background music" : "Mute background music"}
       title={muted ? "Unmute music" : "Mute music"}
       className={`inline-flex items-center justify-center transition focus:outline-none focus:ring-2 focus:ring-white/70 ${className}`}
     >
-      {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+      {silent ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
     </button>
   )
 }

@@ -2,8 +2,9 @@
 
 import { useSyncExternalStore } from "react"
 
-// Tiny shared store so any component (floating control, landing-page button)
-// can read and toggle the background music owned by <BackgroundMusic />.
+// Shared store for the site's background music, owned by <BackgroundMusic />.
+// Rule: the music is always meant to be playing, except while a site video
+// plays. The visitor can only mute it, never stop it.
 
 const MUSIC_SRC = "/background-music.mp3"
 const VOLUME = 0.4
@@ -12,8 +13,6 @@ type State = { playing: boolean; muted: boolean }
 
 let audio: HTMLAudioElement | null = null
 let state: State = { playing: false, muted: false }
-// Set when a video interrupted the music so we can resume afterwards.
-let pausedForVideo = false
 
 const listeners = new Set<() => void>()
 const emit = () => listeners.forEach((l) => l())
@@ -38,15 +37,27 @@ export function getAudio() {
   return audio
 }
 
-/** Attempt to play. Resolves to whether the browser allowed it. */
+// Videos that should NOT interrupt the music (e.g. silent hero loops) opt out
+// with a `data-music-ignore` attribute.
+export const countsAsVideo = (el: EventTarget | null): el is HTMLVideoElement =>
+  el instanceof HTMLVideoElement && !el.hasAttribute("data-music-ignore")
+
+export const anyVideoPlaying = () =>
+  typeof document !== "undefined" &&
+  Array.from(document.querySelectorAll("video")).some(
+    (v) => countsAsVideo(v) && !v.paused && !v.ended,
+  )
+
+/** Start the music unless a video is playing. Resolves to whether it is now playing. */
 export async function playMusic(): Promise<boolean> {
   const a = getAudio()
-  if (!a) return false
+  if (!a || anyVideoPlaying()) return false
+  if (!a.paused) return true
   try {
     await a.play()
     return true
   } catch {
-    return false
+    return false // autoplay blocked until the visitor interacts
   }
 }
 
@@ -54,27 +65,11 @@ export function pauseMusic() {
   getAudio()?.pause()
 }
 
-/** User pressed the mute button. The music keeps running; only the sound
- *  is silenced, so it can never be "stopped" by the visitor. */
+/** User pressed the mute button. Only the sound is silenced. */
 export function toggleMute() {
   const a = getAudio()
   if (!a) return
   a.muted = !a.muted
-  if (a.paused && !pausedForVideo) void playMusic()
-}
-
-/** Called when a site video starts: silence the music while it plays. */
-export function pauseForVideo() {
-  const a = getAudio()
-  if (!a || a.paused) return
-  pausedForVideo = true
-  a.pause()
-}
-
-/** Called when no site video is playing anymore. */
-export function resumeAfterVideo() {
-  if (!pausedForVideo) return
-  pausedForVideo = false
   void playMusic()
 }
 
