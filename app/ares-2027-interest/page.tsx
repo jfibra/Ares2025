@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { notFound } from "next/navigation"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import Ares2027Form from "@/components/ares-2027-form"
@@ -53,7 +54,12 @@ export const metadata: Metadata = {
   },
 }
 
+// Set to false to bring the interest form back.
+const PAGE_HIDDEN: boolean = true
+
 export default function Ares2027InterestPage() {
+  if (PAGE_HIDDEN) notFound()
+
   return (
     <>
       <Navbar />

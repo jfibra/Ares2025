@@ -14,7 +14,10 @@ const navItems = [
   { name: "About Us", href: "/about" },
   { name: "Speakers", href: "/speakers" },
   { name: "Gallery", href: "/gallery" },
+  { name: "Contact Us", href: "/contact-us" },
 ]
+
+const registration = { name: "Register here", href: "/registration" }
 
 const socials = [
   { name: "Facebook", href: "https://facebook.com", icon: Facebook },
@@ -41,7 +44,7 @@ function Navbar() {
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth > 768 && isOpen) setIsOpen(false)
+      if (window.innerWidth >= 1024 && isOpen) setIsOpen(false)
     }
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
@@ -135,7 +138,7 @@ function Navbar() {
 
             {/* Desktop links */}
             <ul
-              className="relative hidden items-center gap-1 md:flex"
+              className="relative hidden items-center gap-1 lg:flex"
               onMouseLeave={() => setHovered(null)}
             >
               {navItems.map((item) => {
@@ -146,7 +149,7 @@ function Navbar() {
                     <Link
                       href={item.href}
                       onMouseEnter={() => setHovered(item.href)}
-                      className={`relative block rounded-full px-4 py-2 text-sm font-semibold tracking-wide transition-colors duration-300 ${
+                      className={`relative block whitespace-nowrap rounded-full px-3 py-2 text-sm xl:px-4 font-semibold tracking-wide transition-colors duration-300 ${
                         light
                           ? active
                             ? "text-white"
@@ -182,7 +185,7 @@ function Navbar() {
             </ul>
 
             {/* Right cluster: socials + CTA */}
-            <div className="hidden items-center gap-2 md:flex">
+            <div className="hidden items-center gap-2 lg:flex">
               {socials.map(({ name, href, icon: Icon }) => (
                 <motion.a
                   key={name}
@@ -192,7 +195,7 @@ function Navbar() {
                   aria-label={name}
                   whileHover={{ y: -2, scale: 1.08 }}
                   whileTap={{ scale: 0.95 }}
-                  className={`grid h-10 w-10 place-items-center rounded-full border transition-colors duration-300 ${
+                  className={`hidden h-10 w-10 place-items-center rounded-full border transition-colors duration-300 xl:grid ${
                     light
                       ? "border-white/25 bg-white/10 text-white hover:bg-white/20"
                       : "border-gray-200 bg-white text-gray-600 hover:border-[#0078b6]/40 hover:text-[#0078b6]"
@@ -202,17 +205,17 @@ function Navbar() {
                 </motion.a>
               ))}
 
-              <Link href="/contact-us" className="ml-2">
+              <Link href={registration.href} className="ml-2">
                 <motion.span
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.97 }}
                   className={`shine group relative inline-flex items-center gap-2 overflow-hidden whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-shadow duration-300 hover:shadow-xl ${
-                    pathname === "/contact-us"
+                    pathname === registration.href
                       ? "bg-gradient-to-r from-[#0078b6] to-[#005a8b]"
                       : "bg-gradient-to-r from-[#e22837] to-[#0078b6]"
                   }`}
                 >
-                  Contact Us
+                  {registration.name}
                   <ArrowUpRight
                     size={16}
                     className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
@@ -226,7 +229,7 @@ function Navbar() {
               onClick={() => setIsOpen((v) => !v)}
               aria-label={isOpen ? "Close navigation" : "Open navigation"}
               aria-expanded={isOpen}
-              className={`relative z-[1002] grid h-11 w-11 place-items-center rounded-full border transition-colors duration-300 md:hidden ${
+              className={`relative z-[1002] grid h-11 w-11 place-items-center rounded-full border transition-colors duration-300 lg:hidden ${
                 light || isOpen ? "border-white/25 bg-white/10 text-white" : "border-gray-200 bg-white text-gray-800"
               }`}
             >
@@ -257,7 +260,7 @@ function Navbar() {
         {isOpen && (
           <motion.div
             key="mobile-menu"
-            className="fixed inset-0 z-[1001] flex flex-col overflow-hidden bg-gradient-to-br from-[#0b1220] via-[#0f172a] to-black text-white md:hidden"
+            className="fixed inset-0 z-[1001] flex flex-col overflow-hidden bg-gradient-to-br from-[#0b1220] via-[#0f172a] to-black text-white lg:hidden"
             initial={{ clipPath: "circle(0% at calc(100% - 44px) 44px)" }}
             animate={{ clipPath: "circle(150% at calc(100% - 44px) 44px)" }}
             exit={{ clipPath: "circle(0% at calc(100% - 44px) 44px)" }}
@@ -272,7 +275,7 @@ function Navbar() {
 
             <nav aria-label="Mobile" className="relative flex flex-1 flex-col justify-center px-8">
               <ul className="space-y-2">
-                {[...navItems, { name: "Contact Us", href: "/contact-us" }].map((item, i) => {
+                {[...navItems, registration].map((item, i) => {
                   const active = pathname === item.href
                   return (
                     <motion.li

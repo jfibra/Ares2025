@@ -145,7 +145,13 @@ export default function RootLayout({
       {/* Browser extensions (ColorZilla, Grammarly, ...) add attributes to body
           before hydration; suppress the resulting dev-only mismatch warning. */}
       <body suppressHydrationWarning>
-        <Suspense fallback={"Loading..."}>
+        <Suspense
+          fallback={
+            <div role="status" aria-label="Loading" className="fixed inset-0 grid place-items-center bg-[#120a2e]">
+              <span className="h-12 w-12 animate-spin rounded-full border-4 border-[#d4a437]/25 border-t-[#f3d27a]" />
+            </div>
+          }
+        >
           {children}
           <AnalyticsWrapper />
         </Suspense>

@@ -1,0 +1,1718 @@
+"use client"
+
+import { Fragment, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { MotionConfig, motion } from "framer-motion"
+import QRCode from "qrcode"
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  BadgeCheck,
+  Banknote,
+  Check,
+  CheckCircle2,
+  Clock,
+  Copy,
+  Download,
+  Link2,
+  Loader2,
+  LogOut,
+  QrCode,
+  Receipt,
+  RefreshCw,
+  Search,
+  Send,
+  Settings,
+  Trash2,
+  Undo2,
+  UserCog,
+  Users,
+  X,
+} from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Counter } from "@/components/motion"
+import { GoldRule, Lotus, brownLattice, goldLattice, goldText } from "@/components/thai-ornaments"
+import {
+  CURRENCY,
+  PAYMENT_METHODS,
+  MAX_PAYMENT_ACCOUNTS,
+  hasPaymentDetails,
+  type PaymentStatus,
+  type Registration,
+  type Remittance,
+  type TeamLeader,
+  type TlPaymentAccount,
+  type TlPaymentDetails,
+} from "@/lib/registrations"
+
+const LOGO_URL = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
+
+type Role = "admin" | "tl"
+type Tab = "pending" | "confirmed" | "remittances" | "leaders" | "settings" | "payment"
+type Row = Record<string, unknown> & { id: number }
+type Column = { key: string; label: string; render?: (row: Row) => React.ReactNode }
+type Sort = { key: string; direction: "asc" | "desc" }
+type PendingAction =
+  | { kind: "registration"; row: Registration }
+  | { kind: "leader"; row: TeamLeader }
+  | { kind: "regenerate" }
+  | { kind: "verify"; row: Remittance }
+  | null
+
+// A fixed time zone keeps the server-rendered and browser-rendered text identical.
+const dateFormat = new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila" })
+const formatDate = (value: unknown) => (typeof value === "string" && value ? dateFormat.format(new Date(value)) : "—")
+// A birth date is a plain calendar day (YYYY-MM-DD), so it is formatted without a time or zone shift.
+const dayFormat = new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeZone: "UTC" })
+const formatDay = (value: unknown) => (typeof value === "string" && value ? dayFormat.format(new Date(`${value}T00:00:00Z`)) : "—")
+const dash = <span className="text-[#a89a7c]">—</span>
+const moneyFormat = new Intl.NumberFormat("en-PH", { style: "currency", currency: CURRENCY })
+const formatMoney = (value: unknown) => (value === null || value === undefined || value === "" ? "—" : moneyFormat.format(Number(value)))
+
+const paymentBadge: Record<PaymentStatus, { label: string; className: string }> = {
+  unpaid: { label: "Not paid", className: "border-[#e3d3a8] bg-[#fdf3d7] text-[#8a5a00]" },
+  paid_to_tl: { label: "Paid to TL", className: "border-sky-200 bg-sky-50 text-sky-800" },
+  remitted: { label: "Sent to admin", className: "border-violet-200 bg-violet-50 text-violet-800" },
+  verified: { label: "Fully paid", className: "border-green-200 bg-green-50 text-green-800" },
+}
+const remittanceBadge: Record<Remittance["status"], { label: string; className: string }> = {
+  submitted: { label: "Waiting for admin", className: "border-violet-200 bg-violet-50 text-violet-800" },
+  verified: { label: "Received", className: "border-green-200 bg-green-50 text-green-800" },
+  rejected: { label: "Rejected", className: "border-red-200 bg-red-50 text-red-800" },
+}
+const Badge = ({ label, className }: { label: string; className: string }) => (
+  <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}>{label}</span>
+)
+
+function compareValues(x: unknown, y: unknown) {
+  const blankX = x === null || x === undefined || x === ""
+  const blankY = y === null || y === undefined || y === ""
+  if (blankX || blankY) return blankX === blankY ? 0 : blankX ? 1 : -1 // blanks last
+  if (typeof x === "number" && typeof y === "number") return x - y
+  if (typeof x === "boolean" && typeof y === "boolean") return Number(x) - Number(y)
+  return String(x).localeCompare(String(y), undefined, { sensitivity: "base", numeric: true })
+}
+
+const csvCell = (value: unknown) => {
+  let text = value === null || value === undefined ? "" : String(value)
+  // Stop spreadsheet apps from running a cell that starts like a formula.
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`
+  return `"${text.replace(/"/g, '""')}"`
+}
+
+function downloadCsv(filename: string, header: string[], lines: unknown[][]) {
+  const text = [header, ...lines].map((line) => line.map(csvCell).join(",")).join("\r\n")
+  const link = document.createElement("a")
+  link.href = URL.createObjectURL(new Blob(["﻿" + text], { type: "text/csv;charset=utf-8" }))
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(link.href)
+}
+
+const outlineButton =
+  "inline-flex h-11 items-center gap-2 rounded-xl border border-[#e3d3a8] bg-white px-4 text-sm font-semibold text-[#6b4a12] transition-colors hover:border-[#c9972f] hover:bg-[#fdf3d7] disabled:cursor-not-allowed disabled:opacity-50"
+const goldButton =
+  "shine relative inline-flex h-11 items-center gap-2 overflow-hidden rounded-xl border border-[#8a6417] bg-gradient-to-r from-[#b8862b] via-[#f3d27a] to-[#b8862b] px-4 text-sm font-bold text-[#2a1408] transition-all hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+const fieldClass =
+  "h-11 w-full rounded-xl border border-[#e3d3a8] bg-white px-3 text-sm text-[#2a1a3d] outline-none transition-all placeholder:text-[#a89a7c] focus:border-[#c9972f] focus:shadow-[0_0_0_4px_rgba(212,164,55,0.18)]"
+const fieldLabel = "mb-1.5 block text-sm font-semibold text-[#4a3413]"
+const dialogClass = "rounded-2xl border-[#d4a437]/60 bg-white font-sans text-[#2a1a3d] sm:rounded-2xl"
+const iconButton =
+  "grid h-9 w-9 place-items-center rounded-lg border border-[#e3d3a8] bg-white text-[#7a6a4a] transition-colors hover:border-[#b3261e]/40 hover:bg-[#b3261e]/5 hover:text-[#b3261e] disabled:cursor-not-allowed"
+
+export default function PortalDashboard({
+  role,
+  userLabel,
+  initialRegistrations,
+  initialRemittances,
+  initialFee,
+  initialTeamLeaders = [],
+  initialInviteToken = null,
+  initialPaymentDetails = null,
+  loadFailed,
+}: {
+  role: Role
+  userLabel: string
+  initialRegistrations: Registration[]
+  initialRemittances: Remittance[]
+  initialFee: number | null
+  initialTeamLeaders?: TeamLeader[]
+  initialInviteToken?: string | null
+  initialPaymentDetails?: TlPaymentDetails | null
+  loadFailed: boolean
+}) {
+  const router = useRouter()
+  const isAdmin = role === "admin"
+  const [rows, setRows] = useState(initialRegistrations)
+  const [remittances, setRemittances] = useState(initialRemittances)
+  const [fee, setFee] = useState(initialFee)
+  const [leaders, setLeaders] = useState(initialTeamLeaders)
+  // Team leader: where their agents send the registration fee.
+  const [paymentDetails, setPaymentDetails] = useState(initialPaymentDetails)
+  // Team leader: agents ticked to send to the admin in one remittance.
+  const [selected, setSelected] = useState<Set<number>>(() => new Set())
+  const [remitOpen, setRemitOpen] = useState(false)
+  const [rejecting, setRejecting] = useState<Remittance | null>(null)
+  const [expanded, setExpanded] = useState<number | null>(null)
+  const [inviteToken, setInviteToken] = useState(initialInviteToken)
+  const [tab, setTab] = useState<Tab>("pending")
+  const [query, setQuery] = useState("")
+  const [sort, setSort] = useState<Sort>({ key: "registration_date", direction: "desc" })
+  const [busyKey, setBusyKey] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(loadFailed ? "Could not load everything. Try Refresh." : null)
+
+  const pending = useMemo(() => rows.filter((r) => !r.confirmed_by_tl), [rows])
+  const confirmed = useMemo(() => rows.filter((r) => r.confirmed_by_tl), [rows])
+  const toSend = useMemo(() => rows.filter((r) => r.payment_status === "paid_to_tl"), [rows])
+  const selectedRows = useMemo(() => toSend.filter((r) => selected.has(r.id)), [toSend, selected])
+  const sum = (list: { amount: number | null }[]) => list.reduce((total, item) => total + Number(item.amount ?? 0), 0)
+  const agentsByRemittance = useMemo(() => {
+    const map = new Map<number, Registration[]>()
+    for (const r of rows) if (r.remittance_id !== null) map.set(r.remittance_id, [...(map.get(r.remittance_id) ?? []), r])
+    return map
+  }, [rows])
+  const agentCounts = useMemo(() => {
+    const counts = new Map<number, { pending: number; confirmed: number }>()
+    for (const r of rows) {
+      if (r.team_leader_id === null) continue
+      const entry = counts.get(r.team_leader_id) ?? { pending: 0, confirmed: 0 }
+      entry[r.confirmed_by_tl ? "confirmed" : "pending"] += 1
+      counts.set(r.team_leader_id, entry)
+    }
+    return counts
+  }, [rows])
+
+  // ---- Requests ----------------------------------------------------------------
+  /** Runs a request; sends the visitor back to sign-in if the session has ended. */
+  const call = async (url: string, init?: RequestInit) => {
+    const response = await fetch(url, init)
+    if (response.status === 401) {
+      router.replace(`/${role}/login`)
+      return null
+    }
+    const result = await response.json().catch(() => null)
+    if (!response.ok || !result?.success) throw new Error(result?.message || "Something went wrong.")
+    return result
+  }
+
+  const run = async (key: string, fallback: string, task: () => Promise<void>) => {
+    setBusyKey(key)
+    setErrorMessage(null)
+    try {
+      await task()
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : fallback)
+    } finally {
+      setBusyKey(null)
+    }
+  }
+
+  const refresh = async () => {
+    setRefreshing(true)
+    setErrorMessage(null)
+    try {
+      const result = await call(`/api/${role}/registrations`, { cache: "no-store" })
+      if (result) {
+        setRows(result.registrations)
+        setRemittances(result.remittances)
+        setFee(result.fee)
+        setSelected(new Set())
+      }
+      if (isAdmin) {
+        const leaderResult = await call("/api/admin/team-leaders", { cache: "no-store" })
+        if (leaderResult) setLeaders(leaderResult.teamLeaders)
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Could not refresh.")
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  const setConfirmed = (row: Registration, value: boolean) =>
+    run(`registration-${row.id}`, "Could not update the registration.", async () => {
+      const result = await call(`/api/${role}/registrations/${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmed_by_tl: value }),
+      })
+      if (result) setRows((all) => all.map((r) => (r.id === row.id ? result.registration : r)))
+    })
+
+  const confirmPendingAction = () => {
+    const action = pendingAction
+    setPendingAction(null)
+    if (!action) return
+    if (action.kind === "registration") {
+      run(`registration-${action.row.id}`, "Could not delete the registration.", async () => {
+        const result = await call(`/api/admin/registrations/${action.row.id}`, { method: "DELETE" })
+        if (result) setRows((all) => all.filter((r) => r.id !== action.row.id))
+      })
+    } else if (action.kind === "leader") {
+      run(`leader-${action.row.id}`, "Could not delete the team leader.", async () => {
+        const result = await call(`/api/admin/team-leaders/${action.row.id}`, { method: "DELETE" })
+        if (result) setLeaders((all) => all.filter((l) => l.id !== action.row.id))
+      })
+    } else if (action.kind === "verify") {
+      reviewRemittance(action.row, "verified", "")
+    } else {
+      run("invite", "Could not create a new link.", async () => {
+        const result = await call("/api/admin/tl-invite", { method: "POST" })
+        if (result) setInviteToken(result.token)
+      })
+    }
+  }
+
+  /** Admin: mark a remittance received, or reject it with a note. */
+  const reviewRemittance = (row: Remittance, status: "verified" | "rejected", note: string) =>
+    run(`remittance-${row.id}`, "Could not update the remittance.", async () => {
+      const result = await call(`/api/admin/remittances/${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, note }),
+      })
+      if (!result) return
+      setRemittances((all) => all.map((r) => (r.id === row.id ? result.remittance : r)))
+      setRows((all) =>
+        all.map((r) =>
+          r.remittance_id !== row.id
+            ? r
+            : status === "verified"
+              ? { ...r, payment_status: "verified" }
+              : { ...r, payment_status: "paid_to_tl", remittance_id: null },
+        ),
+      )
+    })
+
+  /** Team leader: one remittance for every ticked agent. Throws so the dialog can show the reason. */
+  const sendRemittance = async (form: FormData) => {
+    form.set("registration_ids", JSON.stringify(selectedRows.map((r) => r.id)))
+    const result = await call("/api/tl/remittances", { method: "POST", body: form })
+    if (!result) return
+    const ids = new Set(selectedRows.map((r) => r.id))
+    setRemittances((all) => [result.remittance, ...all])
+    setRows((all) => all.map((r) => (ids.has(r.id) ? { ...r, payment_status: "remitted", remittance_id: result.remittance.id } : r)))
+    setSelected(new Set())
+    setRemitOpen(false)
+    changeTab("remittances")
+  }
+
+  /** Team leader: add, change or delete a payment account. Throws so the panel can show the reason. */
+  const changePaymentAccounts = async (url: string, init: RequestInit) => {
+    const result = await call(url, init)
+    if (result) setPaymentDetails(result.accounts)
+  }
+
+  const saveFee = (value: number) =>
+    run("fee", "Could not save the fee.", async () => {
+      const result = await call("/api/admin/fee", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fee: value }),
+      })
+      if (result) setFee(result.fee)
+    })
+
+  const toggleSelected = (id: number) =>
+    setSelected((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  const signOut = async () => {
+    await fetch("/api/auth/logout", { method: "POST" }).catch(() => null)
+    router.replace(`/${role}/login`)
+    router.refresh()
+  }
+
+  // ---- Table for the current tab -------------------------------------------------
+  const registrationColumns: Column[] = [
+    { key: "name", label: "Name", render: (r) => <span className="font-semibold text-[#2a1458]">{String(r.name)}</span> },
+    {
+      key: "email",
+      label: "Email",
+      render: (r) => (
+        <a href={`mailto:${r.email}`} className="text-[#0078b6] hover:underline">
+          {String(r.email)}
+        </a>
+      ),
+    },
+    { key: "contact_number", label: "Contact Number" },
+    { key: "whatsapp_number", label: "WhatsApp" },
+    { key: "birth_date", label: "Birth Date", render: (r: Row) => formatDay(r.birth_date) },
+    { key: "polo_shirt_size", label: "Polo Size" },
+    {
+      key: "attendee_count",
+      label: "Joining",
+      render: (r: Row) =>
+        Number(r.attendee_count) === 2 ? (
+          <Badge label="Both · 2 people" className="border-violet-200 bg-violet-50 text-violet-800" />
+        ) : r.attendees ? (
+          `${String(r.attendees)} only`
+        ) : (
+          "1 person"
+        ),
+    },
+    { key: "team", label: "Team" },
+    ...(isAdmin ? [{ key: "team_leader_name", label: "Team Leader" }] : []),
+    { key: "registration_date", label: "Registered", render: (r: Row) => formatDate(r.registration_date) },
+    {
+      key: "agent_receipt_at",
+      label: "Agent Receipt",
+      render: (r: Row) =>
+        r.agent_receipt_at ? (
+          <div className="min-w-[10rem]">
+            <a
+              href={`/api/registrations/${r.id}/receipt`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 font-semibold text-[#0078b6] hover:underline"
+            >
+              <Receipt size={15} /> View receipt
+            </a>
+            <p className="text-xs text-[#7a6a4a]">Sent {formatDate(r.agent_receipt_at)}</p>
+            {r.agent_receipt_note ? (
+              <p className="mt-1 max-w-xs whitespace-pre-wrap break-words text-xs text-[#4a3413]">“{String(r.agent_receipt_note)}”</p>
+            ) : null}
+          </div>
+        ) : (
+          dash
+        ),
+    },
+    ...(tab === "pending" ? [{ key: "amount_due", label: "To Pay", render: (r: Row) => formatMoney(r.amount_due) }] : []),
+    ...(tab === "confirmed"
+      ? [
+          { key: "amount", label: "Amount", render: (r: Row) => formatMoney(r.amount) },
+          { key: "payment_status", label: "Payment", render: (r: Row) => <Badge {...paymentBadge[r.payment_status as PaymentStatus]} /> },
+        ]
+      : []),
+  ]
+  const remittanceColumns: Column[] = [
+    { key: "submitted_at", label: "Sent", render: (r) => formatDate(r.submitted_at) },
+    ...(isAdmin ? [{ key: "team_leader_name", label: "Team Leader" }] : []),
+    {
+      key: "agent_count",
+      label: "Agents",
+      render: (r) => {
+        const agents = agentsByRemittance.get(r.id) ?? []
+        if (agents.length === 0) return String(r.agent_count)
+        return (
+          <button
+            type="button"
+            onClick={() => setExpanded((current) => (current === r.id ? null : r.id))}
+            aria-expanded={expanded === r.id}
+            className="font-semibold text-[#0078b6] underline-offset-2 hover:underline"
+          >
+            {String(r.agent_count)} {expanded === r.id ? "(hide)" : "(show)"}
+          </button>
+        )
+      },
+    },
+    { key: "amount", label: "Amount", render: (r) => <span className="font-semibold tabular-nums">{formatMoney(r.amount)}</span> },
+    { key: "method", label: "Method" },
+    { key: "reference_no", label: "Reference No." },
+    {
+      key: "status",
+      label: "Status",
+      render: (r) => (
+        <div>
+          <Badge {...remittanceBadge[r.status as Remittance["status"]]} />
+          {r.admin_note ? <p className="mt-1.5 max-w-[16rem] text-xs text-[#5c4a2a]">Note: {String(r.admin_note)}</p> : null}
+        </div>
+      ),
+    },
+    {
+      key: "has_receipt",
+      label: "Receipt",
+      render: (r) =>
+        r.has_receipt ? (
+          <a
+            href={`/api/remittances/${r.id}/receipt`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 font-semibold text-[#0078b6] hover:underline"
+          >
+            <Receipt size={15} /> View
+          </a>
+        ) : (
+          dash
+        ),
+    },
+  ]
+  const leaderColumns: Column[] = [
+    { key: "name", label: "Name", render: (l) => <span className="font-semibold text-[#2a1458]">{String(l.name)}</span> },
+    {
+      key: "email",
+      label: "Email",
+      render: (l) => (
+        <a href={`mailto:${l.email}`} className="text-[#0078b6] hover:underline">
+          {String(l.email)}
+        </a>
+      ),
+    },
+    { key: "contact_number", label: "Contact Number" },
+    { key: "team", label: "Team" },
+    { key: "pending_agents", label: "Pending Agents" },
+    { key: "confirmed_agents", label: "Confirmed Agents" },
+    { key: "created_at", label: "Registered", render: (l) => formatDate(l.created_at) },
+  ]
+
+  const isLeaderTab = tab === "leaders"
+  const isRemittanceTab = tab === "remittances"
+  const columns = isLeaderTab ? leaderColumns : isRemittanceTab ? remittanceColumns : registrationColumns
+  const selectable = !isAdmin && tab === "confirmed"
+  const source: Row[] = useMemo(() => {
+    if (tab === "leaders") {
+      return leaders.map((l) => ({
+        ...l,
+        pending_agents: agentCounts.get(l.id)?.pending ?? 0,
+        confirmed_agents: agentCounts.get(l.id)?.confirmed ?? 0,
+      }))
+    }
+    if (tab === "remittances") return remittances as unknown as Row[]
+    if (tab === "confirmed") return confirmed as unknown as Row[]
+    // What each waiting registration owes: the fee for every person joining.
+    return pending.map((r) => ({ ...r, amount_due: fee === null ? null : fee * r.attendee_count }))
+  }, [tab, leaders, agentCounts, confirmed, pending, remittances, fee])
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const searchable = ["name", "email", "team", "contact_number", "whatsapp_number", "team_leader_name", "reference_no", "method"]
+    const filtered = q ? source.filter((r) => searchable.some((k) => String(r[k] ?? "").toLowerCase().includes(q))) : source
+    const factor = sort.direction === "asc" ? 1 : -1
+    return [...filtered].sort((a, b) => compareValues(a[sort.key], b[sort.key]) * factor || b.id - a.id)
+  }, [source, query, sort])
+
+  const changeTab = (next: Tab) => {
+    setTab(next)
+    setQuery("")
+    setExpanded(null)
+    const key = { pending: "registration_date", confirmed: "registration_date", remittances: "submitted_at", leaders: "created_at", settings: "", payment: "" }[next]
+    setSort({ key, direction: "desc" })
+  }
+
+  const toggleSort = (key: string) =>
+    setSort((current) =>
+      current.key === key ? { key, direction: current.direction === "asc" ? "desc" : "asc" } : { key, direction: "asc" },
+    )
+
+  const exportCsv = () => {
+    const names: Record<Tab, string> = {
+      pending: "pending-agents",
+      confirmed: "confirmed-agents",
+      remittances: "remittances",
+      leaders: "team-leaders",
+      settings: "",
+      payment: "",
+    }
+    const exportValue = (r: Row, key: string) => {
+      if (key === "birth_date") return r[key] ?? ""
+      if (key === "agent_receipt_at") {
+        return r[key] ? `Sent ${formatDate(r[key])}${r.agent_receipt_note ? ` - ${r.agent_receipt_note}` : ""}` : "No"
+      }
+      if (key === "attendee_count") return Number(r[key]) === 2 ? `Both (2 people): ${r.attendees ?? ""}` : r.attendees ? `${r.attendees} only` : "1 person"
+      if (/_at$|_date$/.test(key)) return r[key] ? formatDate(r[key]) : ""
+      if (key === "payment_status") return paymentBadge[r[key] as PaymentStatus].label
+      if (key === "status") return remittanceBadge[r[key] as Remittance["status"]].label
+      if (key === "has_receipt") return r[key] ? "Yes" : "No"
+      return r[key]
+    }
+    downloadCsv(
+      `ares-2027-${names[tab]}.csv`,
+      columns.map((c) => c.label),
+      visible.map((r) => columns.map((c) => exportValue(r, c.key))),
+    )
+  }
+
+  // ---- Header numbers and tabs -----------------------------------------------------
+  const waiting = remittances.filter((r) => r.status === "submitted")
+  const verifiedTotal = sum(remittances.filter((r) => r.status === "verified"))
+  const statCards: { label: string; icon: typeof Users; count?: number; money?: number; hint?: string }[] = isAdmin
+    ? [
+        { label: "Team leaders", icon: UserCog, count: leaders.length },
+        { label: "Agents registered", icon: Users, count: rows.length, hint: `${pending.length.toLocaleString()} not paid yet` },
+        { label: "Remittances to check", icon: Clock, money: sum(waiting), hint: `${waiting.length.toLocaleString()} waiting` },
+        { label: "Received", icon: BadgeCheck, money: verifiedTotal },
+      ]
+    : [
+        { label: "Agents registered", icon: Users, count: rows.length },
+        { label: "Not paid yet", icon: Clock, count: pending.length },
+        { label: "To send to admin", icon: Banknote, money: sum(toSend), hint: `${toSend.length.toLocaleString()} agents` },
+        { label: "Received by admin", icon: BadgeCheck, money: verifiedTotal },
+      ]
+  const tabs: { id: Tab; label: string; count?: number; icon?: typeof Users }[] = [
+    { id: "pending", label: "Pending", count: pending.length },
+    { id: "confirmed", label: "Confirmed", count: confirmed.length },
+    { id: "remittances", label: "Remittances", count: isAdmin ? waiting.length : remittances.length },
+    ...(isAdmin
+      ? [
+          { id: "leaders" as Tab, label: "Team leaders", count: leaders.length },
+          { id: "settings" as Tab, label: "Settings", icon: Settings },
+        ]
+      : [{ id: "payment" as Tab, label: "Payment details", icon: QrCode }]),
+  ]
+
+  const emptyText: Record<Exclude<Tab, "settings" | "payment">, [string, string]> = {
+    pending: isAdmin
+      ? ["No agents waiting to pay", "Agents appear here after they register, until their team leader confirms their payment."]
+      : ["No agents waiting for you", "When an agent on your team registers, they appear here. Check their receipt and confirm them once they pay you."],
+    confirmed: ["No confirmed agents yet", "Agents move here once their team leader confirms their payment."],
+    remittances: isAdmin
+      ? ["No remittances yet", "When a team leader sends collected payments, the remittance appears here for you to check."]
+      : ["No remittances yet", "Tick agents in the Confirmed list and press Send to admin to record a remittance."],
+    leaders: ["No team leaders yet", "Share the TL registration link so team leaders can register."],
+  }
+
+  const dialog =
+    pendingAction?.kind === "registration"
+      ? {
+          title: "Delete this registration?",
+          body: `${pendingAction.row.name} (${pendingAction.row.email}) will be removed and can register again. This cannot be undone.`,
+          action: "Delete",
+        }
+      : pendingAction?.kind === "leader"
+        ? {
+            title: "Delete this team leader?",
+            body: `${pendingAction.row.name} (${pendingAction.row.team}) will lose their login. Their agents can no longer register until a team leader for that team registers again. This cannot be undone.`,
+            action: "Delete",
+          }
+        : pendingAction?.kind === "regenerate"
+          ? {
+              title: "Create a new registration link?",
+              body: "The current link and QR code will stop working straight away. Team leaders who already registered are not affected.",
+              action: "Create new link",
+            }
+          : pendingAction?.kind === "verify"
+            ? {
+                title: "Mark this remittance as received?",
+                body: `${formatMoney(pendingAction.row.amount)} from ${pendingAction.row.team_leader_name} for ${pendingAction.row.agent_count} agent${
+                  pendingAction.row.agent_count === 1 ? "" : "s"
+                } (${pendingAction.row.method}, ref ${pendingAction.row.reference_no}). Those agents become fully paid. This cannot be undone.`,
+                action: "Yes, received",
+              }
+            : null
+
+  return (
+    <MotionConfig reducedMotion="user">
+      <div className="relative min-h-screen bg-[#fbf5e6] font-sans text-[#2a1a3d]">
+        <div aria-hidden className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: brownLattice }} />
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Header band                                                        */}
+        {/* ---------------------------------------------------------------- */}
+        <header className="relative overflow-hidden border-b-2 border-[#d4a437] bg-gradient-to-r from-[#2a1458] via-[#1a0d3d] to-[#3a0d2a] pb-24 text-white">
+          <div aria-hidden className="absolute inset-0 opacity-[0.13]" style={{ backgroundImage: goldLattice }} />
+          <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-80 w-80 rounded-full bg-[#d4a437]/20 blur-[110px]" />
+
+          <div className="relative mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+            <Link href="/" aria-label="ARES 2027 home" className="flex items-center">
+              <img src={LOGO_URL} alt="Asian Real Estate Summit" className="h-10 w-auto sm:h-11" />
+              <span className="ml-3 border-l border-white/40 pl-3 text-xl font-black leading-none tracking-tight sm:text-2xl">2027</span>
+              <span className="ml-3 whitespace-nowrap rounded-full border border-[#d4a437]/60 bg-[#d4a437]/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#f3d27a]">
+                {isAdmin ? "Admin" : "Team leader"}
+              </span>
+            </Link>
+            <div className="flex items-center gap-3">
+              <span className="hidden text-sm text-white/70 md:inline">{userLabel}</span>
+              <button
+                type="button"
+                onClick={signOut}
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#d4a437]/50 bg-white/10 px-3 text-sm font-semibold text-[#fbe7a1] transition-colors hover:bg-white/20"
+              >
+                <LogOut size={16} /> Sign out
+              </button>
+            </div>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="relative mx-auto mt-6 flex max-w-[1400px] items-end gap-5 px-4 sm:px-6"
+          >
+            <Lotus bloom className="hidden h-14 w-24 shrink-0 text-[#f0c24b] sm:block" />
+            <div>
+              <p lang="th" className="text-base font-medium text-[#f3d27a]">
+                การลงทะเบียน
+              </p>
+              <h1 className={`pb-1 text-4xl font-black uppercase leading-none tracking-tight sm:text-5xl ${goldText}`}>
+                {isAdmin ? "Registrations" : "My Agents"}
+              </h1>
+            </div>
+          </motion.div>
+        </header>
+
+        <main className="relative mx-auto -mt-16 max-w-[1400px] px-4 pb-12 sm:px-6">
+          {/* Summary cards overlap the header band */}
+          <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+            {statCards.map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 + i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                className="rounded-2xl border border-[#d4a437]/50 bg-white p-4 shadow-[0_18px_40px_-24px_rgba(58,13,42,0.5)] sm:p-5"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-[#7a6a4a]">{stat.label}</dt>
+                  <span className="grid h-9 w-9 shrink-0 rotate-45 place-items-center border border-[#d4a437] bg-[#fdf3d7] text-[#b8862b]">
+                    <stat.icon size={16} className="-rotate-45" />
+                  </span>
+                </div>
+                <dd className="mt-2 text-2xl font-black tabular-nums text-[#2a1458] sm:text-3xl">
+                  {stat.money !== undefined ? formatMoney(stat.money) : <Counter to={stat.count ?? 0} duration={1.2} />}
+                </dd>
+                {stat.hint ? <p className="mt-1 text-xs text-[#7a6a4a]">{stat.hint}</p> : null}
+              </motion.div>
+            ))}
+          </dl>
+
+          {fee === null ? (
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e3d3a8] bg-[#fdf3d7] px-4 py-3 text-sm text-[#4a3413]">
+              <p>
+                <span className="font-semibold">The registration fee is not set yet.</span>{" "}
+                {isAdmin
+                  ? "Team leaders cannot confirm payments until you set it."
+                  : "You cannot confirm payments until the admin sets it."}
+              </p>
+              {isAdmin ? (
+                <button type="button" onClick={() => changeTab("settings")} className={goldButton}>
+                  <Settings size={16} /> Set the fee
+                </button>
+              ) : null}
+            </div>
+          ) : !isAdmin ? (
+            <p className="mt-6 text-sm text-[#5c4a2a]">
+              Registration fee per person: <span className="font-bold text-[#2a1458]">{formatMoney(fee)}</span>. A couple who are
+              both joining pays double.
+            </p>
+          ) : null}
+
+          {!isAdmin && tab !== "payment" && !hasPaymentDetails(paymentDetails) ? (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e3d3a8] bg-[#fdf3d7] px-4 py-3 text-sm text-[#4a3413]">
+              <p>
+                <span className="font-semibold">Your agents cannot see where to pay you yet.</span> Add your bank or e-wallet
+                accounts and they will be shown to them after they register.
+              </p>
+              <button type="button" onClick={() => changeTab("payment")} className={goldButton}>
+                <QrCode size={16} /> Add payment details
+              </button>
+            </div>
+          ) : null}
+
+          {/* Tabs */}
+          <div role="tablist" aria-label="Lists" className="mt-8 flex gap-2 overflow-x-auto pb-1">
+            {tabs.map((item) => {
+              const active = tab === item.id
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => changeTab(item.id)}
+                  className={`inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors ${
+                    active
+                      ? "border-[#2a1458] bg-[#2a1458] text-[#fbe7a1]"
+                      : "border-[#e3d3a8] bg-white text-[#6b4a12] hover:border-[#c9972f] hover:bg-[#fdf3d7]"
+                  }`}
+                >
+                  {item.icon ? <item.icon size={16} /> : null}
+                  {item.label}
+                  {item.count !== undefined ? (
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs tabular-nums ${
+                        active ? "bg-[#f3d27a] text-[#2a1408]" : "bg-[#f1e6c8] text-[#6b4a12]"
+                      }`}
+                    >
+                      {item.count.toLocaleString()}
+                    </span>
+                  ) : null}
+                </button>
+              )
+            })}
+          </div>
+
+          {errorMessage ? (
+            <p role="alert" className="mt-4 rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
+              {errorMessage}
+            </p>
+          ) : null}
+
+          {tab === "payment" ? (
+            <PaymentDetailsPanel
+              accounts={paymentDetails ?? []}
+              fee={fee}
+              onAdd={(form) => changePaymentAccounts("/api/tl/payment-details", { method: "POST", body: form })}
+              onUpdate={(id, form) => changePaymentAccounts(`/api/tl/payment-details/${id}`, { method: "PUT", body: form })}
+              onDelete={(id) => changePaymentAccounts(`/api/tl/payment-details/${id}`, { method: "DELETE" })}
+            />
+          ) : tab === "settings" ? (
+            <>
+              <FeePanel fee={fee} busy={busyKey === "fee"} onSave={saveFee} />
+              <InvitePanel token={inviteToken} busy={busyKey === "invite"} onRegenerate={() => setPendingAction({ kind: "regenerate" })} />
+            </>
+          ) : (
+            <>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <label className="relative block w-full sm:w-96">
+                  <span className="sr-only">Search this list</span>
+                  <Search size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#b8862b]" />
+                  <input
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search name, email, team, contact number"
+                    className="h-11 w-full rounded-xl border border-[#e3d3a8] bg-white pl-11 pr-3 text-sm text-[#2a1a3d] outline-none transition-all placeholder:text-[#a89a7c] focus:border-[#c9972f] focus:shadow-[0_0_0_4px_rgba(212,164,55,0.18)]"
+                  />
+                </label>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={refresh} disabled={refreshing} className={outlineButton}>
+                    <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} /> Refresh
+                  </button>
+                  <button type="button" onClick={exportCsv} disabled={visible.length === 0} className={goldButton}>
+                    <Download size={16} /> Export CSV
+                  </button>
+                </div>
+              </div>
+
+              {selectable && toSend.length > 0 ? (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#d4a437]/60 bg-[#2a1458] px-4 py-3 text-[#fbe7a1]">
+                  <p className="text-sm">
+                    {selectedRows.length === 0 ? (
+                      <>
+                        <span className="font-semibold text-white">{toSend.length.toLocaleString()}</span> agent
+                        {toSend.length === 1 ? " has" : "s have"} paid you. Tick the ones you are sending to the admin.
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-white">{selectedRows.length.toLocaleString()}</span> selected ·{" "}
+                        <span className="font-bold text-white">{formatMoney(sum(selectedRows))}</span>
+                      </>
+                    )}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelected(selectedRows.length === toSend.length ? new Set() : new Set(toSend.map((r) => r.id)))}
+                      className="inline-flex h-10 items-center rounded-xl border border-[#d4a437]/50 bg-white/10 px-3 text-sm font-semibold transition-colors hover:bg-white/20"
+                    >
+                      {selectedRows.length === toSend.length ? "Clear selection" : `Select all ${toSend.length.toLocaleString()}`}
+                    </button>
+                    <button type="button" onClick={() => setRemitOpen(true)} disabled={selectedRows.length === 0} className={`${goldButton} h-10`}>
+                      <Send size={16} /> Send to admin
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="mt-4 overflow-hidden rounded-2xl border border-[#d4a437]/50 bg-white shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)]">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[980px] border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-[#2a1458] to-[#1a0d3d] text-left text-[#fbe7a1]">
+                        <th scope="col" className="w-12 px-4 py-3.5 text-right font-semibold text-[#f3d27a]/70">
+                          {selectable ? <span className="sr-only">Select</span> : "#"}
+                        </th>
+                        {columns.map((column) => {
+                          const active = sort.key === column.key
+                          const Icon = !active ? ArrowUpDown : sort.direction === "asc" ? ArrowUp : ArrowDown
+                          return (
+                            <th
+                              key={column.key}
+                              scope="col"
+                              aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+                              className="px-3 py-3.5 font-semibold"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => toggleSort(column.key)}
+                                className={`inline-flex w-full items-center justify-between gap-2 whitespace-nowrap transition-colors hover:text-white ${
+                                  active ? "text-white" : ""
+                                }`}
+                              >
+                                {column.label}
+                                <Icon size={14} className={active ? "text-[#f3d27a]" : "text-[#f3d27a]/40"} />
+                              </button>
+                            </th>
+                          )
+                        })}
+                        <th scope="col" className="px-3 py-3.5 font-semibold">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visible.length === 0 ? (
+                        <tr>
+                          <td colSpan={columns.length + 2} className="px-3 py-16 text-center">
+                            <Lotus className="mx-auto h-12 w-20 text-[#d4a437]" />
+                            <p className="mt-4 text-base font-semibold text-[#2a1458]">
+                              {source.length === 0 ? emptyText[tab][0] : "Nothing matches your search"}
+                            </p>
+                            <p className="mt-1 text-sm text-[#7a6a4a]">
+                              {source.length === 0 ? emptyText[tab][1] : "Try a different name, email or team."}
+                            </p>
+                          </td>
+                        </tr>
+                      ) : (
+                        visible.map((row, index) => {
+                          const busy = busyKey === `${isLeaderTab ? "leader" : isRemittanceTab ? "remittance" : "registration"}-${row.id}`
+                          const status = row.payment_status as PaymentStatus | undefined
+                          const remitted = isRemittanceTab ? (agentsByRemittance.get(row.id) ?? []) : []
+                          return (
+                            <Fragment key={`${tab}-${row.id}`}>
+                            <motion.tr
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: busy ? 0.55 : 1, y: 0 }}
+                              transition={{ duration: 0.35, delay: Math.min(index, 12) * 0.03 }}
+                              className="border-b border-[#f1e6c8] transition-colors last:border-0 odd:bg-white even:bg-[#fdfaf1] hover:bg-[#fdf3d7]"
+                            >
+                              <td className="px-4 py-3.5 text-right tabular-nums text-[#a89a7c]">
+                                {selectable ? (
+                                  status === "paid_to_tl" ? (
+                                    <input
+                                      type="checkbox"
+                                      checked={selected.has(row.id)}
+                                      onChange={() => toggleSelected(row.id)}
+                                      aria-label={`Select ${String(row.name)} to send to admin`}
+                                      className="h-5 w-5 cursor-pointer rounded accent-[#2a1458]"
+                                    />
+                                  ) : null
+                                ) : (
+                                  index + 1
+                                )}
+                              </td>
+                              {columns.map((column) => {
+                                const value = row[column.key]
+                                return (
+                                  <td key={column.key} className="px-3 py-3.5">
+                                    {column.render ? column.render(row) : value === null || value === "" ? dash : String(value)}
+                                  </td>
+                                )
+                              })}
+                              <td className="px-3 py-3.5">
+                                <div className="flex items-center gap-2">
+                                  {isRemittanceTab ? (
+                                    isAdmin && row.status === "submitted" ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => setPendingAction({ kind: "verify", row: row as unknown as Remittance })}
+                                          disabled={busy}
+                                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#8a6417] bg-gradient-to-r from-[#c9972f] to-[#f3d27a] px-3 text-xs font-bold text-[#2a1408] transition-all hover:brightness-105 disabled:cursor-not-allowed"
+                                        >
+                                          {busy ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Received
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setRejecting(row as unknown as Remittance)}
+                                          disabled={busy}
+                                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#e3d3a8] bg-white px-3 text-xs font-bold text-[#9a1c15] transition-colors hover:bg-[#b3261e]/5 disabled:cursor-not-allowed"
+                                        >
+                                          <X size={14} /> Reject
+                                        </button>
+                                      </>
+                                    ) : (
+                                      dash
+                                    )
+                                  ) : isLeaderTab ? null : status === "unpaid" || status === "paid_to_tl" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmed(row as unknown as Registration, status === "unpaid")}
+                                      disabled={busy || (status === "unpaid" && fee === null)}
+                                      className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+                                        status === "unpaid" ? "w-[150px]" : "w-[84px]"
+                                      } ${
+                                        status === "unpaid"
+                                          ? "border border-[#8a6417] bg-gradient-to-r from-[#c9972f] to-[#f3d27a] text-[#2a1408] hover:brightness-105"
+                                          : "border border-[#e3d3a8] bg-white text-[#6b4a12] hover:bg-[#fdf3d7]"
+                                      }`}
+                                    >
+                                      {busy ? (
+                                        <Loader2 size={14} className="animate-spin" />
+                                      ) : status === "unpaid" ? (
+                                        <>
+                                          <CheckCircle2 size={14} /> Payment received
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Undo2 size={14} /> Undo
+                                        </>
+                                      )}
+                                    </button>
+                                  ) : (
+                                    dash
+                                  )}
+                                  {selectable && status === "paid_to_tl" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        // Send just this agent, without ticking boxes first.
+                                        setSelected(new Set([row.id]))
+                                        setRemitOpen(true)
+                                      }}
+                                      disabled={busy}
+                                      aria-label={`Send ${String(row.name)}'s payment to admin`}
+                                      className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#8a6417] bg-gradient-to-r from-[#c9972f] to-[#f3d27a] px-3 text-xs font-bold text-[#2a1408] transition-all hover:brightness-105 disabled:cursor-not-allowed"
+                                    >
+                                      <Send size={14} /> Send
+                                    </button>
+                                  ) : null}
+                                  {isAdmin && !isRemittanceTab && (isLeaderTab || status === "unpaid" || status === "paid_to_tl") ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setPendingAction(
+                                          isLeaderTab
+                                            ? { kind: "leader", row: row as unknown as TeamLeader }
+                                            : { kind: "registration", row: row as unknown as Registration },
+                                        )
+                                      }
+                                      disabled={busy}
+                                      aria-label={`Delete ${String(row.name)}`}
+                                      className={iconButton}
+                                    >
+                                      {isLeaderTab && busy ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </td>
+                            </motion.tr>
+                            {isRemittanceTab && expanded === row.id && remitted.length > 0 ? (
+                              <tr className="border-b border-[#f1e6c8] bg-[#fdf8ea]">
+                                <td />
+                                <td colSpan={columns.length + 1} className="px-3 py-3 text-sm text-[#4a3413]">
+                                  <span className="font-semibold">Agents in this remittance:</span>{" "}
+                                  {remitted.map((agent) => `${agent.name} (${formatMoney(agent.amount)})`).join(", ")}
+                                </td>
+                              </tr>
+                            ) : null}
+                            </Fragment>
+                          )
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <p className="mt-3 text-xs text-[#7a6a4a]">
+                Showing {visible.length.toLocaleString()} of {source.length.toLocaleString()}. Dates are in Philippine time.
+              </p>
+            </>
+          )}
+
+          <GoldRule className="mx-auto mt-10 max-w-xs" />
+        </main>
+
+        <AlertDialog open={pendingAction !== null} onOpenChange={(open) => (open ? null : setPendingAction(null))}>
+          <AlertDialogContent className="rounded-2xl border-[#d4a437]/60 bg-white font-sans text-[#2a1a3d] sm:rounded-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-xl font-black text-[#2a1458]">{dialog?.title}</AlertDialogTitle>
+              <AlertDialogDescription className="text-[#5c4a2a]">{dialog?.body}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-xl border-[#e3d3a8] bg-white text-[#6b4a12] hover:bg-[#fdf3d7] hover:text-[#6b4a12]">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmPendingAction}
+                className={`rounded-xl text-white ${
+                  pendingAction?.kind === "verify" ? "bg-[#2a1458] hover:bg-[#1a0d3d]" : "bg-[#b3261e] hover:bg-[#9a1c15]"
+                }`}
+              >
+                {dialog?.action}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <RemitDialog
+          open={remitOpen}
+          onOpenChange={setRemitOpen}
+          agents={selectedRows}
+          total={sum(selectedRows)}
+          onSubmit={sendRemittance}
+        />
+        <RejectDialog
+          remittance={rejecting}
+          onClose={() => setRejecting(null)}
+          onReject={(row, note) => {
+            setRejecting(null)
+            reviewRemittance(row, "rejected", note)
+          }}
+        />
+      </div>
+    </MotionConfig>
+  )
+}
+
+/** Team leader: record sending the ticked agents' payments to the organizer. */
+function RemitDialog({
+  open,
+  onOpenChange,
+  agents,
+  total,
+  onSubmit,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  agents: Registration[]
+  total: number
+  onSubmit: (form: FormData) => Promise<void>
+}) {
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open) setError(null)
+  }, [open])
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (sending) return
+    const form = new FormData(e.currentTarget)
+    const receipt = form.get("receipt")
+    if (receipt instanceof File && receipt.size > 5 * 1024 * 1024) return setError("The receipt file is larger than 5 MB.")
+    setSending(true)
+    setError(null)
+    try {
+      await onSubmit(form)
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "We could not record your remittance.")
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => (sending ? null : onOpenChange(next))}>
+      <DialogContent className={`${dialogClass} max-h-[90vh] overflow-y-auto`}>
+        <DialogHeader>
+          <DialogTitle className="text-xl font-black text-[#2a1458]">Send payment to admin</DialogTitle>
+          <DialogDescription className="text-[#5c4a2a]">
+            Send the money to the organizer first, then record it here so the admin can check it.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="rounded-xl border border-[#e3d3a8] bg-[#fdf8ea] p-4">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-sm font-semibold text-[#4a3413]">
+              {agents.length.toLocaleString()} agent{agents.length === 1 ? "" : "s"}
+            </span>
+            <span className="text-2xl font-black tabular-nums text-[#2a1458]">{formatMoney(total)}</span>
+          </div>
+          <p className="mt-2 max-h-20 overflow-y-auto text-xs leading-relaxed text-[#5c4a2a]">{agents.map((a) => a.name).join(", ")}</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="remit-method" className={fieldLabel}>
+                How did you send it?
+              </label>
+              <select id="remit-method" name="method" required defaultValue="" className={fieldClass}>
+                <option value="" disabled>
+                  Choose…
+                </option>
+                {PAYMENT_METHODS.map((method) => (
+                  <option key={method} value={method}>
+                    {method}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="remit-reference" className={fieldLabel}>
+                Reference number
+              </label>
+              <input id="remit-reference" name="reference_no" required maxLength={120} autoComplete="off" className={fieldClass} />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="remit-receipt" className={fieldLabel}>
+              Receipt photo or screenshot
+            </label>
+            <input
+              id="remit-receipt"
+              name="receipt"
+              type="file"
+              required
+              accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+              className="block w-full rounded-xl border border-[#e3d3a8] bg-white text-sm text-[#2a1a3d] file:mr-3 file:h-11 file:cursor-pointer file:border-0 file:bg-[#2a1458] file:px-4 file:text-sm file:font-semibold file:text-[#fbe7a1]"
+            />
+            <p className="mt-1.5 text-xs text-[#7a6a4a]">JPG, PNG, WEBP, HEIC or PDF, up to 5 MB.</p>
+          </div>
+
+          {error ? (
+            <p role="alert" className="rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
+              {error}
+            </p>
+          ) : null}
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <button type="button" onClick={() => onOpenChange(false)} disabled={sending} className={outlineButton}>
+              Cancel
+            </button>
+            <button type="submit" disabled={sending || agents.length === 0} className={goldButton}>
+              {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} {sending ? "Sending…" : "Record remittance"}
+            </button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** Admin: reject a remittance with a note for the team leader. */
+function RejectDialog({
+  remittance,
+  onClose,
+  onReject,
+}: {
+  remittance: Remittance | null
+  onClose: () => void
+  onReject: (remittance: Remittance, note: string) => void
+}) {
+  const [note, setNote] = useState("")
+  useEffect(() => setNote(""), [remittance])
+
+  return (
+    <Dialog open={remittance !== null} onOpenChange={(open) => (open ? null : onClose())}>
+      <DialogContent className={dialogClass}>
+        <DialogHeader>
+          <DialogTitle className="text-xl font-black text-[#2a1458]">Reject this remittance?</DialogTitle>
+          <DialogDescription className="text-[#5c4a2a]">
+            {remittance
+              ? `${formatMoney(remittance.amount)} from ${remittance.team_leader_name}. Its agents go back to "Paid to TL" so the team leader can send them again.`
+              : ""}
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (remittance && note.trim()) onReject(remittance, note.trim())
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label htmlFor="reject-note" className={fieldLabel}>
+              Reason (the team leader will see this)
+            </label>
+            <textarea
+              id="reject-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              required
+              maxLength={500}
+              rows={3}
+              className={`${fieldClass} h-auto py-2`}
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <button type="button" onClick={onClose} className={outlineButton}>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!note.trim()}
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#b3261e] px-4 text-sm font-bold text-white transition-colors hover:bg-[#9a1c15] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <X size={16} /> Reject remittance
+            </button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** Team leader only: the accounts and QR codes agents are shown after they register. */
+function PaymentDetailsPanel({
+  accounts,
+  fee,
+  onAdd,
+  onUpdate,
+  onDelete,
+}: {
+  accounts: TlPaymentAccount[]
+  fee: number | null
+  onAdd: (form: FormData) => Promise<void>
+  onUpdate: (id: number, form: FormData) => Promise<void>
+  onDelete: (id: number) => Promise<void>
+}) {
+  // Which form is open: an account being edited, a new one, or none.
+  const [editing, setEditing] = useState<number | "new" | null>(accounts.length === 0 ? "new" : null)
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
+  const [deleting, setDeleting] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const full = accounts.length >= MAX_PAYMENT_ACCOUNTS
+
+  const remove = async (id: number) => {
+    setDeleting(id)
+    setError(null)
+    try {
+      await onDelete(id)
+      setConfirmDelete(null)
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "We could not delete this account.")
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  return (
+    <section className="mt-4 rounded-2xl border border-[#d4a437]/50 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)] sm:p-8">
+      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">For your agents</p>
+      <h2 className="mt-2 text-2xl font-black text-[#2a1458]">Where agents pay you</h2>
+      <p className="mt-3 max-w-2xl leading-relaxed text-[#5c4a2a]">
+        Right after an agent on your team registers, they are shown these accounts so they can send you the registration fee
+        {fee !== null ? (
+          <>
+            {" "}
+            of <span className="font-bold text-[#2a1458]">{formatMoney(fee)}</span> per person
+          </>
+        ) : null}
+        . Add as many as you accept, for example BDO, BPI and GCash. The agent picks one.
+      </p>
+
+      {error ? (
+        <p role="alert" className="mt-4 rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
+          {error}
+        </p>
+      ) : null}
+
+      {accounts.length > 0 ? (
+        <ul className="mt-6 grid gap-4 lg:grid-cols-2">
+          {accounts.map((account) =>
+            editing === account.id ? (
+              <li key={account.id} className="lg:col-span-2">
+                <PaymentAccountForm
+                  account={account}
+                  onCancel={() => setEditing(null)}
+                  onSubmit={async (form) => {
+                    await onUpdate(account.id, form)
+                    setEditing(null)
+                  }}
+                />
+              </li>
+            ) : (
+              <li key={account.id} className="flex gap-4 rounded-2xl border border-[#e3d3a8] bg-[#fdf8ea] p-4">
+                <div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-xl border border-[#e3d3a8] bg-white p-1">
+                  {account.qr_url ? (
+                    <img src={account.qr_url} alt={`${account.bank} QR code`} className="h-full w-full object-contain" />
+                  ) : (
+                    <span className="text-center text-[11px] leading-tight text-[#a89a7c]">
+                      <QrCode size={22} className="mx-auto mb-1" />
+                      No QR code
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="break-words text-lg font-black text-[#2a1458]">{account.bank}</p>
+                  {account.account_number ? (
+                    <>
+                      <p className="break-all font-semibold tabular-nums text-[#2a1a3d]">{account.account_number}</p>
+                      <p className="break-words text-sm text-[#5c4a2a]">{account.account_name}</p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-[#5c4a2a]">QR code only</p>
+                  )}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {confirmDelete === account.id ? (
+                      <>
+                        <span className="text-sm font-semibold text-[#9a1c15]">Delete this account?</span>
+                        <button
+                          type="button"
+                          onClick={() => remove(account.id)}
+                          disabled={deleting !== null}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#b3261e] px-3 text-xs font-bold text-white hover:bg-[#9a1c15] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {deleting === account.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Yes, delete
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDelete(null)}
+                          disabled={deleting !== null}
+                          className={`${outlineButton} h-9 px-3 text-xs`}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditing(account.id)
+                            setConfirmDelete(null)
+                          }}
+                          className={`${outlineButton} h-9 px-3 text-xs`}
+                        >
+                          <Settings size={14} /> Edit
+                        </button>
+                        <button type="button" onClick={() => setConfirmDelete(account.id)} className={`${outlineButton} h-9 px-3 text-xs`}>
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </li>
+            ),
+          )}
+        </ul>
+      ) : null}
+
+      {editing === "new" ? (
+        <div className="mt-6">
+          <PaymentAccountForm
+            account={null}
+            onCancel={accounts.length > 0 ? () => setEditing(null) : undefined}
+            onSubmit={async (form) => {
+              await onAdd(form)
+              setEditing(null)
+            }}
+          />
+        </div>
+      ) : (
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <button type="button" onClick={() => setEditing("new")} disabled={full} className={goldButton}>
+            <Banknote size={16} /> Add {accounts.length > 0 ? "another" : "an"} account
+          </button>
+          <p className="text-sm text-[#7a6a4a]">
+            {full
+              ? `You have reached the limit of ${MAX_PAYMENT_ACCOUNTS} accounts.`
+              : `${accounts.length.toLocaleString()} account${accounts.length === 1 ? "" : "s"} shown to your agents.`}
+          </p>
+        </div>
+      )}
+    </section>
+  )
+}
+
+/** Add or edit one payment account: bank, account details and/or its QR code. */
+function PaymentAccountForm({
+  account,
+  onSubmit,
+  onCancel,
+}: {
+  account: TlPaymentAccount | null
+  onSubmit: (form: FormData) => Promise<void>
+  onCancel?: () => void
+}) {
+  const [bank, setBank] = useState(account?.bank ?? "")
+  const [accountName, setAccountName] = useState(account?.account_name ?? "")
+  const [accountNumber, setAccountNumber] = useState(account?.account_number ?? "")
+  const [file, setFile] = useState<File | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
+  const [removeQr, setRemoveQr] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const idPrefix = `pay-${account?.id ?? "new"}`
+
+  useEffect(() => {
+    if (!file) return setPreview(null)
+    const url = URL.createObjectURL(file)
+    setPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+
+  const shownQr = preview ?? (removeQr ? null : (account?.qr_url ?? null))
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (saving) return
+    if (file && file.size > 5 * 1024 * 1024) return setError("The QR code image is larger than 5 MB.")
+    if (!shownQr && !accountNumber.trim()) return setError("Add an account number or a QR code for this account.")
+    const form = new FormData()
+    form.set("bank", bank)
+    form.set("account_name", accountName)
+    form.set("account_number", accountNumber)
+    if (file) form.set("qr", file)
+    if (removeQr && !file) form.set("remove_qr", "1")
+    setSaving(true)
+    setError(null)
+    try {
+      await onSubmit(form)
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "We could not save this account.")
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="grid gap-6 rounded-2xl border border-[#d4a437]/60 bg-[#fdfaf1] p-5 lg:grid-cols-[1fr_auto]">
+      <div className="space-y-4">
+        <h3 className="font-bold text-[#2a1458]">{account ? `Edit ${account.bank}` : "New account"}</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor={`${idPrefix}-bank`} className={fieldLabel}>
+              Bank or e-wallet <span className="text-[#b3261e]">*</span>
+            </label>
+            <input
+              id={`${idPrefix}-bank`}
+              value={bank}
+              onChange={(e) => setBank(e.target.value)}
+              required
+              maxLength={80}
+              placeholder="e.g. BDO, BPI, GCash"
+              autoComplete="off"
+              className={fieldClass}
+            />
+          </div>
+          <div>
+            <label htmlFor={`${idPrefix}-number`} className={fieldLabel}>
+              Account number
+            </label>
+            <input
+              id={`${idPrefix}-number`}
+              value={accountNumber}
+              onChange={(e) => setAccountNumber(e.target.value)}
+              maxLength={60}
+              inputMode="numeric"
+              placeholder="e.g. 0012 3456 7890"
+              autoComplete="off"
+              className={`${fieldClass} tabular-nums`}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label htmlFor={`${idPrefix}-name`} className={fieldLabel}>
+              Account name
+            </label>
+            <input
+              id={`${idPrefix}-name`}
+              value={accountName}
+              onChange={(e) => setAccountName(e.target.value)}
+              required={accountNumber.trim() !== ""}
+              maxLength={120}
+              placeholder="The name the account is under"
+              autoComplete="off"
+              className={fieldClass}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor={`${idPrefix}-qr`} className={fieldLabel}>
+            {account?.qr_url ? "Replace the QR code image" : "QR code image (optional if you gave an account number)"}
+          </label>
+          <input
+            id={`${idPrefix}-qr`}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(e) => {
+              setFile(e.target.files?.[0] ?? null)
+              setRemoveQr(false)
+            }}
+            className="block w-full rounded-xl border border-[#e3d3a8] bg-white text-sm text-[#2a1a3d] file:mr-3 file:h-11 file:cursor-pointer file:border-0 file:bg-[#2a1458] file:px-4 file:text-sm file:font-semibold file:text-[#fbe7a1]"
+          />
+          <p className="mt-1.5 text-xs text-[#7a6a4a]">A screenshot of this account&apos;s QR code. JPG, PNG or WEBP, up to 5 MB.</p>
+          {account?.qr_url && !file ? (
+            <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-[#4a3413]">
+              <input
+                type="checkbox"
+                checked={removeQr}
+                onChange={(e) => setRemoveQr(e.target.checked)}
+                className="h-4 w-4 rounded accent-[#b3261e]"
+              />
+              Remove the current QR code
+            </label>
+          ) : null}
+        </div>
+
+        {error ? (
+          <p role="alert" className="rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="submit" disabled={saving} className={goldButton}>
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}{" "}
+            {saving ? "Saving…" : account ? "Save changes" : "Save account"}
+          </button>
+          {onCancel ? (
+            <button type="button" onClick={onCancel} disabled={saving} className={outlineButton}>
+              Cancel
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center gap-2">
+        <div className="grid h-48 w-48 place-items-center overflow-hidden rounded-2xl border border-[#d4a437]/60 bg-white p-3">
+          {shownQr ? (
+            <img src={shownQr} alt="QR code for this account" className="h-full w-full object-contain" />
+          ) : (
+            <div className="text-center text-sm text-[#a89a7c]">
+              <QrCode size={36} className="mx-auto" />
+              <p className="mt-2">No QR code</p>
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-[#7a6a4a]">{file ? "New image, not saved yet" : ""}</p>
+      </div>
+    </form>
+  )
+}
+
+/** Admin only: the registration fee every agent pays their team leader. */
+function FeePanel({ fee, busy, onSave }: { fee: number | null; busy: boolean; onSave: (fee: number) => void }) {
+  const [value, setValue] = useState(fee === null ? "" : String(fee))
+  useEffect(() => setValue(fee === null ? "" : String(fee)), [fee])
+  const parsed = Number(value)
+  const valid = value.trim() !== "" && Number.isFinite(parsed) && parsed >= 0
+
+  return (
+    <section className="mt-4 rounded-2xl border border-[#d4a437]/50 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)] sm:p-8">
+      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">Payments</p>
+      <h2 className="mt-2 text-2xl font-black text-[#2a1458]">Registration fee per agent</h2>
+      <p className="mt-3 max-w-xl leading-relaxed text-[#5c4a2a]">
+        Each agent pays this amount to their team leader. Changing it only affects payments confirmed from now on; amounts
+        already confirmed stay as they are.
+      </p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (valid) onSave(parsed)
+        }}
+        className="mt-5 flex flex-wrap items-end gap-3"
+      >
+        <div>
+          <label htmlFor="fee-amount" className={fieldLabel}>
+            Amount ({CURRENCY})
+          </label>
+          <input
+            id="fee-amount"
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="0.01"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="0.00"
+            className={`${fieldClass} w-48 tabular-nums`}
+          />
+        </div>
+        <button type="submit" disabled={!valid || busy || parsed === fee} className={goldButton}>
+          {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Save fee
+        </button>
+        <p className="pb-3 text-sm text-[#5c4a2a]">
+          Current: <span className="font-bold text-[#2a1458]">{fee === null ? "not set" : formatMoney(fee)}</span>
+        </p>
+      </form>
+    </section>
+  )
+}
+
+/** Admin only: the private link and QR code that let team leaders register. */
+function InvitePanel({ token, busy, onRegenerate }: { token: string | null; busy: boolean; onRegenerate: () => void }) {
+  const [origin, setOrigin] = useState("")
+  const [qr, setQr] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => setOrigin(window.location.origin), [])
+  const link = token && origin ? `${origin}/tl/register?invite=${encodeURIComponent(token)}` : ""
+
+  useEffect(() => {
+    if (!link) return setQr(null)
+    let cancelled = false
+    QRCode.toDataURL(link, { width: 640, margin: 2, errorCorrectionLevel: "M", color: { dark: "#1a0d3d", light: "#ffffff" } })
+      .then((url) => (cancelled ? null : setQr(url)))
+      .catch(() => (cancelled ? null : setQr(null)))
+    return () => {
+      cancelled = true
+    }
+  }, [link])
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  if (!token) {
+    return (
+      <p role="alert" className="mt-4 rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
+        The registration link could not be loaded. Reload the page to try again.
+      </p>
+    )
+  }
+
+  return (
+    <section className="mt-4 grid gap-6 rounded-2xl border border-[#d4a437]/50 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)] sm:p-8 lg:grid-cols-[1fr_auto]">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">For team leaders only</p>
+        <h2 className="mt-2 text-2xl font-black text-[#2a1458]">Team leader registration link</h2>
+        <p className="mt-3 max-w-xl leading-relaxed text-[#5c4a2a]">
+          Team leaders can only register through this private link or its QR code. Send it to the team leaders yourself. It
+          is not shown anywhere on the public site.
+        </p>
+
+        <label htmlFor="tl-invite-link" className="mt-6 flex items-center gap-2 text-sm font-semibold text-[#4a3413]">
+          <Link2 size={16} className="text-[#b8862b]" /> Registration link
+        </label>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+          <input
+            id="tl-invite-link"
+            readOnly
+            value={link}
+            onFocus={(e) => e.currentTarget.select()}
+            className="h-11 min-w-0 flex-1 rounded-xl border border-[#e3d3a8] bg-[#fdfaf1] px-3 font-mono text-xs text-[#2a1a3d] outline-none focus:border-[#c9972f]"
+          />
+          <button type="button" onClick={copy} disabled={!link} className={goldButton}>
+            {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? "Copied" : "Copy link"}
+          </button>
+        </div>
+
+        <div className="mt-8 border-t border-dashed border-[#d4a437]/60 pt-6">
+          <h3 className="font-bold text-[#2a1458]">Link shared with the wrong people?</h3>
+          <p className="mt-1 max-w-xl text-sm leading-relaxed text-[#5c4a2a]">
+            Create a new link. The current link and QR code stop working at once; team leaders who already registered keep
+            their accounts.
+          </p>
+          <button type="button" onClick={onRegenerate} disabled={busy} className={`${outlineButton} mt-4`}>
+            {busy ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} Create new link
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center gap-3">
+        <div className="grid h-60 w-60 place-items-center rounded-2xl border border-[#d4a437]/60 bg-white p-3">
+          {qr ? (
+            <img src={qr} alt="QR code for the team leader registration link" className="h-full w-full" />
+          ) : (
+            <Loader2 className="animate-spin text-[#b8862b]" />
+          )}
+        </div>
+        {qr ? (
+          <a href={qr} download="ares-2027-team-leader-registration-qr.png" className={outlineButton}>
+            <Download size={16} /> Download QR code
+          </a>
+        ) : null}
+      </div>
+    </section>
+  )
+}

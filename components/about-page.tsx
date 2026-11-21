@@ -257,15 +257,6 @@ const AboutPage = () => {
                     Because growth happens when we look beyond what we know, learn from the best, and dare to think
                     beyond boundaries.
                   </p>
-                  <div className="flex flex-wrap items-center gap-4 pt-2">
-                    <Link
-                      href="/ares-2027-interest"
-                      className="group inline-flex min-h-[48px] items-center gap-3 rounded-full bg-[#ffd700] px-6 text-sm font-semibold text-gray-900 transition-colors hover:bg-white"
-                    >
-                      Register your interest
-                      <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
-                    </Link>
-                  </div>
                 </div>
               </div>
             </div>
