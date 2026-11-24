@@ -443,7 +443,7 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
 
                   <div className="mt-6 rounded-xl border border-dashed border-[#d4a437]/70 bg-[#fdf8ea] px-4 py-4 text-center text-sm text-[#5c4a2a]">
                     <p className="font-semibold text-[#2a1458]">Can't make it to ARES 2027?</p>
-                    <p className="mt-1">No worries at all! Just let us know so we can plan ahead. Thank you!</p>
+                    <p className="mt-1">No worries at all! Your account may still be used to monitor your team's registration. Thank you!</p>
                     <button
                       type="button"
                       onClick={() => setDeclining(true)}
