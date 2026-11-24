@@ -442,8 +442,8 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
                   </p>
 
                   <div className="mt-6 rounded-xl border border-dashed border-[#d4a437]/70 bg-[#fdf8ea] px-4 py-4 text-center text-sm text-[#5c4a2a]">
-                    <p className="font-semibold text-[#2a1458]">Not joining ARES 2027?</p>
-                    <p className="mt-1">Let us know so we do not keep waiting for your registration.</p>
+                    <p className="font-semibold text-[#2a1458]">Can't make it to ARES 2027?</p>
+                    <p className="mt-1">No worries at all! Just let us know so we can plan ahead. Thank you!</p>
                     <button
                       type="button"
                       onClick={() => setDeclining(true)}
