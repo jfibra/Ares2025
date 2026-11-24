@@ -3,9 +3,10 @@ import { redirect } from "next/navigation"
 import PortalDashboard from "@/components/portal-dashboard"
 import { getAdmin } from "@/lib/auth"
 import { loadDashboardData } from "@/lib/payments"
-import { TEAM_LEADER_COLUMNS, type TeamLeader } from "@/lib/registrations"
+import { TEAM_LEADER_COLUMNS, TL_DECLINE_COLUMNS, type TeamLeader, type TlDecline } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { getTlInviteToken } from "@/lib/tl-invite"
+import { getTlPaymentDetails } from "@/lib/tl-payment"
 
 export const metadata: Metadata = { title: "Admin - Registrations", robots: { index: false, follow: false } }
 export const dynamic = "force-dynamic"
@@ -14,7 +15,7 @@ export default async function AdminPage() {
   const admin = await getAdmin()
   if (!admin) redirect("/admin/login")
 
-  const [data, teamLeaders, inviteToken] = await Promise.all([
+  const [data, teamLeaders, inviteToken, declines, adminAccounts] = await Promise.all([
     loadDashboardData().catch((error) => {
       console.error("Admin page could not load registrations:", error)
       return null
@@ -24,7 +25,13 @@ export default async function AdminPage() {
       console.error("Admin page could not load the TL invite:", error)
       return null
     }),
+    createSupabaseAdmin().from("team_leader_declines").select(TL_DECLINE_COLUMNS).order("declined_at", { ascending: false }),
+    getTlPaymentDetails("admin").catch((error) => {
+      console.error("Admin page could not load the payment accounts:", error)
+      return null
+    }),
   ])
+  if (declines.error) console.error("Admin page could not load TL declines:", declines.error)
   if (teamLeaders.error) console.error("Admin page could not load team leaders:", teamLeaders.error)
 
   return (
@@ -34,9 +41,12 @@ export default async function AdminPage() {
       initialRegistrations={data?.registrations ?? []}
       initialRemittances={data?.remittances ?? []}
       initialFee={data?.fee ?? null}
+      initialSlotLimit={data?.slotLimit}
       initialTeamLeaders={(teamLeaders.data ?? []) as TeamLeader[]}
       initialInviteToken={inviteToken}
-      loadFailed={!data || Boolean(teamLeaders.error)}
+      initialDeclines={(declines.data ?? []) as TlDecline[]}
+      initialAdminAccounts={adminAccounts ?? []}
+      loadFailed={!data || !adminAccounts || Boolean(teamLeaders.error) || Boolean(declines.error)}
     />
   )
 }

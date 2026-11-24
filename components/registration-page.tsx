@@ -326,6 +326,18 @@ function noticeFor(result: Record<string, unknown> | null): Notice {
         title: "Your team leader hasn't registered yet",
         text: `${result.teamLeaderName ? `${result.teamLeaderName} (${result.team})` : `The leader of ${result.team}`} needs to register first. Please ask them, then come back.`,
       }
+    case "tl_declined":
+      return {
+        tone: "warning",
+        title: "Your team leader is not joining ARES 2027",
+        text: `${result.teamLeaderName ? `${result.teamLeaderName} (${result.team})` : `The leader of ${result.team}`} has told us they will not be joining, so registration is not open for your team. If you would still like to attend, please contact the ARES admin.`,
+      }
+    case "full":
+      return {
+        tone: "warning",
+        title: "Registration is full",
+        text: "All available slots have been taken for now. Please ask your team leader or the ARES admin if more slots will open.",
+      }
     case "already_registered":
       return result.confirmed
         ? { tone: "info", title: "You're already registered", text: "Your team leader has confirmed you. See you in Bangkok!" }
@@ -349,7 +361,7 @@ function noticeFor(result: Record<string, unknown> | null): Notice {
   }
 }
 
-const RegistrationPage = () => {
+const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: number } | null }) => {
   const reduce = useReducedMotion()
 
   const [stage, setStage] = useState<Stage>("email")
@@ -599,6 +611,32 @@ const RegistrationPage = () => {
                   <CalendarDays size={16} /> July 13, 2027
                 </span>
               </motion.div>
+              {slots && slots.limit > 0 ? (
+                <motion.div variants={staggerItem} className="mt-6 flex justify-center">
+                  <p className="inline-flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-2xl border border-[#f0c24b]/70 bg-[#d4a437]/15 px-5 py-3 text-sm text-white backdrop-blur sm:text-base">
+                    <Ticket size={18} className="shrink-0 text-[#f0c24b]" />
+                    {slots.left > 0 ? (
+                      <>
+                        <span>
+                          Only <span className={`text-lg font-black sm:text-xl ${goldText}`}>{slots.limit.toLocaleString()} slots</span>{" "}
+                          available
+                          {slots.left < slots.limit ? (
+                            <>
+                              , <span className="font-bold text-[#fbe7a1]">{slots.left.toLocaleString()} left</span>
+                            </>
+                          ) : null}
+                          .
+                        </span>
+                        <span className="font-semibold text-[#fbe7a1]">Reserve your slot now.</span>
+                      </>
+                    ) : (
+                      <span className="font-semibold text-[#fbe7a1]">
+                        All {slots.limit.toLocaleString()} slots have been taken. Registration is full for now.
+                      </span>
+                    )}
+                  </p>
+                </motion.div>
+              ) : null}
             </motion.div>
           </div>
 

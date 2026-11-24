@@ -5,7 +5,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, MotionConfig, motion } from "framer-motion"
-import { ArrowLeft, Eye, EyeOff, Loader2, LockKeyhole, Mail, Phone, ShieldCheck, TriangleAlert, User, Users } from "lucide-react"
+import { ArrowLeft, Check, Eye, EyeOff, Loader2, LockKeyhole, Mail, Phone, ShieldCheck, TriangleAlert, User, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { staggerContainer, staggerItem } from "@/components/motion"
@@ -18,12 +18,162 @@ const inputClass =
 const labelClass = "mb-2 block text-sm font-semibold text-[#4a3413]"
 const fieldIconClass = "pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#b8862b]"
 
+const emptyDecline = { name: "", email: "", team: "", reason: "" }
+
+/** For a team leader who is not joining: who they are and why. Shown in place of the registration form. */
+function DeclineForm({ invite, onBack }: { invite: string; onBack: () => void }) {
+  const [form, setForm] = useState(emptyDecline)
+  const [submitting, setSubmitting] = useState(false)
+  const [done, setDone] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const update = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (submitting) return
+    if (!form.reason.trim()) return setErrorMessage("Please tell us why you are not joining.")
+    setSubmitting(true)
+    setErrorMessage(null)
+    try {
+      const response = await fetch("/api/tl/decline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invite, ...form }),
+      })
+      const result = await response.json().catch(() => null)
+      if (!response.ok || !result?.success) {
+        setErrorMessage(result?.message || "We could not save your answer. Please try again.")
+        return
+      }
+      setDone(true)
+    } catch {
+      setErrorMessage("We could not save your answer. Please check your connection and try again.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (done) {
+    return (
+      <div className="py-6 text-center" role="status">
+        <span className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-full bg-[#fdf3d7] text-[#8a5a00]">
+          <Check size={26} />
+        </span>
+        <h2 className="text-2xl font-black text-[#2a1458]">Thank you for letting us know</h2>
+        <p className="mx-auto mt-3 max-w-sm text-[#5c4a2a]">
+          We have recorded that you are not joining ARES 2027, together with your reason. If your plans change, open this
+          same link again and register.
+        </p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="mt-6 inline-flex h-12 items-center rounded-xl border border-[#c9972f] bg-white px-6 text-base font-semibold text-[#6b4a12] hover:bg-[#fdf3d7]"
+        >
+          I can join after all
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div className="mb-7 text-center">
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">ARES 2027</p>
+        <h2 className="mt-2 text-3xl font-black text-[#2a1458]">Not joining?</h2>
+        <p className="mt-2 text-sm text-[#7a6a4a]">Tell us who you are and why you cannot join. All fields are required.</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label htmlFor="decline-name" className={labelClass}>
+            Full name
+          </label>
+          <div className="relative">
+            <User size={18} className={fieldIconClass} />
+            <Input id="decline-name" name="name" autoComplete="name" autoFocus value={form.name} onChange={update} required maxLength={200} className={inputClass} />
+          </div>
+        </div>
+        <div>
+          <label htmlFor="decline-email" className={labelClass}>
+            Email
+          </label>
+          <div className="relative">
+            <Mail size={18} className={fieldIconClass} />
+            <Input id="decline-email" type="email" name="email" autoComplete="email" autoCapitalize="none" spellCheck={false} value={form.email} onChange={update} required className={inputClass} />
+          </div>
+        </div>
+        <div>
+          <label htmlFor="decline-team" className={labelClass}>
+            Team
+          </label>
+          <div className="relative">
+            <Users size={18} className={fieldIconClass} />
+            <Input id="decline-team" name="team" autoComplete="organization" value={form.team} onChange={update} required maxLength={200} aria-describedby="decline-team-help" className={inputClass} />
+          </div>
+          <p id="decline-team-help" className="mt-1.5 text-xs text-[#7a6a4a]">
+            Use your team&apos;s official name, so your agents are told you are not joining.
+          </p>
+        </div>
+        <div>
+          <label htmlFor="decline-reason" className={labelClass}>
+            Reason for not joining
+          </label>
+          <textarea
+            id="decline-reason"
+            name="reason"
+            value={form.reason}
+            onChange={update}
+            required
+            maxLength={1000}
+            rows={4}
+            placeholder="e.g. I have a schedule conflict on those dates."
+            className="w-full rounded-xl border border-[#e3d3a8] bg-white px-4 py-3 text-base text-[#2a1a3d] outline-none transition-all duration-300 placeholder:text-[#a89a7c] focus:border-[#c9972f] focus:shadow-[0_0_0_4px_rgba(212,164,55,0.18)]"
+          />
+        </div>
+
+        {errorMessage ? (
+          <p role="alert" className="flex items-start gap-2 rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
+            <TriangleAlert size={16} className="mt-0.5 shrink-0" /> {errorMessage}
+          </p>
+        ) : null}
+
+        <Button
+          type="submit"
+          disabled={submitting}
+          className="h-14 w-full rounded-xl border border-[#2a1458] bg-[#2a1458] text-lg font-bold text-[#fbe7a1] hover:bg-[#1a0d3d] disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {submitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="animate-spin" size={20} /> Sending…
+            </span>
+          ) : (
+            "Submit: I am not joining"
+          )}
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center text-sm text-[#7a6a4a]">
+        Joining after all?{" "}
+        <button type="button" onClick={onBack} className="font-semibold text-[#6b4a12] underline-offset-2 hover:underline">
+          Back to registration
+        </button>
+      </p>
+    </>
+  )
+}
+
 const emptyForm = { name: "", email: "", contact_number: "", team: "", password: "", confirm: "" }
 
 /** Team leader sign-up. `invite` is null when the link's token is missing or no longer valid. */
 export default function TeamLeaderRegister({ invite }: { invite: string | null }) {
   const router = useRouter()
   const [form, setForm] = useState(emptyForm)
+  // A team leader who is not joining switches to the decline form.
+  const [declining, setDeclining] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -141,6 +291,8 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
                     Already registered? Sign in
                   </Link>
                 </div>
+              ) : declining ? (
+                <DeclineForm invite={invite} onBack={() => setDeclining(false)} />
               ) : (
                 <>
                   <div className="mb-7 text-center">
@@ -288,6 +440,18 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
                       Sign in
                     </Link>
                   </p>
+
+                  <div className="mt-6 rounded-xl border border-dashed border-[#d4a437]/70 bg-[#fdf8ea] px-4 py-4 text-center text-sm text-[#5c4a2a]">
+                    <p className="font-semibold text-[#2a1458]">Not joining ARES 2027?</p>
+                    <p className="mt-1">Let us know so we do not keep waiting for your registration.</p>
+                    <button
+                      type="button"
+                      onClick={() => setDeclining(true)}
+                      className="mt-3 inline-flex h-11 items-center rounded-xl border border-[#c9972f] bg-white px-5 text-sm font-semibold text-[#6b4a12] hover:bg-[#fdf3d7]"
+                    >
+                      I am not joining
+                    </button>
+                  </div>
                 </>
               )}
             </div>

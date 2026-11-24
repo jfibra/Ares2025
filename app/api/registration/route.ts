@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { EMAIL_PATTERN, resolveAgent } from "@/lib/agent-registration"
-import { getRegistrationFee } from "@/lib/payments"
+import { getRegistrationFee, getSlotsLeft } from "@/lib/payments"
 import { resolveAttendance, validateAgentDetails } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { getTlPaymentDetails } from "@/lib/tl-payment"
@@ -40,6 +40,20 @@ export async function POST(request: Request) {
     if (!attendance.ok) {
       return NextResponse.json(
         { success: false, status: "invalid_details", field: "attending", message: attendance.message },
+        { status: 400 },
+      )
+    }
+    // Slots are limited; a couple who are both joining needs two.
+    const slotsLeft = await getSlotsLeft()
+    if (slotsLeft <= 0) return NextResponse.json({ success: false, status: "full" }, { status: 409 })
+    if (attendance.attendee_count > slotsLeft) {
+      return NextResponse.json(
+        {
+          success: false,
+          status: "invalid_details",
+          field: "attending",
+          message: "Only 1 slot is left, so only one of you can register. Please choose who is joining.",
+        },
         { status: 400 },
       )
     }

@@ -54,6 +54,18 @@ export const hasPaymentDetails = (details: TlPaymentDetails | null | undefined) 
 
 export const TEAM_LEADER_COLUMNS = "id,name,email,contact_number,team,created_at"
 
+/** A team leader who said they are not joining ARES 2027. */
+export type TlDecline = {
+  id: number
+  name: string
+  email: string
+  team: string
+  reason: string
+  declined_at: string
+}
+
+export const TL_DECLINE_COLUMNS = "id,name,email,team,reason,declined_at"
+
 export type Remittance = {
   id: number
   team_leader_id: number

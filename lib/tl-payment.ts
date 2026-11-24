@@ -2,10 +2,12 @@ import { randomUUID } from "crypto"
 import { MAX_PAYMENT_ACCOUNTS, type TlPaymentAccount } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 
-// Server only. The accounts and QR codes a team leader wants their agents to pay into.
+// Server only. The accounts and QR codes people pay into: a team leader's (for their agents)
+// or the admin's (for team leaders sending on what they collected).
 
 export const PAYMENT_QR_BUCKET = "tl-payment-qr"
 const TABLE = "team_leader_payment_accounts"
+const ADMIN_TABLE = "admin_payment_accounts"
 const COLUMNS = "id,bank,account_name,account_number,qr_path"
 const MAX_QR_BYTES = 5 * 1024 * 1024
 const QR_TYPES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" }
@@ -14,10 +16,16 @@ type AccountRow = { id: number; bank: string; account_name: string | null; accou
 export type AccountResult = { ok: true } | { ok: false; status: number; message: string }
 const refuse = (message: string, status = 400): AccountResult => ({ ok: false, status, message })
 
-/** Every account of one team leader, oldest first. QR storage paths become links that expire. */
-export async function getTlPaymentDetails(teamLeaderId: number, qrLinkSeconds = 60 * 60): Promise<TlPaymentAccount[]> {
+/** Whose accounts: one team leader's (their id) or the organizer's. */
+export type PaymentOwner = number | "admin"
+const tableOf = (owner: PaymentOwner) => (owner === "admin" ? ADMIN_TABLE : TABLE)
+/** Filter for `.match()` that limits a query to the owner's rows. Every row of the admin table is the admin's. */
+const ownedBy = (owner: PaymentOwner): Record<string, number> => (owner === "admin" ? {} : { team_leader_id: owner })
+
+/** Every account of one owner, oldest first. QR storage paths become links that expire. */
+export async function getTlPaymentDetails(owner: PaymentOwner, qrLinkSeconds = 60 * 60): Promise<TlPaymentAccount[]> {
   const supabase = createSupabaseAdmin()
-  const { data, error } = await supabase.from(TABLE).select(COLUMNS).eq("team_leader_id", teamLeaderId).order("id")
+  const { data, error } = await supabase.from(tableOf(owner)).select(COLUMNS).match(ownedBy(owner)).order("id")
   if (error) throw error
   const rows = (data ?? []) as AccountRow[]
 
@@ -58,8 +66,8 @@ function readAccountForm(form: FormData) {
   return { message, bank, accountName, accountNumber, qr, removeQr: text("remove_qr") === "1" }
 }
 
-async function uploadQr(teamLeaderId: number, qr: File) {
-  const path = `${teamLeaderId}/${randomUUID()}.${QR_TYPES[qr.type]}`
+async function uploadQr(owner: PaymentOwner, qr: File) {
+  const path = `${owner}/${randomUUID()}.${QR_TYPES[qr.type]}`
   const { error } = await createSupabaseAdmin()
     .storage.from(PAYMENT_QR_BUCKET)
     .upload(path, Buffer.from(await qr.arrayBuffer()), { contentType: qr.type, upsert: false })
@@ -72,22 +80,22 @@ const removeFiles = async (paths: (string | null)[]) => {
   if (real.length) await createSupabaseAdmin().storage.from(PAYMENT_QR_BUCKET).remove(real)
 }
 
-export async function addPaymentAccount(teamLeaderId: number, form: FormData): Promise<AccountResult> {
+export async function addPaymentAccount(owner: PaymentOwner, form: FormData): Promise<AccountResult> {
   const input = readAccountForm(form)
   if (input.message) return refuse(input.message)
   if (!input.qr && !input.accountNumber) return refuse("Add an account number or a QR code for this account.")
 
   const supabase = createSupabaseAdmin()
   const { count, error: countError } = await supabase
-    .from(TABLE)
+    .from(tableOf(owner))
     .select("id", { count: "exact", head: true })
-    .eq("team_leader_id", teamLeaderId)
+    .match(ownedBy(owner))
   if (countError) throw countError
   if ((count ?? 0) >= MAX_PAYMENT_ACCOUNTS) return refuse(`You can list up to ${MAX_PAYMENT_ACCOUNTS} accounts. Delete one first.`, 409)
 
-  const qrPath = input.qr ? await uploadQr(teamLeaderId, input.qr) : null
-  const { error } = await supabase.from(TABLE).insert({
-    team_leader_id: teamLeaderId,
+  const qrPath = input.qr ? await uploadQr(owner, input.qr) : null
+  const { error } = await supabase.from(tableOf(owner)).insert({
+    ...(owner === "admin" ? {} : { team_leader_id: owner }),
     bank: input.bank,
     account_name: input.accountName || null,
     account_number: input.accountNumber || null,
@@ -100,16 +108,16 @@ export async function addPaymentAccount(teamLeaderId: number, form: FormData): P
   return { ok: true }
 }
 
-export async function updatePaymentAccount(teamLeaderId: number, id: number, form: FormData): Promise<AccountResult> {
+export async function updatePaymentAccount(owner: PaymentOwner, id: number, form: FormData): Promise<AccountResult> {
   const input = readAccountForm(form)
   if (input.message) return refuse(input.message)
 
   const supabase = createSupabaseAdmin()
   const { data: current, error: readError } = await supabase
-    .from(TABLE)
+    .from(tableOf(owner))
     .select("qr_path")
     .eq("id", id)
-    .eq("team_leader_id", teamLeaderId)
+    .match(ownedBy(owner))
     .maybeSingle()
   if (readError) throw readError
   if (!current) return refuse("This account no longer exists. Refresh and try again.", 404)
@@ -118,9 +126,9 @@ export async function updatePaymentAccount(teamLeaderId: number, id: number, for
   const keepsQr = Boolean(input.qr) || (Boolean(oldPath) && !input.removeQr)
   if (!keepsQr && !input.accountNumber) return refuse("Add an account number or a QR code for this account.")
 
-  const newPath = input.qr ? await uploadQr(teamLeaderId, input.qr) : input.removeQr ? null : oldPath
+  const newPath = input.qr ? await uploadQr(owner, input.qr) : input.removeQr ? null : oldPath
   const { error } = await supabase
-    .from(TABLE)
+    .from(tableOf(owner))
     .update({
       bank: input.bank,
       account_name: input.accountName || null,
@@ -128,7 +136,7 @@ export async function updatePaymentAccount(teamLeaderId: number, id: number, for
       qr_path: newPath,
     })
     .eq("id", id)
-    .eq("team_leader_id", teamLeaderId)
+    .match(ownedBy(owner))
   if (error) {
     if (input.qr) await removeFiles([newPath])
     throw error
@@ -137,12 +145,12 @@ export async function updatePaymentAccount(teamLeaderId: number, id: number, for
   return { ok: true }
 }
 
-export async function deletePaymentAccount(teamLeaderId: number, id: number): Promise<AccountResult> {
+export async function deletePaymentAccount(owner: PaymentOwner, id: number): Promise<AccountResult> {
   const { data, error } = await createSupabaseAdmin()
-    .from(TABLE)
+    .from(tableOf(owner))
     .delete()
     .eq("id", id)
-    .eq("team_leader_id", teamLeaderId)
+    .match(ownedBy(owner))
     .select("qr_path")
     .maybeSingle()
   if (error) throw error

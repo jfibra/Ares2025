@@ -64,6 +64,9 @@ export async function POST(request: Request) {
       throw insertError
     }
 
+    // They are joining after all: drop any earlier "not joining" answer.
+    await supabase.from("team_leader_declines").delete().eq("email", email)
+
     setSession(email, "tl")
     return NextResponse.json({ success: true }, { status: 201 })
   } catch (error) {

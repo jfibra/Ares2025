@@ -27,11 +27,45 @@ export async function setRegistrationFee(fee: number) {
   if (error) throw error
 }
 
+const SLOTS_KEY = "registration_slots"
+/** How many people can register until an admin changes it in Settings. */
+export const DEFAULT_SLOT_LIMIT = 300
+
+/** The most people who may register. A couple who are both joining takes two slots. */
+export async function getSlotLimit(): Promise<number> {
+  const { data, error } = await createSupabaseAdmin().from("app_settings").select("value").eq("key", SLOTS_KEY).maybeSingle()
+  if (error) throw error
+  const limit = data ? Number(data.value) : NaN
+  return Number.isInteger(limit) && limit >= 0 ? limit : DEFAULT_SLOT_LIMIT
+}
+
+export async function setSlotLimit(limit: number) {
+  const { error } = await createSupabaseAdmin()
+    .from("app_settings")
+    .upsert({ key: SLOTS_KEY, value: String(limit), updated_at: new Date().toISOString() }, { onConflict: "key" })
+  if (error) throw error
+}
+
+/** Slots still open: the limit minus every person already registered, paid or not. */
+export async function getSlotsLeft(): Promise<number> {
+  return (await getSlotStatus()).left
+}
+
+/** The total number of slots and how many are still open. */
+export async function getSlotStatus(): Promise<{ limit: number; left: number }> {
+  const supabase = createSupabaseAdmin()
+  const [limit, taken] = await Promise.all([getSlotLimit(), supabase.from("registrations").select("attendee_count").limit(100_000)])
+  if (taken.error) throw taken.error
+  const people = (taken.data ?? []).reduce((total, row) => total + (row.attendee_count ?? 1), 0)
+  return { limit, left: Math.max(0, limit - people) }
+}
+
 /** Everything a dashboard shows. `teamLeaderId` limits it to one team leader's own records. */
 export async function loadDashboardData(teamLeaderId?: number): Promise<{
   registrations: Registration[]
   remittances: Remittance[]
   fee: number | null
+  slotLimit: number
 }> {
   const supabase = createSupabaseAdmin()
   let registrations = supabase.from("registrations").select(REGISTRATION_COLUMNS).order("registration_date", { ascending: false })
@@ -40,13 +74,14 @@ export async function loadDashboardData(teamLeaderId?: number): Promise<{
     registrations = registrations.eq("team_leader_id", teamLeaderId)
     remittances = remittances.eq("team_leader_id", teamLeaderId)
   }
-  const [regs, rems, fee] = await Promise.all([registrations, remittances, getRegistrationFee()])
+  const [regs, rems, fee, slotLimit] = await Promise.all([registrations, remittances, getRegistrationFee(), getSlotLimit()])
   if (regs.error) throw regs.error
   if (rems.error) throw rems.error
   return {
     registrations: (regs.data ?? []).map((r) => ({ ...r, amount: r.amount === null ? null : Number(r.amount) })) as Registration[],
     remittances: (rems.data ?? []).map((r) => toRemittance(r as Record<string, unknown>)),
     fee,
+    slotLimit,
   }
 }
 

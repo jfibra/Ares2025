@@ -21,10 +21,21 @@ async function findTeamLeaderFor(agent: DirectoryAgent): Promise<TeamLeader | nu
   return sameTeam.length === 1 ? sameTeam[0] : null
 }
 
+/** True when this agent's team leader told us they are not joining: matched by email, else by team name. */
+async function teamLeaderDeclined(agent: DirectoryAgent): Promise<boolean> {
+  const { data, error } = await createSupabaseAdmin().from("team_leader_declines").select("email,team")
+  if (error) throw error
+  const declines = (data ?? []) as { email: string; team: string }[]
+  if (agent.team_leader_email && declines.some((decline) => decline.email === agent.team_leader_email)) return true
+  const team = normaliseTeam(agent.team)
+  return declines.some((decline) => normaliseTeam(decline.team) === team)
+}
+
 export type AgentResolution =
   | { status: "found"; agent: DirectoryAgent; teamLeader: TeamLeader }
   | { status: "not_found" }
   | { status: "tl_not_registered"; team: string; teamLeaderName: string }
+  | { status: "tl_declined"; team: string; teamLeaderName: string }
   | { status: "already_registered"; confirmed: boolean; teamLeaderName: string | null; teamLeaderId: number | null; attendeeCount: number; receiptAt: string | null }
   | { status: "unavailable" }
 
@@ -63,6 +74,9 @@ export async function resolveAgent(rawEmail: string): Promise<AgentResolution> {
 
   const teamLeader = await findTeamLeaderFor(agent)
   if (!teamLeader) {
+    if (await teamLeaderDeclined(agent)) {
+      return { status: "tl_declined", team: agent.team, teamLeaderName: agent.team_leader_name }
+    }
     return { status: "tl_not_registered", team: agent.team, teamLeaderName: agent.team_leader_name }
   }
   return { status: "found", agent, teamLeader }

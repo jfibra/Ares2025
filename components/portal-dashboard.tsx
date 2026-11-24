@@ -53,6 +53,7 @@ import {
   type Registration,
   type Remittance,
   type TeamLeader,
+  type TlDecline,
   type TlPaymentAccount,
   type TlPaymentDetails,
 } from "@/lib/registrations"
@@ -60,13 +61,14 @@ import {
 const LOGO_URL = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
 
 type Role = "admin" | "tl"
-type Tab = "pending" | "confirmed" | "remittances" | "leaders" | "settings" | "payment"
+type Tab = "pending" | "confirmed" | "remittances" | "leaders" | "declined" | "settings" | "payment" | "payadmin"
 type Row = Record<string, unknown> & { id: number }
 type Column = { key: string; label: string; render?: (row: Row) => React.ReactNode }
 type Sort = { key: string; direction: "asc" | "desc" }
 type PendingAction =
   | { kind: "registration"; row: Registration }
   | { kind: "leader"; row: TeamLeader }
+  | { kind: "decline"; row: TlDecline }
   | { kind: "regenerate" }
   | { kind: "verify"; row: Remittance }
   | null
@@ -138,9 +140,12 @@ export default function PortalDashboard({
   initialRegistrations,
   initialRemittances,
   initialFee,
+  initialSlotLimit = 300,
   initialTeamLeaders = [],
   initialInviteToken = null,
   initialPaymentDetails = null,
+  initialAdminAccounts = [],
+  initialDeclines = [],
   loadFailed,
 }: {
   role: Role
@@ -148,9 +153,12 @@ export default function PortalDashboard({
   initialRegistrations: Registration[]
   initialRemittances: Remittance[]
   initialFee: number | null
+  initialSlotLimit?: number
   initialTeamLeaders?: TeamLeader[]
   initialInviteToken?: string | null
   initialPaymentDetails?: TlPaymentDetails | null
+  initialAdminAccounts?: TlPaymentAccount[]
+  initialDeclines?: TlDecline[]
   loadFailed: boolean
 }) {
   const router = useRouter()
@@ -158,9 +166,15 @@ export default function PortalDashboard({
   const [rows, setRows] = useState(initialRegistrations)
   const [remittances, setRemittances] = useState(initialRemittances)
   const [fee, setFee] = useState(initialFee)
+  // Admin: how many people can register in total.
+  const [slotLimit, setSlotLimit] = useState(initialSlotLimit)
   const [leaders, setLeaders] = useState(initialTeamLeaders)
+  // Admin: team leaders who said they are not joining.
+  const [declines, setDeclines] = useState(initialDeclines)
   // Team leader: where their agents send the registration fee.
   const [paymentDetails, setPaymentDetails] = useState(initialPaymentDetails)
+  // The organizer's accounts: the admin manages them, team leaders send their collections there.
+  const [adminAccounts, setAdminAccounts] = useState(initialAdminAccounts)
   // Team leader: agents ticked to send to the admin in one remittance.
   const [selected, setSelected] = useState<Set<number>>(() => new Set())
   const [remitOpen, setRemitOpen] = useState(false)
@@ -230,11 +244,15 @@ export default function PortalDashboard({
         setRows(result.registrations)
         setRemittances(result.remittances)
         setFee(result.fee)
+        if (typeof result.slotLimit === "number") setSlotLimit(result.slotLimit)
         setSelected(new Set())
+        if (result.adminAccounts) setAdminAccounts(result.adminAccounts)
       }
       if (isAdmin) {
         const leaderResult = await call("/api/admin/team-leaders", { cache: "no-store" })
         if (leaderResult) setLeaders(leaderResult.teamLeaders)
+        const declineResult = await call("/api/admin/tl-declines", { cache: "no-store" })
+        if (declineResult) setDeclines(declineResult.declines)
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Could not refresh.")
@@ -266,6 +284,11 @@ export default function PortalDashboard({
       run(`leader-${action.row.id}`, "Could not delete the team leader.", async () => {
         const result = await call(`/api/admin/team-leaders/${action.row.id}`, { method: "DELETE" })
         if (result) setLeaders((all) => all.filter((l) => l.id !== action.row.id))
+      })
+    } else if (action.kind === "decline") {
+      run(`decline-${action.row.id}`, "Could not remove this entry.", async () => {
+        const result = await call(`/api/admin/tl-declines/${action.row.id}`, { method: "DELETE" })
+        if (result) setDeclines((all) => all.filter((d) => d.id !== action.row.id))
       })
     } else if (action.kind === "verify") {
       reviewRemittance(action.row, "verified", "")
@@ -317,6 +340,12 @@ export default function PortalDashboard({
     if (result) setPaymentDetails(result.accounts)
   }
 
+  /** Admin: add, change or delete one of the organizer's accounts. Throws so the panel can show the reason. */
+  const changeAdminAccounts = async (url: string, init: RequestInit) => {
+    const result = await call(url, init)
+    if (result) setAdminAccounts(result.accounts)
+  }
+
   const saveFee = (value: number) =>
     run("fee", "Could not save the fee.", async () => {
       const result = await call("/api/admin/fee", {
@@ -325,6 +354,16 @@ export default function PortalDashboard({
         body: JSON.stringify({ fee: value }),
       })
       if (result) setFee(result.fee)
+    })
+
+  const saveSlots = (value: number) =>
+    run("slots", "Could not save the number of slots.", async () => {
+      const result = await call("/api/admin/slots", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slots: value }),
+      })
+      if (result) setSlotLimit(result.slots)
     })
 
   const toggleSelected = (id: number) =>
@@ -473,9 +512,30 @@ export default function PortalDashboard({
     { key: "created_at", label: "Registered", render: (l) => formatDate(l.created_at) },
   ]
 
+  const declineColumns: Column[] = [
+    { key: "name", label: "Name", render: (d) => <span className="font-semibold text-[#2a1458]">{String(d.name)}</span> },
+    {
+      key: "email",
+      label: "Email",
+      render: (d) => (
+        <a href={`mailto:${d.email}`} className="text-[#0078b6] hover:underline">
+          {String(d.email)}
+        </a>
+      ),
+    },
+    { key: "team", label: "Team" },
+    {
+      key: "reason",
+      label: "Reason for not joining",
+      render: (d) => <p className="min-w-[16rem] max-w-md whitespace-pre-wrap break-words">{String(d.reason)}</p>,
+    },
+    { key: "declined_at", label: "Declined", render: (d) => formatDate(d.declined_at) },
+  ]
+
   const isLeaderTab = tab === "leaders"
+  const isDeclinedTab = tab === "declined"
   const isRemittanceTab = tab === "remittances"
-  const columns = isLeaderTab ? leaderColumns : isRemittanceTab ? remittanceColumns : registrationColumns
+  const columns = isLeaderTab ? leaderColumns : isDeclinedTab ? declineColumns : isRemittanceTab ? remittanceColumns : registrationColumns
   const selectable = !isAdmin && tab === "confirmed"
   const source: Row[] = useMemo(() => {
     if (tab === "leaders") {
@@ -485,15 +545,16 @@ export default function PortalDashboard({
         confirmed_agents: agentCounts.get(l.id)?.confirmed ?? 0,
       }))
     }
+    if (tab === "declined") return declines as unknown as Row[]
     if (tab === "remittances") return remittances as unknown as Row[]
     if (tab === "confirmed") return confirmed as unknown as Row[]
     // What each waiting registration owes: the fee for every person joining.
     return pending.map((r) => ({ ...r, amount_due: fee === null ? null : fee * r.attendee_count }))
-  }, [tab, leaders, agentCounts, confirmed, pending, remittances, fee])
+  }, [tab, leaders, declines, agentCounts, confirmed, pending, remittances, fee])
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const searchable = ["name", "email", "team", "contact_number", "whatsapp_number", "team_leader_name", "reference_no", "method"]
+    const searchable = ["name", "email", "team", "reason", "contact_number", "whatsapp_number", "team_leader_name", "reference_no", "method"]
     const filtered = q ? source.filter((r) => searchable.some((k) => String(r[k] ?? "").toLowerCase().includes(q))) : source
     const factor = sort.direction === "asc" ? 1 : -1
     return [...filtered].sort((a, b) => compareValues(a[sort.key], b[sort.key]) * factor || b.id - a.id)
@@ -503,7 +564,7 @@ export default function PortalDashboard({
     setTab(next)
     setQuery("")
     setExpanded(null)
-    const key = { pending: "registration_date", confirmed: "registration_date", remittances: "submitted_at", leaders: "created_at", settings: "", payment: "" }[next]
+    const key = { pending: "registration_date", confirmed: "registration_date", remittances: "submitted_at", leaders: "created_at", declined: "declined_at", settings: "", payment: "", payadmin: "" }[next]
     setSort({ key, direction: "desc" })
   }
 
@@ -518,8 +579,10 @@ export default function PortalDashboard({
       confirmed: "confirmed-agents",
       remittances: "remittances",
       leaders: "team-leaders",
+      declined: "team-leaders-not-joining",
       settings: "",
       payment: "",
+      payadmin: "",
     }
     const exportValue = (r: Row, key: string) => {
       if (key === "birth_date") return r[key] ?? ""
@@ -542,11 +605,18 @@ export default function PortalDashboard({
 
   // ---- Header numbers and tabs -----------------------------------------------------
   const waiting = remittances.filter((r) => r.status === "submitted")
+  // Every person registered takes a slot; a couple who are both joining takes two.
+  const slotsTaken = rows.reduce((total, r) => total + (Number(r.attendee_count) || 1), 0)
   const verifiedTotal = sum(remittances.filter((r) => r.status === "verified"))
   const statCards: { label: string; icon: typeof Users; count?: number; money?: number; hint?: string }[] = isAdmin
     ? [
         { label: "Team leaders", icon: UserCog, count: leaders.length },
-        { label: "Agents registered", icon: Users, count: rows.length, hint: `${pending.length.toLocaleString()} not paid yet` },
+        {
+          label: "Agents registered",
+          icon: Users,
+          count: rows.length,
+          hint: `${slotsTaken.toLocaleString()} of ${slotLimit.toLocaleString()} slots taken · ${pending.length.toLocaleString()} not paid yet`,
+        },
         { label: "Remittances to check", icon: Clock, money: sum(waiting), hint: `${waiting.length.toLocaleString()} waiting` },
         { label: "Received", icon: BadgeCheck, money: verifiedTotal },
       ]
@@ -563,20 +633,25 @@ export default function PortalDashboard({
     ...(isAdmin
       ? [
           { id: "leaders" as Tab, label: "Team leaders", count: leaders.length },
+          { id: "declined" as Tab, label: "Not joining", count: declines.length },
           { id: "settings" as Tab, label: "Settings", icon: Settings },
         ]
-      : [{ id: "payment" as Tab, label: "Payment details", icon: QrCode }]),
+      : [
+          { id: "payadmin" as Tab, label: "Pay admin", icon: Send, count: toSend.length },
+          { id: "payment" as Tab, label: "Payment details", icon: QrCode },
+        ]),
   ]
 
-  const emptyText: Record<Exclude<Tab, "settings" | "payment">, [string, string]> = {
+  const emptyText: Record<Exclude<Tab, "settings" | "payment" | "payadmin">, [string, string]> = {
     pending: isAdmin
       ? ["No agents waiting to pay", "Agents appear here after they register, until their team leader confirms their payment."]
       : ["No agents waiting for you", "When an agent on your team registers, they appear here. Check their receipt and confirm them once they pay you."],
     confirmed: ["No confirmed agents yet", "Agents move here once their team leader confirms their payment."],
     remittances: isAdmin
       ? ["No remittances yet", "When a team leader sends collected payments, the remittance appears here for you to check."]
-      : ["No remittances yet", "Tick agents in the Confirmed list and press Send to admin to record a remittance."],
+      : ["No remittances yet", "Open Pay admin to see where to send the money and record your payment."],
     leaders: ["No team leaders yet", "Share the TL registration link so team leaders can register."],
+    declined: ["No team leader has declined", "A team leader who is not joining can say so, with their reason, from the TL registration link."],
   }
 
   const dialog =
@@ -592,7 +667,13 @@ export default function PortalDashboard({
             body: `${pendingAction.row.name} (${pendingAction.row.team}) will lose their login. Their agents can no longer register until a team leader for that team registers again. This cannot be undone.`,
             action: "Delete",
           }
-        : pendingAction?.kind === "regenerate"
+        : pendingAction?.kind === "decline"
+          ? {
+              title: "Remove this entry?",
+              body: `${pendingAction.row.name} (${pendingAction.row.team}) will be removed from the "Not joining" list, along with their reason. Their agents will again be told their team leader has not registered yet.`,
+              action: "Remove",
+            }
+          : pendingAction?.kind === "regenerate"
           ? {
               title: "Create a new registration link?",
               body: "The current link and QR code will stop working straight away. Team leaders who already registered are not affected.",
@@ -704,6 +785,18 @@ export default function PortalDashboard({
             </p>
           ) : null}
 
+          {isAdmin && tab !== "settings" && adminAccounts.length === 0 ? (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e3d3a8] bg-[#fdf3d7] px-4 py-3 text-sm text-[#4a3413]">
+              <p>
+                <span className="font-semibold">Team leaders cannot see where to send the money yet.</span> Add your bank or
+                e-wallet accounts and they will be shown when a team leader sends a payment.
+              </p>
+              <button type="button" onClick={() => changeTab("settings")} className={goldButton}>
+                <QrCode size={16} /> Add payment details
+              </button>
+            </div>
+          ) : null}
+
           {!isAdmin && tab !== "payment" && !hasPaymentDetails(paymentDetails) ? (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e3d3a8] bg-[#fdf3d7] px-4 py-3 text-sm text-[#4a3413]">
               <p>
@@ -763,9 +856,32 @@ export default function PortalDashboard({
               onUpdate={(id, form) => changePaymentAccounts(`/api/tl/payment-details/${id}`, { method: "PUT", body: form })}
               onDelete={(id) => changePaymentAccounts(`/api/tl/payment-details/${id}`, { method: "DELETE" })}
             />
+          ) : tab === "payadmin" ? (
+            <PayAdminPanel
+              accounts={adminAccounts}
+              agents={toSend}
+              selected={selected}
+              total={sum(selectedRows)}
+              waiting={waiting}
+              verifiedTotal={verifiedTotal}
+              onToggle={toggleSelected}
+              onSelectAll={(all) => setSelected(all ? new Set(toSend.map((r) => r.id)) : new Set())}
+              onSend={() => setRemitOpen(true)}
+              onViewHistory={() => changeTab("remittances")}
+              onViewPending={() => changeTab("pending")}
+            />
           ) : tab === "settings" ? (
             <>
               <FeePanel fee={fee} busy={busyKey === "fee"} onSave={saveFee} />
+              <SlotsPanel limit={slotLimit} taken={slotsTaken} busy={busyKey === "slots"} onSave={saveSlots} />
+              <PaymentDetailsPanel
+                audience="leaders"
+                accounts={adminAccounts}
+                fee={fee}
+                onAdd={(form) => changeAdminAccounts("/api/admin/payment-details", { method: "POST", body: form })}
+                onUpdate={(id, form) => changeAdminAccounts(`/api/admin/payment-details/${id}`, { method: "PUT", body: form })}
+                onDelete={(id) => changeAdminAccounts(`/api/admin/payment-details/${id}`, { method: "DELETE" })}
+              />
               <InvitePanel token={inviteToken} busy={busyKey === "invite"} onRegenerate={() => setPendingAction({ kind: "regenerate" })} />
             </>
           ) : (
@@ -778,7 +894,7 @@ export default function PortalDashboard({
                     type="search"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search name, email, team, contact number"
+                    placeholder={isDeclinedTab ? "Search name, email, team, reason" : "Search name, email, team, contact number"}
                     className="h-11 w-full rounded-xl border border-[#e3d3a8] bg-white pl-11 pr-3 text-sm text-[#2a1a3d] outline-none transition-all placeholder:text-[#a89a7c] focus:border-[#c9972f] focus:shadow-[0_0_0_4px_rgba(212,164,55,0.18)]"
                   />
                 </label>
@@ -873,7 +989,7 @@ export default function PortalDashboard({
                         </tr>
                       ) : (
                         visible.map((row, index) => {
-                          const busy = busyKey === `${isLeaderTab ? "leader" : isRemittanceTab ? "remittance" : "registration"}-${row.id}`
+                          const busy = busyKey === `${isLeaderTab ? "leader" : isDeclinedTab ? "decline" : isRemittanceTab ? "remittance" : "registration"}-${row.id}`
                           const status = row.payment_status as PaymentStatus | undefined
                           const remitted = isRemittanceTab ? (agentsByRemittance.get(row.id) ?? []) : []
                           return (
@@ -932,7 +1048,7 @@ export default function PortalDashboard({
                                     ) : (
                                       dash
                                     )
-                                  ) : isLeaderTab ? null : status === "unpaid" || status === "paid_to_tl" ? (
+                                  ) : isLeaderTab || isDeclinedTab ? null : status === "unpaid" || status === "paid_to_tl" ? (
                                     <button
                                       type="button"
                                       onClick={() => setConfirmed(row as unknown as Registration, status === "unpaid")}
@@ -975,12 +1091,14 @@ export default function PortalDashboard({
                                       <Send size={14} /> Send
                                     </button>
                                   ) : null}
-                                  {isAdmin && !isRemittanceTab && (isLeaderTab || status === "unpaid" || status === "paid_to_tl") ? (
+                                  {isAdmin && !isRemittanceTab && (isLeaderTab || isDeclinedTab || status === "unpaid" || status === "paid_to_tl") ? (
                                     <button
                                       type="button"
                                       onClick={() =>
                                         setPendingAction(
-                                          isLeaderTab
+                                          isDeclinedTab
+                                            ? { kind: "decline", row: row as unknown as TlDecline }
+                                            : isLeaderTab
                                             ? { kind: "leader", row: row as unknown as TeamLeader }
                                             : { kind: "registration", row: row as unknown as Registration },
                                         )
@@ -989,7 +1107,7 @@ export default function PortalDashboard({
                                       aria-label={`Delete ${String(row.name)}`}
                                       className={iconButton}
                                     >
-                                      {isLeaderTab && busy ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                                      {(isLeaderTab || isDeclinedTab) && busy ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
                                     </button>
                                   ) : null}
                                 </div>
@@ -1049,6 +1167,7 @@ export default function PortalDashboard({
           onOpenChange={setRemitOpen}
           agents={selectedRows}
           total={sum(selectedRows)}
+          accounts={adminAccounts}
           onSubmit={sendRemittance}
         />
         <RejectDialog
@@ -1070,12 +1189,15 @@ function RemitDialog({
   onOpenChange,
   agents,
   total,
+  accounts,
   onSubmit,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   agents: Registration[]
   total: number
+  /** The organizer's accounts to send the money to. */
+  accounts: TlPaymentAccount[]
   onSubmit: (form: FormData) => Promise<void>
 }) {
   const [sending, setSending] = useState(false)
@@ -1121,6 +1243,8 @@ function RemitDialog({
           </div>
           <p className="mt-2 max-h-20 overflow-y-auto text-xs leading-relaxed text-[#5c4a2a]">{agents.map((a) => a.name).join(", ")}</p>
         </div>
+
+        <AdminAccountList accounts={accounts} />
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -1245,13 +1369,208 @@ function RejectDialog({
 }
 
 /** Team leader only: the accounts and QR codes agents are shown after they register. */
+/** Team leader: the admin's bank details, who to pay for, and the button that records the payment. */
+function PayAdminPanel({
+  accounts,
+  agents,
+  selected,
+  total,
+  waiting,
+  verifiedTotal,
+  onToggle,
+  onSelectAll,
+  onSend,
+  onViewHistory,
+  onViewPending,
+}: {
+  accounts: TlPaymentAccount[]
+  /** Agents whose fee the team leader holds and has not sent on yet. */
+  agents: Registration[]
+  selected: Set<number>
+  /** Sum for the ticked agents. */
+  total: number
+  /** Remittances the admin has not checked yet. */
+  waiting: Remittance[]
+  verifiedTotal: number
+  onToggle: (id: number) => void
+  onSelectAll: (all: boolean) => void
+  onSend: () => void
+  onViewHistory: () => void
+  onViewPending: () => void
+}) {
+  const picked = agents.filter((agent) => selected.has(agent.id))
+  const allPicked = agents.length > 0 && picked.length === agents.length
+  const owed = agents.reduce((sum, agent) => sum + Number(agent.amount ?? 0), 0)
+  const waitingTotal = waiting.reduce((sum, item) => sum + Number(item.amount ?? 0), 0)
+  const panel = "rounded-2xl border border-[#d4a437]/50 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)] sm:p-8"
+
+  return (
+    <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <section className={panel}>
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">Step 1</p>
+        <h2 className="mt-2 text-2xl font-black text-[#2a1458]">Send the money to the admin</h2>
+        <p className="mb-5 mt-3 leading-relaxed text-[#5c4a2a]">
+          Transfer the fees you collected from your agents to the organizer, then record the payment in step 2.
+        </p>
+        <AdminAccountList accounts={accounts} />
+      </section>
+
+      <section className={panel}>
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">Step 2</p>
+        <h2 className="mt-2 text-2xl font-black text-[#2a1458]">Record your payment</h2>
+
+        {agents.length === 0 ? (
+          <div className="mt-4 rounded-xl border border-[#e3d3a8] bg-[#fdf8ea] p-4 text-sm leading-relaxed text-[#4a3413]">
+            <p className="font-semibold">Nothing to send right now.</p>
+            <p className="mt-1">
+              Agents appear here after you confirm that they paid you.{" "}
+              <button type="button" onClick={onViewPending} className="font-semibold text-[#2a1458] underline underline-offset-2">
+                See pending agents
+              </button>
+            </p>
+          </div>
+        ) : (
+          <>
+            <p className="mt-3 leading-relaxed text-[#5c4a2a]">
+              You are holding <span className="font-bold text-[#2a1458]">{formatMoney(owed)}</span> from{" "}
+              {agents.length.toLocaleString()} agent{agents.length === 1 ? "" : "s"}. Tick the agents this payment covers.
+            </p>
+
+            <div className="mt-4 overflow-hidden rounded-xl border border-[#e3d3a8]">
+              <label className="flex cursor-pointer items-center gap-3 border-b border-[#e3d3a8] bg-[#fdf3d7] px-4 py-2.5 text-sm font-semibold text-[#4a3413]">
+                <input
+                  type="checkbox"
+                  checked={allPicked}
+                  onChange={(e) => onSelectAll(e.target.checked)}
+                  className="h-4 w-4 accent-[#2a1458]"
+                />
+                Select all
+              </label>
+              <ul className="max-h-64 divide-y divide-[#f1e6c8] overflow-y-auto">
+                {agents.map((agent) => (
+                  <li key={agent.id}>
+                    <label className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-[#fdf8ea]">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(agent.id)}
+                        onChange={() => onToggle(agent.id)}
+                        className="h-4 w-4 shrink-0 accent-[#2a1458]"
+                      />
+                      <span className="min-w-0 flex-1 break-words font-medium text-[#2a1a3d]">{agent.name}</span>
+                      <span className="shrink-0 font-semibold tabular-nums text-[#2a1458]">{formatMoney(agent.amount)}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#2a1458] px-4 py-3 text-[#fbe7a1]">
+              <p className="text-sm">
+                {picked.length.toLocaleString()} selected ·{" "}
+                <span className="text-xl font-black tabular-nums text-white">{formatMoney(total)}</span>
+              </p>
+              <button type="button" onClick={onSend} disabled={picked.length === 0} className={`${goldButton} h-10`}>
+                <Send size={16} /> Record payment
+              </button>
+            </div>
+          </>
+        )}
+
+        <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
+          <div className="rounded-xl border border-[#e3d3a8] bg-[#fdf8ea] p-3">
+            <dt className="text-[#7a6a4a]">Waiting for admin to check</dt>
+            <dd className="mt-0.5 text-lg font-black tabular-nums text-[#2a1458]">{formatMoney(waitingTotal)}</dd>
+          </div>
+          <div className="rounded-xl border border-[#e3d3a8] bg-[#fdf8ea] p-3">
+            <dt className="text-[#7a6a4a]">Verified by admin</dt>
+            <dd className="mt-0.5 text-lg font-black tabular-nums text-[#2a1458]">{formatMoney(verifiedTotal)}</dd>
+          </div>
+        </dl>
+        <button type="button" onClick={onViewHistory} className={`${outlineButton} mt-4`}>
+          <Receipt size={16} /> See payments you recorded
+        </button>
+      </section>
+    </div>
+  )
+}
+
+/** Where the money goes: the admin's accounts, shown to team leaders. */
+function AdminAccountList({ accounts }: { accounts: TlPaymentAccount[] }) {
+  const [copied, setCopied] = useState<number | null>(null)
+
+  const copy = async (id: number, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(id)
+      setTimeout(() => setCopied((current) => (current === id ? null : current)), 2000)
+    } catch {
+      setCopied(null)
+    }
+  }
+
+  if (accounts.length === 0) {
+    return (
+      <p className="rounded-xl border border-[#e3d3a8] bg-[#fdf3d7] px-4 py-3 text-sm leading-relaxed text-[#4a3413]">
+        <span className="font-semibold">The admin has not added payment details yet.</span> Ask the admin where to send the
+        money, then record it here.
+      </p>
+    )
+  }
+
+  return (
+    <div>
+      <p className={fieldLabel}>Send the money to {accounts.length === 1 ? "this account" : "any one of these accounts"}</p>
+      <ul className="space-y-2">
+        {accounts.map((account) => (
+          <li key={account.id} className="flex items-center gap-3 rounded-xl border border-[#e3d3a8] bg-white p-3">
+            {account.qr_url ? (
+              <a
+                href={account.qr_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open the QR code full size"
+                className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-lg border border-[#e3d3a8] bg-white p-1"
+              >
+                <img src={account.qr_url} alt={`${account.bank} QR code`} className="h-full w-full object-contain" />
+              </a>
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <p className="break-words font-black text-[#2a1458]">{account.bank}</p>
+              {account.account_number ? (
+                <>
+                  <p className="break-all font-semibold tabular-nums text-[#2a1a3d]">{account.account_number}</p>
+                  <p className="break-words text-sm text-[#5c4a2a]">{account.account_name}</p>
+                </>
+              ) : (
+                <p className="text-sm text-[#5c4a2a]">Scan the QR code</p>
+              )}
+            </div>
+            {account.account_number ? (
+              <button
+                type="button"
+                onClick={() => copy(account.id, account.account_number ?? "")}
+                className={`${outlineButton} h-9 shrink-0 px-3 text-xs`}
+              >
+                {copied === account.id ? <Check size={14} /> : <Copy size={14} />} {copied === account.id ? "Copied" : "Copy"}
+              </button>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function PaymentDetailsPanel({
+  audience = "agents",
   accounts,
   fee,
   onAdd,
   onUpdate,
   onDelete,
 }: {
+  /** Who pays into these accounts: a team leader's agents, or team leaders paying the admin. */
+  audience?: "agents" | "leaders"
   accounts: TlPaymentAccount[]
   fee: number | null
   onAdd: (form: FormData) => Promise<void>
@@ -1264,6 +1583,7 @@ function PaymentDetailsPanel({
   const [deleting, setDeleting] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const full = accounts.length >= MAX_PAYMENT_ACCOUNTS
+  const forLeaders = audience === "leaders"
 
   const remove = async (id: number) => {
     setDeleting(id)
@@ -1280,18 +1600,27 @@ function PaymentDetailsPanel({
 
   return (
     <section className="mt-4 rounded-2xl border border-[#d4a437]/50 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)] sm:p-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">For your agents</p>
-      <h2 className="mt-2 text-2xl font-black text-[#2a1458]">Where agents pay you</h2>
-      <p className="mt-3 max-w-2xl leading-relaxed text-[#5c4a2a]">
-        Right after an agent on your team registers, they are shown these accounts so they can send you the registration fee
-        {fee !== null ? (
-          <>
-            {" "}
-            of <span className="font-bold text-[#2a1458]">{formatMoney(fee)}</span> per person
-          </>
-        ) : null}
-        . Add as many as you accept, for example BDO, BPI and GCash. The agent picks one.
+      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">
+        {forLeaders ? "For team leaders" : "For your agents"}
       </p>
+      <h2 className="mt-2 text-2xl font-black text-[#2a1458]">{forLeaders ? "Where team leaders pay you" : "Where agents pay you"}</h2>
+      {forLeaders ? (
+        <p className="mt-3 max-w-2xl leading-relaxed text-[#5c4a2a]">
+          When a team leader sends you the fees they collected from their agents, they are shown these accounts. Add as many as
+          you accept, for example BDO, BPI and GCash. The team leader picks one.
+        </p>
+      ) : (
+        <p className="mt-3 max-w-2xl leading-relaxed text-[#5c4a2a]">
+          Right after an agent on your team registers, they are shown these accounts so they can send you the registration fee
+          {fee !== null ? (
+            <>
+              {" "}
+              of <span className="font-bold text-[#2a1458]">{formatMoney(fee)}</span> per person
+            </>
+          ) : null}
+          . Add as many as you accept, for example BDO, BPI and GCash. The agent picks one.
+        </p>
+      )}
 
       {error ? (
         <p role="alert" className="mt-4 rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
@@ -1400,7 +1729,7 @@ function PaymentDetailsPanel({
           <p className="text-sm text-[#7a6a4a]">
             {full
               ? `You have reached the limit of ${MAX_PAYMENT_ACCOUNTS} accounts.`
-              : `${accounts.length.toLocaleString()} account${accounts.length === 1 ? "" : "s"} shown to your agents.`}
+              : `${accounts.length.toLocaleString()} account${accounts.length === 1 ? "" : "s"} shown to ${forLeaders ? "team leaders" : "your agents"}.`}
           </p>
         </div>
       )}
@@ -1618,6 +1947,79 @@ function FeePanel({ fee, busy, onSave }: { fee: number | null; busy: boolean; on
         <p className="pb-3 text-sm text-[#5c4a2a]">
           Current: <span className="font-bold text-[#2a1458]">{fee === null ? "not set" : formatMoney(fee)}</span>
         </p>
+      </form>
+    </section>
+  )
+}
+
+/** Admin only: how many people can register before registration closes by itself. */
+function SlotsPanel({ limit, taken, busy, onSave }: { limit: number; taken: number; busy: boolean; onSave: (limit: number) => void }) {
+  const [value, setValue] = useState(String(limit))
+  useEffect(() => setValue(String(limit)), [limit])
+  const parsed = Number(value)
+  const valid = value.trim() !== "" && Number.isInteger(parsed) && parsed >= 0 && parsed <= 100_000
+  const left = Math.max(0, limit - taken)
+  const percent = limit > 0 ? Math.min(100, Math.round((taken / limit) * 100)) : 100
+
+  return (
+    <section className="mt-4 rounded-2xl border border-[#d4a437]/50 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)] sm:p-8">
+      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">Registration</p>
+      <h2 className="mt-2 text-2xl font-black text-[#2a1458]">Available slots</h2>
+      <p className="mt-3 max-w-xl leading-relaxed text-[#5c4a2a]">
+        Agents can register until every slot is taken, then registration closes by itself. Each person takes one slot, so a
+        couple who are both joining takes two. Raise the number at any time to open more.
+      </p>
+
+      <div className="mt-5 max-w-xl">
+        <div className="flex items-baseline justify-between gap-3 text-sm text-[#5c4a2a]">
+          <span>
+            <span className="text-lg font-black tabular-nums text-[#2a1458]">{taken.toLocaleString()}</span> of{" "}
+            {limit.toLocaleString()} taken
+          </span>
+          <span className={`font-semibold ${left === 0 ? "text-[#9a1c15]" : "text-[#2a1458]"}`}>
+            {left === 0 ? "Registration is full" : `${left.toLocaleString()} left`}
+          </span>
+        </div>
+        <div
+          role="progressbar"
+          aria-label="Slots taken"
+          aria-valuemin={0}
+          aria-valuemax={limit}
+          aria-valuenow={Math.min(taken, limit)}
+          className="mt-2 h-2.5 overflow-hidden rounded-full bg-[#f1e6c8]"
+        >
+          <div className={`h-full rounded-full ${left === 0 ? "bg-[#b3261e]" : "bg-[#d4a437]"}`} style={{ width: `${percent}%` }} />
+        </div>
+      </div>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (valid) onSave(parsed)
+        }}
+        className="mt-5 flex flex-wrap items-end gap-3"
+      >
+        <div>
+          <label htmlFor="slot-limit" className={fieldLabel}>
+            Total slots
+          </label>
+          <input
+            id="slot-limit"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className={`${fieldClass} w-48 tabular-nums`}
+          />
+        </div>
+        <button type="submit" disabled={!valid || busy || parsed === limit} className={goldButton}>
+          {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Save slots
+        </button>
+        {valid && parsed < taken ? (
+          <p className="pb-3 text-sm text-[#9a1c15]">Lower than the {taken.toLocaleString()} already registered: nobody else can register.</p>
+        ) : null}
       </form>
     </section>
   )

@@ -22,6 +22,11 @@ export default async function TeamLeaderPage() {
     return null
   })
 
+  const adminAccounts = await getTlPaymentDetails("admin").catch((error) => {
+    console.error("TL page could not load the admin's payment accounts:", error)
+    return []
+  })
+
   return (
     <PortalDashboard
       role="tl"
@@ -30,6 +35,7 @@ export default async function TeamLeaderPage() {
       initialRemittances={data?.remittances ?? []}
       initialFee={data?.fee ?? null}
       initialPaymentDetails={paymentDetails}
+      initialAdminAccounts={adminAccounts}
       loadFailed={!data}
     />
   )

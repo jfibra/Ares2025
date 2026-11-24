@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { EMAIL_PATTERN, maskContactNumber, resolveAgent } from "@/lib/agent-registration"
-import { getRegistrationFee } from "@/lib/payments"
+import { getRegistrationFee, getSlotsLeft } from "@/lib/payments"
 import { getTlPaymentDetails } from "@/lib/tl-payment"
 
 export const runtime = "nodejs"
@@ -34,9 +34,12 @@ export async function POST(request: Request) {
       })
     }
     if (result.status !== "found") return NextResponse.json({ success: true, ...result })
+    const slotsLeft = await getSlotsLeft()
+    if (slotsLeft <= 0) return NextResponse.json({ success: true, status: "full" })
     return NextResponse.json({
       success: true,
       status: "found",
+      slots_left: slotsLeft,
       // Per person, so a couple can see what one or both of them joining costs.
       fee: await getRegistrationFee().catch(() => null),
       agent: {

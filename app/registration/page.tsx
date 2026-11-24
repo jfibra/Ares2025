@@ -1,7 +1,11 @@
 import type { Metadata } from "next"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
-import RegistrationPage from "@/components/registration-page"
+import RegistrationGate from "@/components/registration-gate"
+import { getSlotStatus } from "@/lib/payments"
+
+// Rendered per request so the countdown starts from the real current time.
+export const dynamic = "force-dynamic"
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://asianrealestatesummit.com"
 const pageUrl = `${baseUrl}/registration`
@@ -23,11 +27,16 @@ export const metadata: Metadata = {
   },
 }
 
-export default function Registration() {
+export default async function Registration() {
+  // Shown to visitors so they know slots are limited; the page still works if this cannot load.
+  const slots = await getSlotStatus().catch((error) => {
+    console.error("Registration page could not load the slots:", error)
+    return null
+  })
   return (
     <>
       <Navbar />
-      <RegistrationPage />
+      <RegistrationGate serverNow={Date.now()} slots={slots} />
       <Footer />
     </>
   )
