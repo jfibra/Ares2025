@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server"
 import { EMAIL_PATTERN } from "@/lib/agent-registration"
 import { findTeamLeaderByEmail, setSession } from "@/lib/auth"
+import { TEAM_LEADER_COLUMNS, type TeamLeader } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { isValidTlInvite } from "@/lib/tl-invite"
+import { checkOwnTicket, saveOwnTicket } from "@/lib/tl-ticket"
+import { TL_VERIFY_MESSAGES, verifyTeamLeader } from "@/lib/tl-verify"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -10,7 +13,11 @@ export const dynamic = "force-dynamic"
 const text = (value: unknown) => (typeof value === "string" ? value.trim() : "")
 const fail = (message: string, status = 400) => NextResponse.json({ success: false, message }, { status })
 
-/** Team leader sign-up. Only works with the invite token from the admin's link or QR code. */
+/**
+ * Team leader sign-up. Needs the invite token from the admin's link or QR code, and the
+ * email must belong to a team leader in the LR records. Name and team come from that record.
+ * The team leader attends too, so this also saves their own registration (see lib/tl-ticket).
+ */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
   if (!body || typeof body !== "object") return fail("Invalid request.")
@@ -20,22 +27,32 @@ export async function POST(request: Request) {
       return fail("This registration link is no longer valid. Please ask the admin for a new one.", 403)
     }
 
-    const name = text(body.name)
     const email = text(body.email).toLowerCase()
     const contactNumber = text(body.contact_number)
-    const team = text(body.team)
     const password = typeof body.password === "string" ? body.password : ""
 
     const errors: string[] = []
-    if (!name || name.length > 200) errors.push("Please enter your name.")
     if (!EMAIL_PATTERN.test(email) || email.length > 320) errors.push("Please enter a valid email address.")
     if (contactNumber.length < 5 || contactNumber.length > 40) errors.push("Please enter your contact number.")
-    if (!team || team.length > 200) errors.push("Please enter your team.")
     if (password.length < 8 || password.length > 72) errors.push("Your password must be 8 to 72 characters.")
     if (errors.length) return fail(errors.join(" "))
 
     if (await findTeamLeaderByEmail(email)) {
       return fail("This email is already registered as a team leader. Please sign in instead.", 409)
+    }
+
+    // Checked again here, so skipping the first step in the browser gets nobody in.
+    const verification = await verifyTeamLeader(email)
+    if (verification.status !== "verified") {
+      return fail(TL_VERIFY_MESSAGES[verification.status], verification.status === "unavailable" ? 503 : 403)
+    }
+    const name = verification.leader.name.slice(0, 200)
+    const team = verification.leader.team.slice(0, 200)
+
+    // Their own ticket is checked before the account is made, so a rejected field leaves nothing behind.
+    const ticket = await checkOwnTicket(name, body)
+    if (!ticket.ok) {
+      return NextResponse.json({ success: false, field: ticket.field, message: ticket.message }, { status: ticket.status })
     }
 
     const supabase = createSupabaseAdmin()
@@ -53,15 +70,26 @@ export async function POST(request: Request) {
       throw createError ?? new Error("User was not created")
     }
 
-    const { error: insertError } = await supabase
+    const { data: leader, error: insertError } = await supabase
       .from("team_leaders")
       .insert({ user_id: created.user.id, name, email, contact_number: contactNumber, team })
-    if (insertError) {
+      .select(TEAM_LEADER_COLUMNS)
+      .single()
+    if (insertError || !leader) {
       await supabase.auth.admin.deleteUser(created.user.id) // undo the half-made account
-      if (insertError.code === "23505") {
+      if (insertError?.code === "23505") {
         return fail("This email is already registered as a team leader. Please sign in instead.", 409)
       }
-      throw insertError
+      throw insertError ?? new Error("Team leader was not created")
+    }
+
+    try {
+      await saveOwnTicket(leader as TeamLeader, ticket.ticket)
+    } catch (ticketError) {
+      // Undo the account, so they can simply try again.
+      await supabase.from("team_leaders").delete().eq("id", (leader as TeamLeader).id)
+      await supabase.auth.admin.deleteUser(created.user.id)
+      throw ticketError
     }
 
     // They are joining after all: drop any earlier "not joining" answer.

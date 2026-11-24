@@ -160,7 +160,7 @@ export default function RegistrationCountdown({
               Registration opens in
             </motion.h1>
             <motion.p variants={staggerItem} className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-white/85 md:text-xl">
-              Seats for the Asian Real Estate Summit 2027 in Bangkok are almost here.
+              Asian Real Estate Summit 2027 in Bangkok is almost here.
             </motion.p>
 
             {/* The countdown */}
@@ -187,7 +187,7 @@ export default function RegistrationCountdown({
             </motion.div>
 
             <motion.p variants={staggerItem} className="mt-6 text-sm text-white/80 sm:text-base">
-              Doors open <span className="font-semibold text-[#fbe7a1]">{opensAtDate}</span> at{" "}
+              Registration opens <span className="font-semibold text-[#fbe7a1]">{opensAtDate}</span> at{" "}
               <span className="font-semibold text-[#fbe7a1]">{opensAtTime}</span> Philippine time
             </motion.p>
 

@@ -8,6 +8,8 @@ import { Facebook, Twitter, ArrowUpRight, MapPin } from "lucide-react"
 import ScrollToTop from "./scroll-to-top"
 
 const LOGO_URL = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
+// Same logo with dark lettering, for when the header turns white. The mark keeps its red and blue.
+const LOGO_DARK_URL = "/ares-logo-dark.png"
 
 const navItems = [
   { name: "Home", href: "/" },
@@ -114,15 +116,29 @@ function Navbar() {
           >
             {/* Logo */}
             <Link href="/" className="group relative z-10 flex items-center" aria-label="ARES 2027 home">
-              <motion.img
-                src={LOGO_URL}
-                alt="Asian Real Estate Summit"
-                className={`w-auto transition-[filter] duration-500 ${light ? "drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" : ""}`}
+              {/* Two copies stacked: white lettering over the hero, dark lettering on the white header.
+                  The red and blue mark is the same in both, so only the words appear to change. */}
+              <motion.span
+                className="relative block"
                 initial={false}
                 animate={{ height: isScrolled ? 44 : 60 }}
                 transition={{ duration: 0.5, ease }}
                 whileHover={{ scale: 1.04 }}
-              />
+              >
+                <img
+                  src={LOGO_URL}
+                  alt="Asian Real Estate Summit"
+                  className={`h-full w-auto transition-opacity duration-500 ${
+                    light ? "opacity-100 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]" : "opacity-0"
+                  }`}
+                />
+                <img
+                  src={LOGO_DARK_URL}
+                  alt=""
+                  aria-hidden
+                  className={`absolute inset-0 h-full w-full transition-opacity duration-500 ${light ? "opacity-0" : "opacity-100"}`}
+                />
+              </motion.span>
               <motion.span
                 aria-hidden
                 initial={false}

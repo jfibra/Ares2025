@@ -12,6 +12,8 @@ export type DirectoryAgent = {
   team_leader_name: string
   /** Best way to match the agent to a registered team leader. May be missing. */
   team_leader_email: string | null
+  /** True when the record names this very person as the leader of their team. */
+  is_team_leader: boolean
 }
 
 export class DirectoryUnavailableError extends Error {
@@ -32,13 +34,18 @@ function fromApi(record: Record<string, unknown>, email: string): DirectoryAgent
   const name = str(record.name) || [str(record.first_name), str(record.last_name)].filter(Boolean).join(" ")
   const teamName = str(team.teamname)
   if (!name || !teamName) return null
+  const ownEmail = (str(record.email) || email).toLowerCase()
+  const leaderEmail = str(leader.email).toLowerCase() || null
+  // A team leader's own record lists them as their team's leader: same email, or the same record id.
+  const sameId = str(record.id) !== "" && str(record.id) === str(leader.id)
   return {
     name,
-    email: (str(record.email) || email).toLowerCase(),
+    email: ownEmail,
     contact_number: str(record.mobile),
     team: teamName,
     team_leader_name: str(leader.completename),
-    team_leader_email: str(leader.email).toLowerCase() || null,
+    team_leader_email: leaderEmail,
+    is_team_leader: leaderEmail === ownEmail || sameId,
   }
 }
 

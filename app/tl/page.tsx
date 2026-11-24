@@ -31,6 +31,8 @@ export default async function TeamLeaderPage() {
     <PortalDashboard
       role="tl"
       userLabel={`${leader.name} · ${leader.team}`}
+      ownEmail={leader.email}
+      ownName={leader.name}
       initialRegistrations={data?.registrations ?? []}
       initialRemittances={data?.remittances ?? []}
       initialFee={data?.fee ?? null}

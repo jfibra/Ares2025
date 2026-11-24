@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Counter } from "@/components/motion"
+import { OwnTicketCard } from "@/components/own-ticket-fields"
 import { GoldRule, Lotus, brownLattice, goldLattice, goldText } from "@/components/thai-ornaments"
 import {
   CURRENCY,
@@ -146,6 +147,8 @@ export default function PortalDashboard({
   initialPaymentDetails = null,
   initialAdminAccounts = [],
   initialDeclines = [],
+  ownEmail,
+  ownName,
   loadFailed,
 }: {
   role: Role
@@ -159,6 +162,9 @@ export default function PortalDashboard({
   initialPaymentDetails?: TlPaymentDetails | null
   initialAdminAccounts?: TlPaymentAccount[]
   initialDeclines?: TlDecline[]
+  /** Team leader: their email and LR record name, to pick out (or add) their own registration. */
+  ownEmail?: string
+  ownName?: string
   loadFailed: boolean
 }) {
   const router = useRouter()
@@ -199,6 +205,13 @@ export default function PortalDashboard({
     for (const r of rows) if (r.remittance_id !== null) map.set(r.remittance_id, [...(map.get(r.remittance_id) ?? []), r])
     return map
   }, [rows])
+  // A team leader attends too: their own registration sits in the same list as their agents'.
+  const leaderEmails = useMemo(
+    () => new Set(isAdmin ? leaders.map((l) => l.email.toLowerCase()) : ownEmail ? [ownEmail.toLowerCase()] : []),
+    [isAdmin, leaders, ownEmail],
+  )
+  const isLeaderRow = (r: Row) => leaderEmails.has(String(r.email).toLowerCase())
+  const needsOwnTicket = !isAdmin && Boolean(ownEmail && ownName) && !loadFailed && !rows.some((r) => isLeaderRow(r as unknown as Row))
   const agentCounts = useMemo(() => {
     const counts = new Map<number, { pending: number; confirmed: number }>()
     for (const r of rows) {
@@ -382,7 +395,21 @@ export default function PortalDashboard({
 
   // ---- Table for the current tab -------------------------------------------------
   const registrationColumns: Column[] = [
-    { key: "name", label: "Name", render: (r) => <span className="font-semibold text-[#2a1458]">{String(r.name)}</span> },
+    {
+      key: "name",
+      label: "Name",
+      render: (r) => (
+        <span className="font-semibold text-[#2a1458]">
+          {String(r.name)}
+          {isLeaderRow(r) ? (
+            <>
+              {" "}
+              <Badge label={isAdmin ? "Team leader" : "You"} className="border-amber-300 bg-amber-50 text-amber-900" />
+            </>
+          ) : null}
+        </span>
+      ),
+    },
     {
       key: "email",
       label: "Email",
@@ -645,7 +672,7 @@ export default function PortalDashboard({
   const emptyText: Record<Exclude<Tab, "settings" | "payment" | "payadmin">, [string, string]> = {
     pending: isAdmin
       ? ["No agents waiting to pay", "Agents appear here after they register, until their team leader confirms their payment."]
-      : ["No agents waiting for you", "When an agent on your team registers, they appear here. Check their receipt and confirm them once they pay you."],
+      : ["No one waiting for you", "Your own registration and your agents' appear here until the payment is confirmed. Check each receipt and confirm once they pay you."],
     confirmed: ["No confirmed agents yet", "Agents move here once their team leader confirms their payment."],
     remittances: isAdmin
       ? ["No remittances yet", "When a team leader sends collected payments, the remittance appears here for you to check."]
@@ -808,6 +835,8 @@ export default function PortalDashboard({
               </button>
             </div>
           ) : null}
+
+          {needsOwnTicket && ownName ? <OwnTicketCard name={ownName} fee={fee} onSaved={refresh} /> : null}
 
           {/* Tabs */}
           <div role="tablist" aria-label="Lists" className="mt-8 flex gap-2 overflow-x-auto pb-1">
@@ -1065,7 +1094,7 @@ export default function PortalDashboard({
                                         <Loader2 size={14} className="animate-spin" />
                                       ) : status === "unpaid" ? (
                                         <>
-                                          <CheckCircle2 size={14} /> Payment received
+                                          <CheckCircle2 size={14} /> {!isAdmin && isLeaderRow(row) ? "I have paid" : "Payment received"}
                                         </>
                                       ) : (
                                         <>

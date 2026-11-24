@@ -5,11 +5,12 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, MotionConfig, motion } from "framer-motion"
-import { ArrowLeft, Check, Eye, EyeOff, Loader2, LockKeyhole, Mail, Phone, ShieldCheck, TriangleAlert, User, Users } from "lucide-react"
+import { ArrowLeft, BadgeCheck, Check, Eye, EyeOff, Loader2, LockKeyhole, Mail, Phone, ShieldCheck, TriangleAlert, User, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { staggerContainer, staggerItem } from "@/components/motion"
 import { CornerFlourish, GoldRule, Lotus, brownLattice, goldLattice, goldText } from "@/components/thai-ornaments"
+import { OwnTicketFields, emptyOwnTicket, ownTicketPayload, ownTicketProblem } from "@/components/own-ticket-fields"
 
 const LOGO_URL = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
 
@@ -166,15 +167,29 @@ function DeclineForm({ invite, onBack }: { invite: string; onBack: () => void })
   )
 }
 
-const emptyForm = { name: "", email: "", contact_number: "", team: "", password: "", confirm: "" }
+const emptyForm = { email: "", contact_number: "", password: "", confirm: "" }
 
-/** Team leader sign-up. `invite` is null when the link's token is missing or no longer valid. */
+/** The team leader as found in the LR records, once their email has passed the check. */
+type VerifiedLeader = { name: string; email: string; team: string }
+
+/**
+ * Team leader sign-up, in two steps: first the LR email is checked against the LR records
+ * to see that it belongs to a team leader, then they fill in their own registration (a team
+ * leader attends too; a couple chooses who is joining) and add a contact number and password.
+ * `invite` is null when the link's token is missing or no longer valid.
+ */
 export default function TeamLeaderRegister({ invite }: { invite: string | null }) {
   const router = useRouter()
   const [form, setForm] = useState(emptyForm)
   // A team leader who is not joining switches to the decline form.
   const [declining, setDeclining] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  // Set once the LR records confirm this email is a team leader.
+  const [leader, setLeader] = useState<VerifiedLeader | null>(null)
+  // The team leader's own ticket, and the fee per person shown next to it.
+  const [ticket, setTicket] = useState(emptyOwnTicket)
+  const [fee, setFee] = useState<number | null>(null)
+  const [verifying, setVerifying] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -185,9 +200,45 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
 
   const passwordsDiffer = form.confirm.length > 0 && form.password !== form.confirm
 
+  /** Step 1: ask the server whether this LR email belongs to a team leader. */
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (verifying || !invite) return
+    setVerifying(true)
+    setErrorMessage(null)
+    try {
+      const response = await fetch("/api/tl/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invite, email: form.email }),
+      })
+      const result = await response.json().catch(() => null)
+      if (!response.ok || !result?.success || !result.leader) {
+        setErrorMessage(result?.message || "We could not check your details. Please try again.")
+        return
+      }
+      setFee(typeof result.fee === "number" ? result.fee : null)
+      setTicket(emptyOwnTicket)
+      setLeader(result.leader)
+    } catch {
+      setErrorMessage("We could not check your details. Please check your connection and try again.")
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  const useAnotherEmail = () => {
+    setLeader(null)
+    setErrorMessage(null)
+    setForm(emptyForm)
+    setTicket(emptyOwnTicket)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (submitting || !invite) return
+    if (submitting || !invite || !leader) return
+    const ticketProblem = ownTicketProblem(leader.name, ticket)
+    if (ticketProblem) return setErrorMessage(ticketProblem)
     if (form.password.length < 8) return setErrorMessage("Your password must be at least 8 characters.")
     if (form.password !== form.confirm) return setErrorMessage("The two passwords do not match.")
 
@@ -199,11 +250,10 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           invite,
-          name: form.name,
-          email: form.email,
+          email: leader.email,
           contact_number: form.contact_number,
-          team: form.team,
           password: form.password,
+          ...ownTicketPayload(ticket),
         }),
       })
       const result = await response.json().catch(() => null)
@@ -249,8 +299,8 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
             <motion.div variants={staggerItem} className="hidden lg:block">
               <GoldRule className="my-6 max-w-[14rem]" />
               <p className="text-lg leading-relaxed text-white/80">
-                Register first so the agents on your team can sign up. You will then confirm each of them from your team
-                leader portal.
+                Register first so the agents on your team can sign up. Your own registration is included, and you will
+                confirm each agent from your team leader portal.
               </p>
             </motion.div>
           </motion.div>
@@ -298,55 +348,124 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
                   <div className="mb-7 text-center">
                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">ARES 2027</p>
                     <h2 className="mt-2 text-3xl font-black text-[#2a1458]">Register as team leader</h2>
-                    <p className="mt-2 text-sm text-[#7a6a4a]">All fields are required.</p>
+                    <p className="mt-2 text-sm text-[#7a6a4a]">
+                      {leader ? "Step 2 of 2: your own registration and a password." : "Step 1 of 2: let us confirm you are a team leader."}
+                    </p>
                   </div>
 
-                  <form onSubmit={handleSubmit} className="space-y-5">
-                    <div>
-                      <label htmlFor="tl-name" className={labelClass}>
-                        Full name
-                      </label>
-                      <div className="relative">
-                        <User size={18} className={fieldIconClass} />
-                        <Input id="tl-name" name="name" autoComplete="name" autoFocus value={form.name} onChange={update} required maxLength={200} className={inputClass} />
-                      </div>
-                    </div>
-
-                    <div className="grid gap-5 sm:grid-cols-2">
+                  {!leader ? (
+                    <form onSubmit={handleVerify} className="space-y-5">
                       <div>
                         <label htmlFor="tl-email" className={labelClass}>
-                          Email
+                          LR email
                         </label>
                         <div className="relative">
                           <Mail size={18} className={fieldIconClass} />
-                          <Input id="tl-email" type="email" name="email" autoComplete="email" autoCapitalize="none" spellCheck={false} value={form.email} onChange={update} required className={inputClass} />
+                          <Input
+                            id="tl-email"
+                            type="email"
+                            name="email"
+                            autoComplete="email"
+                            autoCapitalize="none"
+                            spellCheck={false}
+                            autoFocus
+                            value={form.email}
+                            onChange={update}
+                            required
+                            maxLength={320}
+                            placeholder="Your LR email address"
+                            aria-describedby="tl-email-help"
+                            className={inputClass}
+                          />
                         </div>
+                        <p id="tl-email-help" className="mt-1.5 text-xs text-[#7a6a4a]">
+                          Enter the email on your LR record. We check it against our LR records to confirm you are a team
+                          leader.
+                        </p>
                       </div>
-                      <div>
-                        <label htmlFor="tl-contact" className={labelClass}>
-                          Contact number
-                        </label>
-                        <div className="relative">
-                          <Phone size={18} className={fieldIconClass} />
-                          <Input id="tl-contact" type="tel" name="contact_number" autoComplete="tel" value={form.contact_number} onChange={update} required minLength={5} maxLength={40} className={inputClass} />
+
+                      <AnimatePresence>
+                        {errorMessage ? (
+                          <motion.p
+                            key="error"
+                            role="alert"
+                            initial={{ opacity: 0, y: -6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            className="flex items-start gap-2 rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]"
+                          >
+                            <TriangleAlert size={16} className="mt-0.5 shrink-0" /> {errorMessage}
+                          </motion.p>
+                        ) : null}
+                      </AnimatePresence>
+
+                      <motion.div whileHover={verifying ? undefined : { scale: 1.015 }} whileTap={{ scale: 0.985 }}>
+                        <Button
+                          type="submit"
+                          disabled={verifying}
+                          className="shine relative h-14 w-full overflow-hidden rounded-xl border border-[#8a6417] bg-gradient-to-r from-[#b8862b] via-[#f3d27a] to-[#b8862b] text-lg font-bold text-[#2a1408] shadow-[0_12px_30px_-10px_rgba(184,134,43,0.8)] transition-all duration-300 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {verifying ? (
+                            <span className="flex items-center justify-center gap-2">
+                              <Loader2 className="animate-spin" size={20} /> Checking our records…
+                            </span>
+                          ) : (
+                            "Verify my LR email"
+                          )}
+                        </Button>
+                      </motion.div>
+                    </form>
+                  ) : (
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="rounded-xl border border-[#2e7d4f]/30 bg-[#2e7d4f]/5 px-4 py-4" role="status">
+                      <p className="flex items-center gap-2 text-sm font-semibold text-[#1f5c39]">
+                        <BadgeCheck size={18} className="shrink-0" /> Verified team leader
+                      </p>
+                      <dl className="mt-3 space-y-2 text-sm text-[#2a1a3d]">
+                        <div className="flex items-start gap-2">
+                          <User size={16} className="mt-0.5 shrink-0 text-[#b8862b]" />
+                          <dt className="sr-only">Name</dt>
+                          <dd className="font-semibold">{leader.name}</dd>
                         </div>
-                      </div>
+                        <div className="flex items-start gap-2">
+                          <Users size={16} className="mt-0.5 shrink-0 text-[#b8862b]" />
+                          <dt className="sr-only">Team</dt>
+                          <dd>{leader.team}</dd>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Mail size={16} className="mt-0.5 shrink-0 text-[#b8862b]" />
+                          <dt className="sr-only">Email</dt>
+                          <dd className="break-all">{leader.email}</dd>
+                        </div>
+                      </dl>
+                      <button
+                        type="button"
+                        onClick={useAnotherEmail}
+                        className="mt-3 text-xs font-semibold text-[#6b4a12] underline-offset-2 hover:underline"
+                      >
+                        Not you? Use a different email
+                      </button>
                     </div>
 
                     <div>
-                      <label htmlFor="tl-team" className={labelClass}>
-                        Team
+                      <label htmlFor="tl-contact" className={labelClass}>
+                        Contact number
                       </label>
                       <div className="relative">
-                        <Users size={18} className={fieldIconClass} />
-                        <Input id="tl-team" name="team" autoComplete="organization" value={form.team} onChange={update} required maxLength={200} aria-describedby="tl-team-help" className={inputClass} />
+                        <Phone size={18} className={fieldIconClass} />
+                        <Input id="tl-contact" type="tel" name="contact_number" autoComplete="tel" autoFocus value={form.contact_number} onChange={update} required minLength={5} maxLength={40} className={inputClass} />
                       </div>
-                      <p id="tl-team-help" className="mt-1.5 text-xs text-[#7a6a4a]">
-                        Use your team&apos;s official name, so your agents are matched to you.
-                      </p>
                     </div>
 
-                    <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="border-t border-dashed border-[#e3d3a8] pt-5">
+                      <p className="text-sm font-bold text-[#2a1458]">Your own registration</p>
+                      <p className="mb-4 mt-1 text-xs text-[#7a6a4a]">
+                        Team leaders attend too. Your registration is listed with your team&apos;s and paid the same way.
+                      </p>
+                      <OwnTicketFields name={leader.name} fee={fee} value={ticket} onChange={setTicket} idPrefix="tl-own" />
+                    </div>
+
+                    <div className="grid gap-5 border-t border-dashed border-[#e3d3a8] pt-5 sm:grid-cols-2">
                       <div>
                         <label htmlFor="tl-password" className={labelClass}>
                           Create a password
@@ -433,6 +552,7 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
                       </Button>
                     </motion.div>
                   </form>
+                  )}
 
                   <p className="mt-6 text-center text-sm text-[#7a6a4a]">
                     Already registered?{" "}
