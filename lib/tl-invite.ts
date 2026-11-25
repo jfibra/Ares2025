@@ -54,6 +54,6 @@ const sameText = (expected: string, given: string) => {
 export async function isValidTlInvite(candidate: unknown): Promise<boolean> {
   if (typeof candidate !== "string" || !candidate) return false
   const [code, oldToken] = await Promise.all([getTlInviteCode(), readSetting(KEY)])
-  // Codes are lower case; accept one typed in capitals.
-  return sameText(code, candidate.toLowerCase()) || Boolean(oldToken && sameText(oldToken, candidate))
+  // The code is matched without regard to capitals, so "TL-registration" and "tl-registration" both work.
+  return sameText(code.toLowerCase(), candidate.toLowerCase()) || Boolean(oldToken && sameText(oldToken, candidate))
 }
