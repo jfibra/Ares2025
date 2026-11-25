@@ -95,7 +95,7 @@ export function toRemittance(row: Record<string, unknown>): Remittance {
 export const PAYMENT_METHODS = ["GCash", "Bank transfer", "Cash", "Other"] as const
 export const CURRENCY = "PHP"
 
-export const POLO_SHIRT_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL"] as const
+export const POLO_SHIRT_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const
 
 export type AgentDetails = { birth_date: string; whatsapp_number: string; polo_shirt_size: string }
 

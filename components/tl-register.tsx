@@ -460,7 +460,7 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
                     <div className="border-t border-dashed border-[#e3d3a8] pt-5">
                       <p className="text-sm font-bold text-[#2a1458]">Your own registration</p>
                       <p className="mb-4 mt-1 text-xs text-[#7a6a4a]">
-                        Team leaders attend too. Your registration is listed with your team&apos;s and paid the same way.
+                        Your registration is listed with your team&apos;s and paid the same way.
                       </p>
                       <OwnTicketFields name={leader.name} fee={fee} value={ticket} onChange={setTicket} idPrefix="tl-own" />
                     </div>

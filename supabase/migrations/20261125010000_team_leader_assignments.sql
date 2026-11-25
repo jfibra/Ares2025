@@ -1,4 +1,4 @@
--- Some teams (for example LR Direct, Davao Eagles, FH Ozamiz, Team Tycoons) have no team leader
+-- Some teams (for example Leuterio Direct, Davao Eagles, FH Ozamiz, Team Tycoons) have no team leader
 -- in the LR records. The admin picks one of the team's agents to act as its team leader for ARES.
 -- That agent then registers through the team leader link like any other team leader, and the
 -- team's agents are filed under them. One team leader per team.

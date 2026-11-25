@@ -1,7 +1,7 @@
 // Teams that have no team leader in the LR records ("direct" teams). The admin assigns one of
 // each team's own agents as its team leader. Safe to import in the browser.
 
-export const DIRECT_TEAMS = ["LR Direct", "Davao Eagles", "FH Ozamiz", "Team Tycoons"] as const
+export const DIRECT_TEAMS = ["Leuterio Direct", "Davao Eagles", "FH Ozamiz", "Team Tycoons"] as const
 
 /** "Team Tycoons", "tycoons" and "TEAM  TYCOONS" all become "tycoons". */
 const teamKey = (team: string) =>
