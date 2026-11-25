@@ -1,4 +1,5 @@
 import { DirectoryUnavailableError, lookupAgent, type DirectoryAgent } from "@/lib/agent-directory"
+import { isAssignedTeamLeader } from "@/lib/tl-assignments"
 
 export type TlVerification =
   | { status: "verified"; leader: DirectoryAgent }
@@ -6,7 +7,10 @@ export type TlVerification =
   | { status: "not_team_leader" }
   | { status: "unavailable" }
 
-/** Checks the LR records: is this email a team leader there? Never trusts the browser. */
+/**
+ * Checks the LR records: is this email a team leader there? Never trusts the browser.
+ * An agent the admin chose to lead a team that has no team leader also counts.
+ */
 export async function verifyTeamLeader(rawEmail: string): Promise<TlVerification> {
   let record: DirectoryAgent | null
   try {
@@ -19,7 +23,7 @@ export async function verifyTeamLeader(rawEmail: string): Promise<TlVerification
     throw error
   }
   if (!record) return { status: "not_found" }
-  if (!record.is_team_leader) return { status: "not_team_leader" }
+  if (!record.is_team_leader && !(await isAssignedTeamLeader(record.email, record.team))) return { status: "not_team_leader" }
   return { status: "verified", leader: record }
 }
 

@@ -1,16 +1,22 @@
 import { DirectoryUnavailableError, lookupAgent, type DirectoryAgent } from "@/lib/agent-directory"
 import { TEAM_LEADER_COLUMNS, type TeamLeader } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
+import { getAssignmentForTeam, normaliseTeam, type TlAssignment } from "@/lib/tl-assignments"
 
 export const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
 
-const normaliseTeam = (team: string) => team.trim().toLowerCase().replace(/\s+/g, " ")
-
-/** The registered team leader for an agent: matched by the leader's email, else by team name. */
-async function findTeamLeaderFor(agent: DirectoryAgent): Promise<TeamLeader | null> {
+/**
+ * The registered team leader for an agent: the one the admin chose for the team (if they have
+ * registered), else matched by the leader's email in the LR records, else by team name.
+ */
+async function findTeamLeaderFor(agent: DirectoryAgent, assigned: TlAssignment | null): Promise<TeamLeader | null> {
   const { data, error } = await createSupabaseAdmin().from("team_leaders").select(TEAM_LEADER_COLUMNS)
   if (error) throw error
   const leaders = (data ?? []) as TeamLeader[]
+  if (assigned) {
+    const chosen = leaders.find((leader) => leader.email === assigned.email)
+    if (chosen) return chosen
+  }
   if (agent.team_leader_email) {
     const byEmail = leaders.find((leader) => leader.email === agent.team_leader_email)
     if (byEmail) return byEmail
@@ -72,12 +78,15 @@ export async function resolveAgent(rawEmail: string): Promise<AgentResolution> {
   }
   if (!agent) return { status: "not_found" }
 
-  const teamLeader = await findTeamLeaderFor(agent)
+  const assigned = await getAssignmentForTeam(agent.team)
+  const teamLeader = await findTeamLeaderFor(agent, assigned)
   if (!teamLeader) {
+    // The admin's choice for the team is who the agent should be waiting for (or asking).
+    const teamLeaderName = assigned?.name || agent.team_leader_name
     if (await teamLeaderDeclined(agent)) {
-      return { status: "tl_declined", team: agent.team, teamLeaderName: agent.team_leader_name }
+      return { status: "tl_declined", team: agent.team, teamLeaderName }
     }
-    return { status: "tl_not_registered", team: agent.team, teamLeaderName: agent.team_leader_name }
+    return { status: "tl_not_registered", team: agent.team, teamLeaderName }
   }
   return { status: "found", agent, teamLeader }
 }

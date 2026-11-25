@@ -16,6 +16,7 @@ import {
   Clock,
   Copy,
   Download,
+  ImageIcon,
   Link2,
   Loader2,
   LogOut,
@@ -44,12 +45,14 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Counter } from "@/components/motion"
 import { OwnTicketCard } from "@/components/own-ticket-fields"
+import TlAssignPanel from "@/components/tl-assign-panel"
 import { GoldRule, Lotus, brownLattice, goldLattice, goldText } from "@/components/thai-ornaments"
 import {
   CURRENCY,
   PAYMENT_METHODS,
   MAX_PAYMENT_ACCOUNTS,
   hasPaymentDetails,
+  splitCouple,
   type PaymentStatus,
   type Registration,
   type Remittance,
@@ -62,7 +65,7 @@ import {
 const LOGO_URL = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
 
 type Role = "admin" | "tl"
-type Tab = "pending" | "confirmed" | "remittances" | "leaders" | "declined" | "settings" | "payment" | "payadmin"
+type Tab = "pending" | "confirmed" | "remittances" | "leaders" | "assign" | "declined" | "settings" | "payment" | "payadmin"
 type Row = Record<string, unknown> & { id: number }
 type Column = { key: string; label: string; render?: (row: Row) => React.ReactNode }
 type Sort = { key: string; direction: "asc" | "desc" }
@@ -439,6 +442,31 @@ export default function PortalDashboard({
     ...(isAdmin ? [{ key: "team_leader_name", label: "Team Leader" }] : []),
     { key: "registration_date", label: "Registered", render: (r: Row) => formatDate(r.registration_date) },
     {
+      key: "photo_count",
+      label: "Uploaded Photo",
+      render: (r: Row) => {
+        const count = Number(r.photo_count) || 0
+        if (!count) return <span className="text-xs text-[#7a6a4a]">No photo</span>
+        // Two photos means both people on a couple's record are joining, in the order of their names.
+        const names = count === 2 ? splitCouple(String(r.attendees ?? "")) : null
+        return (
+          <div className="min-w-[8rem] space-y-1">
+            {Array.from({ length: count }, (_, index) => (
+              <a
+                key={index}
+                href={`/api/registrations/${r.id}/photo?n=${index + 1}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 font-semibold text-[#0078b6] hover:underline"
+              >
+                <ImageIcon size={15} className="shrink-0" /> {names ? names[index] : "View photo"}
+              </a>
+            ))}
+          </div>
+        )
+      },
+    },
+    {
       key: "agent_receipt_at",
       label: "Agent Receipt",
       render: (r: Row) =>
@@ -591,7 +619,7 @@ export default function PortalDashboard({
     setTab(next)
     setQuery("")
     setExpanded(null)
-    const key = { pending: "registration_date", confirmed: "registration_date", remittances: "submitted_at", leaders: "created_at", declined: "declined_at", settings: "", payment: "", payadmin: "" }[next]
+    const key = { pending: "registration_date", confirmed: "registration_date", remittances: "submitted_at", leaders: "created_at", declined: "declined_at", settings: "", assign: "", payment: "", payadmin: "" }[next]
     setSort({ key, direction: "desc" })
   }
 
@@ -608,6 +636,7 @@ export default function PortalDashboard({
       leaders: "team-leaders",
       declined: "team-leaders-not-joining",
       settings: "",
+      assign: "",
       payment: "",
       payadmin: "",
     }
@@ -621,6 +650,7 @@ export default function PortalDashboard({
       if (key === "payment_status") return paymentBadge[r[key] as PaymentStatus].label
       if (key === "status") return remittanceBadge[r[key] as Remittance["status"]].label
       if (key === "has_receipt") return r[key] ? "Yes" : "No"
+      if (key === "photo_count") return Number(r[key]) ? "Yes" : "No"
       return r[key]
     }
     downloadCsv(
@@ -660,6 +690,7 @@ export default function PortalDashboard({
     ...(isAdmin
       ? [
           { id: "leaders" as Tab, label: "Team leaders", count: leaders.length },
+          { id: "assign" as Tab, label: "Assign TL", icon: UserCog },
           { id: "declined" as Tab, label: "Not joining", count: declines.length },
           { id: "settings" as Tab, label: "Settings", icon: Settings },
         ]
@@ -669,7 +700,7 @@ export default function PortalDashboard({
         ]),
   ]
 
-  const emptyText: Record<Exclude<Tab, "settings" | "payment" | "payadmin">, [string, string]> = {
+  const emptyText: Record<Exclude<Tab, "settings" | "payment" | "payadmin" | "assign">, [string, string]> = {
     pending: isAdmin
       ? ["No agents waiting to pay", "Agents appear here after they register, until their team leader confirms their payment."]
       : ["No one waiting for you", "Your own registration and your agents' appear here until the payment is confirmed. Check each receipt and confirm once they pay you."],
@@ -899,6 +930,8 @@ export default function PortalDashboard({
               onViewHistory={() => changeTab("remittances")}
               onViewPending={() => changeTab("pending")}
             />
+          ) : tab === "assign" ? (
+            <TlAssignPanel leaders={leaders} call={call} onOpenSettings={() => changeTab("settings")} />
           ) : tab === "settings" ? (
             <>
               <FeePanel fee={fee} busy={busyKey === "fee"} onSave={saveFee} />
@@ -1009,10 +1042,10 @@ export default function PortalDashboard({
                           <td colSpan={columns.length + 2} className="px-3 py-16 text-center">
                             <Lotus className="mx-auto h-12 w-20 text-[#d4a437]" />
                             <p className="mt-4 text-base font-semibold text-[#2a1458]">
-                              {source.length === 0 ? emptyText[tab][0] : "Nothing matches your search"}
+                              {source.length === 0 ? emptyText[tab as keyof typeof emptyText][0] : "Nothing matches your search"}
                             </p>
                             <p className="mt-1 text-sm text-[#7a6a4a]">
-                              {source.length === 0 ? emptyText[tab][1] : "Try a different name, email or team."}
+                              {source.length === 0 ? emptyText[tab as keyof typeof emptyText][1] : "Try a different name, email or team."}
                             </p>
                           </td>
                         </tr>

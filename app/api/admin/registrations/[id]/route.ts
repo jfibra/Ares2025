@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getAdmin } from "@/lib/auth"
 import { RECEIPT_BUCKET, setPaymentReceived } from "@/lib/payments"
+import { PHOTO_BUCKET } from "@/lib/photo"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 
 export const runtime = "nodejs"
@@ -41,8 +42,9 @@ export async function DELETE(_request: Request, { params }: Context) {
     .delete()
     .eq("id", id)
     .in("payment_status", ["unpaid", "paid_to_tl"])
-    .select("id,agent_receipt_path")
+    .select("id,agent_receipt_path,photo_paths")
     .maybeSingle()
+  if (data?.photo_paths?.length) await supabase.storage.from(PHOTO_BUCKET).remove(data.photo_paths)
   if (data?.agent_receipt_path) await supabase.storage.from(RECEIPT_BUCKET).remove([data.agent_receipt_path])
   if (error) {
     console.error("Admin delete failed:", error)

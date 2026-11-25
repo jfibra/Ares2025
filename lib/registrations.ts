@@ -23,11 +23,13 @@ export type Registration = {
   /** When the agent uploaded proof of payment; null if they have not. */
   agent_receipt_at: string | null
   agent_receipt_note: string | null
+  /** How many formal photos (for the posters) are on file: one per person joining, 0 for older registrations. */
+  photo_count: number
   registration_date: string
 }
 
 export const REGISTRATION_COLUMNS =
-  "id,name,email,contact_number,birth_date,whatsapp_number,polo_shirt_size,attendee_count,attendees,team,team_leader_id,team_leader_name,confirmed_by_tl,confirmed_at,payment_status,amount,remittance_id,agent_receipt_at,agent_receipt_note,registration_date"
+  "id,name,email,contact_number,birth_date,whatsapp_number,polo_shirt_size,attendee_count,attendees,team,team_leader_id,team_leader_name,confirmed_by_tl,confirmed_at,payment_status,amount,remittance_id,agent_receipt_at,agent_receipt_note,photo_count,registration_date"
 
 export type TeamLeader = {
   id: number

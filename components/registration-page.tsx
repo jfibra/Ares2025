@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   AnimatePresence,
   MotionConfig,
@@ -16,6 +16,7 @@ import Link from "next/link"
 import {
   ArrowLeft,
   CalendarDays,
+  Camera,
   Check,
   Clock,
   Copy,
@@ -46,6 +47,7 @@ import {
   type Attending,
   type TlPaymentDetails,
 } from "@/lib/registrations"
+import { PHOTO_ACCEPT, preparePhoto } from "@/lib/photo"
 import { Particles, Reveal, staggerContainer, staggerItem } from "@/components/motion"
 import {
   CornerFlourish,
@@ -82,9 +84,83 @@ function FieldCheck({ show }: { show: boolean }) {
   )
 }
 
+/** One person's formal photo for their poster: pick it, see it, change it. */
+function PhotoField({
+  id,
+  label,
+  file,
+  onChange,
+}: {
+  id: string
+  label: string
+  file: File | null
+  onChange: (file: File | null) => void
+}) {
+  const [preparing, setPreparing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!file) return setPreview(null)
+    const url = URL.createObjectURL(file)
+    setPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+
+  const pick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = e.target.files?.[0]
+    e.target.value = "" // so picking the same file again still counts as a change
+    if (!picked) return
+    setPreparing(true)
+    setError(null)
+    const result = await preparePhoto(picked)
+    setPreparing(false)
+    if (result.ok) return onChange(result.file)
+    onChange(null)
+    setError(result.message)
+  }
+
+  return (
+    <div>
+      <p className={labelClass}>
+        {label} <span className="text-[#b3261e]">*</span>
+      </p>
+      <div className="flex items-center gap-4 rounded-xl border border-[#e3d3a8] bg-white p-3">
+        <div className="grid h-24 w-20 shrink-0 place-items-center overflow-hidden rounded-lg border border-[#e3d3a8] bg-[#fdf8ea] text-[#b8862b]">
+          {preview ? <img src={preview} alt={`${label} preview`} className="h-full w-full object-cover" /> : <User size={32} />}
+        </div>
+        <div className="min-w-0">
+          <label
+            htmlFor={id}
+            className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg bg-[#2a1458] px-4 text-sm font-semibold text-[#fbe7a1] hover:bg-[#1a0d3d] focus-within:ring-4 focus-within:ring-[#d4a437]/40"
+          >
+            {preparing ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+            {preparing ? "Preparing…" : file ? "Change photo" : "Upload photo"}
+            <input id={id} type="file" accept={PHOTO_ACCEPT} onChange={pick} disabled={preparing} className="sr-only" />
+          </label>
+          <p className="mt-1.5 text-xs text-[#7a6a4a]">
+            {file ? (
+              <span className="inline-flex items-center gap-1 font-semibold text-green-800">
+                <Check size={13} strokeWidth={3} /> Photo added
+              </span>
+            ) : (
+              "JPG, PNG or WEBP."
+            )}
+          </p>
+        </div>
+      </div>
+      {error ? (
+        <p role="alert" className="mt-2 text-sm font-medium text-[#9a1c15]">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
 const steps = [
   { title: "Enter your LR email", text: "We look you up in our agent records." },
-  { title: "Confirm it's you", text: "Check your details, add a few more, and register." },
+  { title: "Confirm it's you", text: "Check your details, upload a clear, formal photo, and register." },
   { title: "Pay your team leader", text: "They confirm your registration once they receive your fee." },
 ]
 
@@ -370,6 +446,8 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
   const [form, setForm] = useState(emptyDetails)
   // For a couple's record: who is joining. Both means two people and double the fee.
   const [attending, setAttending] = useState<Attending | "">("")
+  // Formal photos for the posters: the first is the agent (or the first person on a couple's record), the second their partner.
+  const [photos, setPhotos] = useState<[File | null, File | null]>([null, null])
   const [people, setPeople] = useState(1)
   const [teamLeader, setTeamLeader] = useState("")
   const [fee, setFee] = useState<number | null>(null)
@@ -427,6 +505,14 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
   }
 
   const couple = agent ? splitCouple(agent.name) : null
+  // Whose photo is needed: everyone joining. A couple chooses who is joining first.
+  const photoSlots: { index: 0 | 1; label: string }[] = !couple
+    ? [{ index: 0, label: "Upload your photo" }]
+    : ([0, 1] as const)
+        .filter((index) => attending === "both" || attending === (index === 0 ? "first" : "second"))
+        .map((index) => ({ index, label: `Formal photo of ${couple[index]}` }))
+  const setPhoto = (index: 0 | 1, file: File | null) =>
+    setPhotos((current) => (index === 0 ? [file, current[1]] : [current[0], file]))
   const money = (value: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(value)
 
   /** Step 2: "Yes, this is me", plus the details only the agent can give. */
@@ -442,10 +528,27 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
       setNotice({ tone: "warning", title: "Please check your details", text: "Please tell us who is joining." })
       return
     }
+    if (photoSlots.some((slot) => !photos[slot.index])) {
+      setNotice({
+        tone: "warning",
+        title: "Please check your details",
+        text:
+          photoSlots.length === 2
+            ? "Please upload a clear, formal photo of each of you."
+            : "Please upload a clear, formal photo of yourself.",
+      })
+      return
+    }
+    const body = new FormData()
+    body.set("email", email.trim())
+    Object.entries(checked.details).forEach(([key, value]) => body.set(key, value))
+    if (attending) body.set("attending", attending)
+    photoSlots.forEach((slot) => body.append("photo", photos[slot.index] as File))
     setBusy(true)
     setNotice(null)
     try {
-      const result = await post("/api/registration", { ...checked.details, ...(attending ? { attending } : {}) })
+      const response = await fetch("/api/registration", { method: "POST", headers: { Accept: "application/json" }, body })
+      const result = (await response.json().catch(() => null)) as Record<string, unknown> | null
       if (result?.success) {
         setTeamLeader(typeof result.team_leader === "string" ? result.team_leader : agent?.team_leader ?? "")
         setFee(typeof result.fee === "number" ? result.fee : null)
@@ -471,6 +574,7 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
   const notMe = () => {
     setAgent(null)
     setForm(emptyDetails)
+    setPhotos([null, null])
     setStage("email")
     setNotice({
       tone: "info",
@@ -488,6 +592,7 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
     setPayment(null)
     setReturning(false)
     setForm(emptyDetails)
+    setPhotos([null, null])
     setEmail("")
     setNotice(null)
     setStage("email")
@@ -884,7 +989,7 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                         ) : null}
                         <div className="mt-6">
                           <p className="text-sm font-bold text-[#2a1458]">A few more details</p>
-                          <p className="mt-1 text-sm text-[#7a6a4a]">All three are required to register.</p>
+                          <p className="mt-1 text-sm text-[#7a6a4a]">All of these are required to register.</p>
                           <div className="mt-4 grid gap-5 sm:grid-cols-2">
                             <div>
                               <label htmlFor="reg-birth-date" className={labelClass}>
@@ -952,6 +1057,43 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                                 />
                               </div>
                             </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-6">
+                          <p className="text-sm font-bold text-[#2a1458]">
+                            Your formal photo <span className="text-[#b3261e]">*</span>
+                          </p>
+                          <p className="mt-1 text-sm text-[#7a6a4a]">
+                            Upload a <strong className="text-[#2a1458]">clear, formal photo</strong> of yourself. We will use it to
+                            make your ARES 2027 poster, so it is required to register.
+                          </p>
+                          <ul className="mt-3 space-y-1.5 rounded-xl border border-[#e3d3a8] bg-[#fdf8ea] px-4 py-3 text-sm text-[#4a3413]">
+                            {[
+                              "Formal or business attire",
+                              "Clear and sharp, with good lighting: not blurry, dark or pixelated",
+                              "Only you in the photo, facing the camera, from the chest or waist up",
+                              "Plain background, with no sunglasses, caps or filters",
+                            ].map((rule) => (
+                              <li key={rule} className="flex gap-2">
+                                <Check size={15} strokeWidth={3} className="mt-0.5 shrink-0 text-[#b8862b]" /> {rule}
+                              </li>
+                            ))}
+                          </ul>
+                          <div className="mt-4 space-y-4">
+                            {photoSlots.length ? (
+                              photoSlots.map((slot) => (
+                                <PhotoField
+                                  key={slot.index}
+                                  id={`reg-photo-${slot.index + 1}`}
+                                  label={slot.label}
+                                  file={photos[slot.index]}
+                                  onChange={(file) => setPhoto(slot.index, file)}
+                                />
+                              ))
+                            ) : (
+                              <p className="text-sm text-[#7a6a4a]">Choose who is joining above, then upload a photo of each person.</p>
+                            )}
                           </div>
                         </div>
 

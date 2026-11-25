@@ -1,6 +1,8 @@
+import { randomUUID } from "crypto"
 import { NextResponse } from "next/server"
 import { EMAIL_PATTERN, resolveAgent } from "@/lib/agent-registration"
 import { getRegistrationFee, getSlotsLeft } from "@/lib/payments"
+import { MAX_PHOTO_BYTES, PHOTO_BUCKET, PHOTO_TYPES } from "@/lib/photo"
 import { resolveAttendance, validateAgentDetails } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { getTlPaymentDetails } from "@/lib/tl-payment"
@@ -8,10 +10,28 @@ import { getTlPaymentDetails } from "@/lib/tl-payment"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-/** Step 2: the agent said "yes, this is me". Details are looked up again here, never taken from the browser. */
+const invalid = (field: string, message: string) =>
+  NextResponse.json({ success: false, status: "invalid_details", field, message }, { status: 400 })
+
+/**
+ * Step 2: the agent said "yes, this is me". Details are looked up again here, never taken from the browser.
+ * Sent as a form, because it carries a formal photo of each person joining (used for their poster).
+ */
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null)
-  const email = typeof body?.email === "string" ? body.email.trim() : ""
+  const form = await request.formData().catch(() => null)
+  if (!form) return NextResponse.json({ success: false, message: "Invalid request." }, { status: 400 })
+  const field = (name: string) => {
+    const value = form.get(name)
+    return typeof value === "string" ? value : undefined
+  }
+  const body = {
+    birth_date: field("birth_date"),
+    whatsapp_number: field("whatsapp_number"),
+    polo_shirt_size: field("polo_shirt_size"),
+    attending: field("attending"),
+  }
+  const photos = form.getAll("photo").filter((entry): entry is File => entry instanceof File && entry.size > 0)
+  const email = (field("email") ?? "").trim()
   if (!EMAIL_PATTERN.test(email) || email.length > 320) {
     return NextResponse.json({ success: false, message: "Please enter a valid email address." }, { status: 400 })
   }
@@ -36,13 +56,20 @@ export async function POST(request: Request) {
 
     const { agent, teamLeader } = result
     // A couple's record must say who is joining; the name comes from our records, not the browser.
-    const attendance = resolveAttendance(agent.name, body?.attending)
-    if (!attendance.ok) {
-      return NextResponse.json(
-        { success: false, status: "invalid_details", field: "attending", message: attendance.message },
-        { status: 400 },
+    const attendance = resolveAttendance(agent.name, body.attending)
+    if (!attendance.ok) return invalid("attending", attendance.message)
+
+    // One clear, formal photo of each person joining.
+    if (photos.length !== attendance.attendee_count) {
+      return invalid(
+        "photo",
+        attendance.attendee_count === 2
+          ? "Please upload a clear, formal photo of each of you."
+          : "Please upload a clear, formal photo of yourself.",
       )
     }
+    if (photos.some((photo) => !PHOTO_TYPES[photo.type])) return invalid("photo", "Your photo must be a JPG, PNG or WEBP image.")
+    if (photos.some((photo) => photo.size > MAX_PHOTO_BYTES)) return invalid("photo", "Your photo is larger than 3 MB.")
     // Slots are limited; a couple who are both joining needs two.
     const slotsLeft = await getSlotsLeft()
     if (slotsLeft <= 0) return NextResponse.json({ success: false, status: "full" }, { status: 409 })
@@ -57,18 +84,36 @@ export async function POST(request: Request) {
         { status: 400 },
       )
     }
-    const { error } = await createSupabaseAdmin().from("registrations").insert({
+    const supabase = createSupabaseAdmin()
+    const folder = randomUUID()
+    const photoPaths: string[] = []
+    const dropPhotos = () => (photoPaths.length ? supabase.storage.from(PHOTO_BUCKET).remove(photoPaths) : null)
+    for (const [index, photo] of photos.entries()) {
+      const path = `${folder}/${index + 1}.${PHOTO_TYPES[photo.type]}`
+      const { error: uploadError } = await supabase.storage
+        .from(PHOTO_BUCKET)
+        .upload(path, Buffer.from(await photo.arrayBuffer()), { contentType: photo.type, upsert: false })
+      if (uploadError) {
+        await dropPhotos()
+        throw uploadError
+      }
+      photoPaths.push(path)
+    }
+
+    const { error } = await supabase.from("registrations").insert({
       name: agent.name,
       email: agent.email,
       contact_number: agent.contact_number || null,
       ...checked.details,
       attendee_count: attendance.attendee_count,
       attendees: attendance.attendees,
+      photo_paths: photoPaths,
       team: agent.team,
       team_leader_id: teamLeader.id,
       team_leader_name: teamLeader.name,
     })
     if (error) {
+      await dropPhotos() // nothing was recorded, so drop the files
       if (error.code === "23505") {
         return NextResponse.json(
           { success: false, status: "already_registered", confirmed: false, teamLeaderName: teamLeader.name },
