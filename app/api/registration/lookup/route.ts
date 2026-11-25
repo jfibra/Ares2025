@@ -18,15 +18,17 @@ export async function POST(request: Request) {
     const result = await resolveAgent(email)
     if (result.status === "already_registered") {
       const { teamLeaderId, attendeeCount, receiptAt, ...rest } = result
-      // Still waiting to pay: show again where to send the fee.
-      const waiting = !result.confirmed && teamLeaderId !== null
+      // Still waiting to pay: show again where to send the fee. With no team leader on the
+      // registration (theirs is not joining), the agent pays the admin.
+      const waiting = !result.confirmed
       const [payment, fee] = waiting
-        ? await Promise.all([getTlPaymentDetails(teamLeaderId).catch(() => null), getRegistrationFee().catch(() => null)])
+        ? await Promise.all([getTlPaymentDetails(teamLeaderId ?? "admin").catch(() => null), getRegistrationFee().catch(() => null)])
         : [null, null]
       // `fee` is the total this registration owes: double when both people on a couple's record are joining.
       return NextResponse.json({
         success: true,
         ...rest,
+        admin_managed: teamLeaderId === null,
         payment,
         fee: fee === null ? null : fee * attendeeCount,
         attendee_count: attendeeCount,
@@ -39,6 +41,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       status: "found",
+      past_attendee: result.pastAttendee,
+      // Their team leader is not joining, so the admin handles their payment.
+      admin_managed: !result.teamLeader,
       slots_left: slotsLeft,
       // Per person, so a couple can see what one or both of them joining costs.
       fee: await getRegistrationFee().catch(() => null),
@@ -47,7 +52,7 @@ export async function POST(request: Request) {
         email: result.agent.email,
         contact_number: maskContactNumber(result.agent.contact_number),
         team: result.agent.team,
-        team_leader: result.teamLeader.name,
+        team_leader: result.teamLeader?.name ?? result.agent.team_leader_name,
       },
     })
   } catch (error) {

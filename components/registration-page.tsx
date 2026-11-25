@@ -48,6 +48,7 @@ import {
   type TlPaymentDetails,
 } from "@/lib/registrations"
 import { PHOTO_ACCEPT, preparePhoto } from "@/lib/photo"
+import { GENERAL_REGISTRATION_NOTICE, generalRegistrationOpensAtMs } from "@/lib/registration-opening"
 import { Particles, Reveal, staggerContainer, staggerItem } from "@/components/motion"
 import {
   CornerFlourish,
@@ -179,8 +180,11 @@ function PaymentCard({ payment, teamLeader }: { payment: TlPaymentDetails | null
       <div className="mt-6 flex w-full max-w-md gap-3 rounded-2xl border border-[#e3d3a8] bg-[#fdf8ea] px-4 py-4 text-left text-sm text-[#4a3413]">
         <Info size={18} className="mt-0.5 shrink-0 text-[#b8862b]" />
         <p className="leading-relaxed">
-          <span className="font-semibold">{teamLeader || "Your team leader"} has not added payment details yet.</span> Please
-          ask them directly how to send your payment.
+          <span className="font-semibold">
+            {teamLeader ? teamLeader.charAt(0).toUpperCase() + teamLeader.slice(1) : "Your team leader"} has not added payment
+            details yet.
+          </span>{" "}
+          Please ask them directly how to send your payment.
         </p>
       </div>
     )
@@ -396,17 +400,17 @@ function noticeFor(result: Record<string, unknown> | null): Notice {
         title: "We couldn't find that email",
         text: "It is not in our agent records. Check the spelling, and make sure it is your LR email, not a personal one.",
       }
+    case "general_only":
+      return {
+        tone: "info",
+        title: "Pre-registration is for ARES 2025 attendees",
+        text: GENERAL_REGISTRATION_NOTICE,
+      }
     case "tl_not_registered":
       return {
         tone: "warning",
         title: "Your team leader hasn't registered yet",
         text: `${result.teamLeaderName ? `${result.teamLeaderName} (${result.team})` : `The leader of ${result.team}`} needs to register first. Please ask them, then come back.`,
-      }
-    case "tl_declined":
-      return {
-        tone: "warning",
-        title: "Your team leader is not joining ARES 2027",
-        text: `${result.teamLeaderName ? `${result.teamLeaderName} (${result.team})` : `The leader of ${result.team}`} has told us they will not be joining, so registration is not open for your team. If you would still like to attend, please contact the ARES admin.`,
       }
     case "full":
       return {
@@ -416,11 +420,11 @@ function noticeFor(result: Record<string, unknown> | null): Notice {
       }
     case "already_registered":
       return result.confirmed
-        ? { tone: "info", title: "You're already registered", text: "Your team leader has confirmed you. See you in Bangkok!" }
+        ? { tone: "info", title: "You're already registered", text: "Your payment has been confirmed. See you in Bangkok!" }
         : {
             tone: "info",
             title: "You're already registered",
-            text: `Your registration is waiting for ${result.teamLeaderName || "your team leader"} to confirm it.`,
+            text: `Your registration is waiting for ${result.admin_managed ? "the ARES admin" : result.teamLeaderName || "your team leader"} to confirm it.`,
           }
     case "unavailable":
       return {
@@ -443,6 +447,18 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
   const [stage, setStage] = useState<Stage>("email")
   const [email, setEmail] = useState("")
   const [agent, setAgent] = useState<Agent | null>(null)
+  // True when this agent attended ARES 2025: they are welcomed back.
+  const [pastAttendee, setPastAttendee] = useState(false)
+  // Until general registration opens, only ARES 2025 attendees may register. Set after mount, from the device clock.
+  const [preRegistration, setPreRegistration] = useState(false)
+  useEffect(() => {
+    const wait = generalRegistrationOpensAtMs - Date.now()
+    if (wait <= 0) return
+    setPreRegistration(true)
+    // setTimeout cannot wait longer than about 24 days.
+    const timer = setTimeout(() => setPreRegistration(false), Math.min(wait, 2_000_000_000))
+    return () => clearTimeout(timer)
+  }, [])
   const [form, setForm] = useState(emptyDetails)
   // For a couple's record: who is joining. Both means two people and double the fee.
   const [attending, setAttending] = useState<Attending | "">("")
@@ -450,6 +466,8 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
   const [photos, setPhotos] = useState<[File | null, File | null]>([null, null])
   const [people, setPeople] = useState(1)
   const [teamLeader, setTeamLeader] = useState("")
+  // True when the agent's team leader is not joining: the ARES admin takes their payment and confirms it instead.
+  const [adminManaged, setAdminManaged] = useState(false)
   const [fee, setFee] = useState<number | null>(null)
   const [payment, setPayment] = useState<TlPaymentDetails | null>(null)
   // True when someone who registered earlier came back to see how to pay.
@@ -481,12 +499,15 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
       const result = await post("/api/registration/lookup")
       if (result?.success && result.status === "found") {
         setAgent(result.agent as Agent)
+        setPastAttendee(result.past_attendee === true)
+        setAdminManaged(result.admin_managed === true)
         setAttending("")
         setFee(typeof result.fee === "number" ? result.fee : null)
         setStage("confirm")
       } else if (result?.success && result.status === "already_registered" && !result.confirmed) {
         // Registered but not yet paid: show again where to send the fee.
         setAgent(null)
+        setAdminManaged(result.admin_managed === true)
         setTeamLeader(typeof result.teamLeaderName === "string" ? result.teamLeaderName : "")
         setFee(typeof result.fee === "number" ? result.fee : null)
         setPayment((result.payment as TlPaymentDetails | null) ?? null)
@@ -550,6 +571,7 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
       const response = await fetch("/api/registration", { method: "POST", headers: { Accept: "application/json" }, body })
       const result = (await response.json().catch(() => null)) as Record<string, unknown> | null
       if (result?.success) {
+        setAdminManaged(result.admin_managed === true)
         setTeamLeader(typeof result.team_leader === "string" ? result.team_leader : agent?.team_leader ?? "")
         setFee(typeof result.fee === "number" ? result.fee : null)
         setPayment((result.payment as TlPaymentDetails | null) ?? null)
@@ -573,6 +595,8 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
 
   const notMe = () => {
     setAgent(null)
+    setPastAttendee(false)
+    setAdminManaged(false)
     setForm(emptyDetails)
     setPhotos([null, null])
     setStage("email")
@@ -585,6 +609,8 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
 
   const startOver = () => {
     setAgent(null)
+    setPastAttendee(false)
+    setAdminManaged(false)
     setReceiptSentAt(null)
     setAttending("")
     setPeople(1)
@@ -653,7 +679,11 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
         { icon: Mail, label: "Email", value: agent.email },
         { icon: Phone, label: "Contact number", value: agent.contact_number || "Not on record" },
         { icon: Users, label: "Team", value: agent.team },
-        { icon: UserCheck, label: "Team leader", value: agent.team_leader },
+        {
+          icon: UserCheck,
+          label: "Team leader",
+          value: adminManaged ? `${agent.team_leader ? `${agent.team_leader} ` : ""}(not joining ARES 2027)` : agent.team_leader,
+        },
       ]
     : []
 
@@ -834,6 +864,16 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                           </p>
                         </div>
 
+                        {preRegistration ? (
+                          <div className="mb-6 flex gap-3 rounded-xl border border-[#d4a437]/60 bg-[#fdf3d7] px-4 py-3 text-sm text-[#4a3413]">
+                            <Info size={18} className="mt-0.5 shrink-0 text-[#b8862b]" />
+                            <p className="leading-relaxed">
+                              <span className="font-semibold text-[#2a1458]">Pre-registration is open for ARES 2025 attendees.</span>{" "}
+                              {GENERAL_REGISTRATION_NOTICE}
+                            </p>
+                          </div>
+                        ) : null}
+
                         <form onSubmit={findAgent} className="space-y-6">
                           <div>
                             <label htmlFor="reg-email" className={labelClass}>
@@ -916,6 +956,26 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                           <h2 className="mt-2 text-3xl font-black text-[#2a1458]">Is this you?</h2>
                           <p className="mt-2 text-sm text-[#7a6a4a]">These details come from your agent record.</p>
                         </div>
+
+                        {adminManaged ? (
+                          <div className="mb-6 flex gap-3 rounded-xl border border-[#e3d3a8] bg-[#fdf8ea] px-4 py-3 text-sm text-[#4a3413]">
+                            <Info size={18} className="mt-0.5 shrink-0 text-[#b8862b]" />
+                            <p className="leading-relaxed">
+                              <span className="font-semibold text-[#2a1458]">Your team leader is not joining ARES 2027.</span> You can
+                              still register: the ARES admin will receive your payment and confirm your registration.
+                            </p>
+                          </div>
+                        ) : null}
+
+                        {pastAttendee ? (
+                          <div role="status" className="mb-6 flex items-center gap-3 rounded-xl border border-[#d4a437] bg-gradient-to-r from-[#2a1458] to-[#3a0d2a] px-4 py-3.5 text-[#fbe7a1]">
+                            <Lotus className="h-7 w-11 shrink-0 text-[#f0c24b]" />
+                            <p className="leading-snug">
+                              <span className="block text-base font-black text-white">Welcome back to ARES!</span>
+                              <span className="text-sm">Proceed to register.</span>
+                            </p>
+                          </div>
+                        ) : null}
 
                         <motion.dl
                           variants={staggerContainer}
@@ -1153,12 +1213,21 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                           ) : (
                             "the registration fee"
                           )}{" "}
-                          to your team leader{teamLeader ? `, ${teamLeader}` : ""}. They will confirm it once received.
+                          {adminManaged
+                            ? "to the ARES admin. Your team leader is not joining, so the admin will confirm it once received."
+                            : `to your team leader${teamLeader ? `, ${teamLeader}` : ""}. They will confirm it once received.`}
                         </p>
-                        <PaymentCard payment={payment} teamLeader={teamLeader} />
-                        <ReceiptUpload email={email} teamLeader={teamLeader} sentAt={receiptSentAt} onSent={setReceiptSentAt} />
+                        <PaymentCard payment={payment} teamLeader={adminManaged ? "the ARES admin" : teamLeader} />
+                        <ReceiptUpload
+                          email={email}
+                          teamLeader={adminManaged ? "the ARES admin" : teamLeader}
+                          sentAt={receiptSentAt}
+                          onSent={setReceiptSentAt}
+                        />
                         <p className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#e3d3a8] bg-[#fdf3d7] px-4 py-2 text-sm font-semibold text-[#8a5a00]">
-                          <Clock size={16} /> {receiptSentAt ? "Waiting for your team leader to confirm" : "Waiting for payment to your team leader"}
+                          <Clock size={16} /> {receiptSentAt
+                            ? `Waiting for ${adminManaged ? "the ARES admin" : "your team leader"} to confirm`
+                            : `Waiting for payment to ${adminManaged ? "the ARES admin" : "your team leader"}`}
                         </p>
                         <Button
                           type="button"

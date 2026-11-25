@@ -5,7 +5,7 @@ import { getAdmin } from "@/lib/auth"
 import { loadDashboardData } from "@/lib/payments"
 import { TEAM_LEADER_COLUMNS, TL_DECLINE_COLUMNS, type TeamLeader, type TlDecline } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
-import { getTlInviteToken } from "@/lib/tl-invite"
+import { getTlInviteCode } from "@/lib/tl-invite"
 import { getTlPaymentDetails } from "@/lib/tl-payment"
 
 export const metadata: Metadata = { title: "Admin - Registrations", robots: { index: false, follow: false } }
@@ -21,7 +21,7 @@ export default async function AdminPage() {
       return null
     }),
     createSupabaseAdmin().from("team_leaders").select(TEAM_LEADER_COLUMNS).order("created_at", { ascending: false }),
-    getTlInviteToken().catch((error) => {
+    getTlInviteCode().catch((error) => {
       console.error("Admin page could not load the TL invite:", error)
       return null
     }),

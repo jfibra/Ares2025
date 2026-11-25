@@ -1,4 +1,6 @@
 import { DirectoryUnavailableError, lookupAgent, type DirectoryAgent } from "@/lib/agent-directory"
+import { isPastAttendee } from "@/lib/past-attendees"
+import { generalRegistrationOpensAtMs } from "@/lib/registration-opening"
 import { TEAM_LEADER_COLUMNS, type TeamLeader } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { getAssignmentForTeam, normaliseTeam, type TlAssignment } from "@/lib/tl-assignments"
@@ -38,10 +40,16 @@ async function teamLeaderDeclined(agent: DirectoryAgent): Promise<boolean> {
 }
 
 export type AgentResolution =
-  | { status: "found"; agent: DirectoryAgent; teamLeader: TeamLeader }
+  /**
+   * `teamLeader` is null when the agent's team leader said they are not joining: the agent can
+   * still register, and the admin looks after them (takes the payment and confirms it).
+   * `pastAttendee`: they attended ARES 2025, so they are welcomed back.
+   */
+  | { status: "found"; agent: DirectoryAgent; teamLeader: TeamLeader | null; pastAttendee: boolean }
   | { status: "not_found" }
+  /** Pre-registration is on and this agent did not attend ARES 2025: they wait for general registration. */
+  | { status: "general_only" }
   | { status: "tl_not_registered"; team: string; teamLeaderName: string }
-  | { status: "tl_declined"; team: string; teamLeaderName: string }
   | { status: "already_registered"; confirmed: boolean; teamLeaderName: string | null; teamLeaderId: number | null; attendeeCount: number; receiptAt: string | null }
   | { status: "unavailable" }
 
@@ -78,17 +86,20 @@ export async function resolveAgent(rawEmail: string): Promise<AgentResolution> {
   }
   if (!agent) return { status: "not_found" }
 
+  // Until general registration opens, only people who attended ARES 2025 may register.
+  const pastAttendee = await isPastAttendee(agent.email)
+  if (!pastAttendee && Date.now() < generalRegistrationOpensAtMs) return { status: "general_only" }
+
   const assigned = await getAssignmentForTeam(agent.team)
   const teamLeader = await findTeamLeaderFor(agent, assigned)
   if (!teamLeader) {
     // The admin's choice for the team is who the agent should be waiting for (or asking).
     const teamLeaderName = assigned?.name || agent.team_leader_name
-    if (await teamLeaderDeclined(agent)) {
-      return { status: "tl_declined", team: agent.team, teamLeaderName }
-    }
+    // A team leader who is not joining does not hold their agents back: the admin manages them instead.
+    if (await teamLeaderDeclined(agent)) return { status: "found", agent, teamLeader: null, pastAttendee }
     return { status: "tl_not_registered", team: agent.team, teamLeaderName }
   }
-  return { status: "found", agent, teamLeader }
+  return { status: "found", agent, teamLeader, pastAttendee }
 }
 
 /** 09171234567 -> 0917•••4567, so the lookup page does not hand out full numbers. */

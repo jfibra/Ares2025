@@ -104,14 +104,15 @@ export async function setPaymentReceived(id: number, received: boolean, teamLead
   }
 
   // Each person pays the fee, so a couple who are both joining owes double.
-  let people = 1
-  if (received) {
-    let lookup = supabase.from("registrations").select("attendee_count").eq("id", id)
-    if (teamLeaderId !== undefined) lookup = lookup.eq("team_leader_id", teamLeaderId)
-    const { data: row, error: lookupError } = await lookup.maybeSingle()
-    if (lookupError) throw lookupError
-    people = row?.attendee_count ?? 1
-  }
+  let lookup = supabase.from("registrations").select("attendee_count,team_leader_id").eq("id", id)
+  if (teamLeaderId !== undefined) lookup = lookup.eq("team_leader_id", teamLeaderId)
+  const { data: row, error: lookupError } = await lookup.maybeSingle()
+  if (lookupError) throw lookupError
+  const people = row?.attendee_count ?? 1
+  // A registration with no team leader (theirs is not joining) is managed by the admin: the agent
+  // pays the admin directly, so the admin's confirmation makes it fully paid, with no remittance.
+  const adminManaged = teamLeaderId === undefined && Boolean(row) && row?.team_leader_id === null
+  const paidStatus = adminManaged ? "verified" : "paid_to_tl"
 
   let query = supabase
     .from("registrations")
@@ -120,14 +121,16 @@ export async function setPaymentReceived(id: number, received: boolean, teamLead
         ? {
             confirmed_by_tl: true,
             confirmed_at: new Date().toISOString(),
-            payment_status: "paid_to_tl",
+            payment_status: paidStatus,
             amount: (fee ?? 0) * people,
           }
         : { confirmed_by_tl: false, confirmed_at: null, payment_status: "unpaid", amount: null },
     )
     .eq("id", id)
     // Only these moves are allowed; anything already sent to the admin is locked.
-    .eq("payment_status", received ? "unpaid" : "paid_to_tl")
+    .eq("payment_status", received ? "unpaid" : paidStatus)
+  // "verified" may only be undone here for an admin-managed registration, never one paid through a remittance.
+  if (adminManaged) query = query.is("team_leader_id", null).is("remittance_id", null)
   if (teamLeaderId !== undefined) query = query.eq("team_leader_id", teamLeaderId)
 
   const { data, error } = await query.select(REGISTRATION_COLUMNS).maybeSingle()

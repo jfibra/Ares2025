@@ -109,14 +109,15 @@ export async function POST(request: Request) {
       attendees: attendance.attendees,
       photo_paths: photoPaths,
       team: agent.team,
-      team_leader_id: teamLeader.id,
-      team_leader_name: teamLeader.name,
+      // No team leader id means theirs is not joining: the admin manages this registration.
+      team_leader_id: teamLeader?.id ?? null,
+      team_leader_name: teamLeader?.name ?? (agent.team_leader_name.slice(0, 200) || null),
     })
     if (error) {
       await dropPhotos() // nothing was recorded, so drop the files
       if (error.code === "23505") {
         return NextResponse.json(
-          { success: false, status: "already_registered", confirmed: false, teamLeaderName: teamLeader.name },
+          { success: false, status: "already_registered", confirmed: false, teamLeaderName: teamLeader?.name ?? null, admin_managed: !teamLeader },
           { status: 409 },
         )
       }
@@ -124,13 +125,14 @@ export async function POST(request: Request) {
     }
     const [fee, payment] = await Promise.all([
       getRegistrationFee().catch(() => null),
-      getTlPaymentDetails(teamLeader.id).catch(() => null),
+      getTlPaymentDetails(teamLeader?.id ?? "admin").catch(() => null),
     ])
     // `fee` is the total owed: double when both people on a couple's record are joining.
     return NextResponse.json(
       {
         success: true,
-        team_leader: teamLeader.name,
+        team_leader: teamLeader?.name ?? null,
+        admin_managed: !teamLeader,
         fee: fee === null ? null : fee * attendance.attendee_count,
         attendee_count: attendance.attendee_count,
         payment,

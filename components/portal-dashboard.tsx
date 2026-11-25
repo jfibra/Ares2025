@@ -44,7 +44,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Counter } from "@/components/motion"
+import AdminManagedAgents from "@/components/admin-managed-agents"
 import { OwnTicketCard } from "@/components/own-ticket-fields"
+import PastAttendeesPanel from "@/components/past-attendees-panel"
 import TlAssignPanel from "@/components/tl-assign-panel"
 import { GoldRule, Lotus, brownLattice, goldLattice, goldText } from "@/components/thai-ornaments"
 import {
@@ -198,8 +200,12 @@ export default function PortalDashboard({
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(loadFailed ? "Could not load everything. Try Refresh." : null)
 
-  const pending = useMemo(() => rows.filter((r) => !r.confirmed_by_tl), [rows])
-  const confirmed = useMemo(() => rows.filter((r) => r.confirmed_by_tl), [rows])
+  // Admin: agents whose team leader is not joining have no team leader on their registration. The admin
+  // looks after them on the "Not joining" tab, so they are kept out of the Pending and Confirmed lists.
+  const adminManaged = useMemo(() => (isAdmin ? rows.filter((r) => r.team_leader_id === null) : []), [isAdmin, rows])
+  const withLeader = useMemo(() => (isAdmin ? rows.filter((r) => r.team_leader_id !== null) : rows), [isAdmin, rows])
+  const pending = useMemo(() => withLeader.filter((r) => !r.confirmed_by_tl), [withLeader])
+  const confirmed = useMemo(() => withLeader.filter((r) => r.confirmed_by_tl), [withLeader])
   const toSend = useMemo(() => rows.filter((r) => r.payment_status === "paid_to_tl"), [rows])
   const selectedRows = useMemo(() => toSend.filter((r) => selected.has(r.id)), [toSend, selected])
   const sum = (list: { amount: number | null }[]) => list.reduce((total, item) => total + Number(item.amount ?? 0), 0)
@@ -664,7 +670,8 @@ export default function PortalDashboard({
   const waiting = remittances.filter((r) => r.status === "submitted")
   // Every person registered takes a slot; a couple who are both joining takes two.
   const slotsTaken = rows.reduce((total, r) => total + (Number(r.attendee_count) || 1), 0)
-  const verifiedTotal = sum(remittances.filter((r) => r.status === "verified"))
+  // Money that reached the admin: remittances marked received, plus agents who paid the admin directly.
+  const verifiedTotal = sum(remittances.filter((r) => r.status === "verified")) + sum(adminManaged.filter((r) => r.payment_status === "verified"))
   const statCards: { label: string; icon: typeof Users; count?: number; money?: number; hint?: string }[] = isAdmin
     ? [
         { label: "Team leaders", icon: UserCog, count: leaders.length },
@@ -672,7 +679,7 @@ export default function PortalDashboard({
           label: "Agents registered",
           icon: Users,
           count: rows.length,
-          hint: `${slotsTaken.toLocaleString()} of ${slotLimit.toLocaleString()} slots taken · ${pending.length.toLocaleString()} not paid yet`,
+          hint: `${slotsTaken.toLocaleString()} of ${slotLimit.toLocaleString()} slots taken · ${rows.filter((r) => !r.confirmed_by_tl).length.toLocaleString()} not paid yet`,
         },
         { label: "Remittances to check", icon: Clock, money: sum(waiting), hint: `${waiting.length.toLocaleString()} waiting` },
         { label: "Received", icon: BadgeCheck, money: verifiedTotal },
@@ -691,7 +698,7 @@ export default function PortalDashboard({
       ? [
           { id: "leaders" as Tab, label: "Team leaders", count: leaders.length },
           { id: "assign" as Tab, label: "Assign TL", icon: UserCog },
-          { id: "declined" as Tab, label: "Not joining", count: declines.length },
+          { id: "declined" as Tab, label: "Not joining", count: declines.length + adminManaged.length },
           { id: "settings" as Tab, label: "Settings", icon: Settings },
         ]
       : [
@@ -709,7 +716,7 @@ export default function PortalDashboard({
       ? ["No remittances yet", "When a team leader sends collected payments, the remittance appears here for you to check."]
       : ["No remittances yet", "Open Pay admin to see where to send the money and record your payment."],
     leaders: ["No team leaders yet", "Share the TL registration link so team leaders can register."],
-    declined: ["No team leader has declined", "A team leader who is not joining can say so, with their reason, from the TL registration link."],
+    declined: ["No team leader has declined", "A team leader who is not joining can say so, with their reason, from the TL registration link. Their agents can still register, and you manage them here."],
   }
 
   const dialog =
@@ -728,7 +735,7 @@ export default function PortalDashboard({
         : pendingAction?.kind === "decline"
           ? {
               title: "Remove this entry?",
-              body: `${pendingAction.row.name} (${pendingAction.row.team}) will be removed from the "Not joining" list, along with their reason. Their agents will again be told their team leader has not registered yet.`,
+              body: `${pendingAction.row.name} (${pendingAction.row.team}) will be removed from the "Not joining" list, along with their reason. Agents of theirs who have not registered yet will again be told their team leader has not registered; those already registered stay with you.`,
               action: "Remove",
             }
           : pendingAction?.kind === "regenerate"
@@ -936,6 +943,7 @@ export default function PortalDashboard({
             <>
               <FeePanel fee={fee} busy={busyKey === "fee"} onSave={saveFee} />
               <SlotsPanel limit={slotLimit} taken={slotsTaken} busy={busyKey === "slots"} onSave={saveSlots} />
+              <PastAttendeesPanel call={call} />
               <PaymentDetailsPanel
                 audience="leaders"
                 accounts={adminAccounts}
@@ -1196,6 +1204,16 @@ export default function PortalDashboard({
               <p className="mt-3 text-xs text-[#7a6a4a]">
                 Showing {visible.length.toLocaleString()} of {source.length.toLocaleString()}. Dates are in Philippine time.
               </p>
+
+              {isAdmin && isDeclinedTab ? (
+                <AdminManagedAgents
+                  agents={adminManaged}
+                  fee={fee}
+                  busyKey={busyKey}
+                  onConfirm={setConfirmed}
+                  onDelete={(row) => setPendingAction({ kind: "registration", row })}
+                />
+              ) : null}
             </>
           )}
 
@@ -2094,7 +2112,7 @@ function InvitePanel({ token, busy, onRegenerate }: { token: string | null; busy
   const [copied, setCopied] = useState(false)
 
   useEffect(() => setOrigin(window.location.origin), [])
-  const link = token && origin ? `${origin}/tl/register?invite=${encodeURIComponent(token)}` : ""
+  const link = token && origin ? `${origin}/join/${encodeURIComponent(token)}` : ""
 
   useEffect(() => {
     if (!link) return setQr(null)
