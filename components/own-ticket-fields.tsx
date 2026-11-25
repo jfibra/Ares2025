@@ -4,10 +4,11 @@ import type React from "react"
 import { useState } from "react"
 import { CalendarDays, Loader2, MessageCircle, Shirt, Ticket, TriangleAlert } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { FormalPhotos, noPhotos, photosProblem, photosToSend, type PhotoPair } from "@/components/photo-field"
 import { POLO_SHIRT_SIZES, splitCouple, validateAgentDetails, type Attending } from "@/lib/registrations"
 
 // What a team leader fills in for their own ticket: who is joining (when their record is a
-// couple) and the same three details an agent gives. Used when they register and, for a team
+// couple), the same three details an agent gives, and a formal photo of each person joining. Used when they register and, for a team
 // leader who has no registration yet, in their portal.
 
 export type OwnTicketForm = { attending: Attending | ""; birth_date: string; whatsapp_number: string; polo_shirt_size: string }
@@ -21,25 +22,35 @@ const fieldIconClass = "pointer-events-none absolute left-3.5 top-1/2 -translate
 const money = (value: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(value)
 
 /** Null when the form can be sent, else what to fix. `name` is the name on the LR record. */
-export function ownTicketProblem(name: string, form: OwnTicketForm): string | null {
+export function ownTicketProblem(name: string, form: OwnTicketForm, photos: PhotoPair): string | null {
+  return ownTicketDetailsProblem(name, form) ?? photosProblem(name, form.attending, photos)
+}
+
+/** The same check without the photos, for a form that asks for them on a later step. */
+export function ownTicketDetailsProblem(name: string, form: OwnTicketForm): string | null {
   if (splitCouple(name) && !form.attending) return "Please tell us who is joining."
   const checked = validateAgentDetails(form)
   return checked.ok ? null : checked.message
 }
 
-/** The part of the form to send to the server. */
-export const ownTicketPayload = (form: OwnTicketForm) => ({
-  birth_date: form.birth_date,
-  whatsapp_number: form.whatsapp_number,
-  polo_shirt_size: form.polo_shirt_size,
-  ...(form.attending ? { attending: form.attending } : {}),
-})
+/** Adds the ticket and its photos to the form that is sent to the server. */
+export function appendOwnTicket(body: FormData, name: string, form: OwnTicketForm, photos: PhotoPair) {
+  body.set("birth_date", form.birth_date)
+  body.set("whatsapp_number", form.whatsapp_number)
+  body.set("polo_shirt_size", form.polo_shirt_size)
+  if (form.attending) body.set("attending", form.attending)
+  photosToSend(name, form.attending, photos).forEach((photo) => body.append("photo", photo))
+  return body
+}
 
 export function OwnTicketFields({
   name,
   fee,
   value,
   onChange,
+  photos,
+  onPhotosChange,
+  section = "all",
   idPrefix = "own",
 }: {
   /** The name on the LR record; "A And B" is treated as a couple. */
@@ -48,6 +59,10 @@ export function OwnTicketFields({
   fee: number | null
   value: OwnTicketForm
   onChange: (next: OwnTicketForm) => void
+  photos: PhotoPair
+  onPhotosChange: (next: PhotoPair) => void
+  /** Which part to show, for a form split over steps. */
+  section?: "all" | "details" | "photo"
   idPrefix?: string
 }) {
   const couple = splitCouple(name)
@@ -56,6 +71,8 @@ export function OwnTicketFields({
 
   return (
     <div className="space-y-5">
+      {section === "photo" ? null : (
+      <>
       {couple ? (
         <fieldset>
           <legend className="text-sm font-semibold text-[#4a3413]">Who is joining?</legend>
@@ -146,6 +163,12 @@ export function OwnTicketFields({
           </div>
         </div>
       </div>
+      </>
+      )}
+
+      {section === "details" ? null : (
+        <FormalPhotos name={name} attending={value.attending} photos={photos} onChange={onPhotosChange} idPrefix={idPrefix} />
+      )}
     </div>
   )
 }
@@ -153,6 +176,7 @@ export function OwnTicketFields({
 /** Portal card for a team leader who has an account but no registration of their own yet. */
 export function OwnTicketCard({ name, fee, onSaved }: { name: string; fee: number | null; onSaved: () => void }) {
   const [form, setForm] = useState(emptyOwnTicket)
+  const [photos, setPhotos] = useState<PhotoPair>(noPhotos)
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -160,15 +184,14 @@ export function OwnTicketCard({ name, fee, onSaved }: { name: string; fee: numbe
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (busy) return
-    const problem = ownTicketProblem(name, form)
+    const problem = ownTicketProblem(name, form, photos)
     if (problem) return setErrorMessage(problem)
     setBusy(true)
     setErrorMessage(null)
     try {
       const response = await fetch("/api/tl/own-registration", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ownTicketPayload(form)),
+        body: appendOwnTicket(new FormData(), name, form, photos),
       })
       const result = await response.json().catch(() => null)
       if (!response.ok || !result?.success) {
@@ -202,7 +225,7 @@ export function OwnTicketCard({ name, fee, onSaved }: { name: string; fee: numbe
       </div>
       {open ? (
         <form onSubmit={submit} className="mt-4 max-w-xl rounded-xl border border-[#e3d3a8] bg-white p-4 sm:p-5">
-          <OwnTicketFields name={name} fee={fee} value={form} onChange={setForm} idPrefix="portal-own" />
+          <OwnTicketFields name={name} fee={fee} value={form} onChange={setForm} photos={photos} onPhotosChange={setPhotos} idPrefix="portal-own" />
           {errorMessage ? (
             <p role="alert" className="mt-4 flex items-start gap-2 rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
               <TriangleAlert size={16} className="mt-0.5 shrink-0" /> {errorMessage}

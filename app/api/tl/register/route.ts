@@ -3,6 +3,7 @@ import { EMAIL_PATTERN } from "@/lib/agent-registration"
 import { findTeamLeaderByEmail, setSession } from "@/lib/auth"
 import { TEAM_LEADER_COLUMNS, type TeamLeader } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
+import { photosIn, photosProblem, removePhotos, storePhotos } from "@/lib/photo-store"
 import { isValidTlInvite } from "@/lib/tl-invite"
 import { checkOwnTicket, saveOwnTicket } from "@/lib/tl-ticket"
 import { TL_VERIFY_MESSAGES, verifyTeamLeader } from "@/lib/tl-verify"
@@ -17,10 +18,17 @@ const fail = (message: string, status = 400) => NextResponse.json({ success: fal
  * Team leader sign-up. Needs the invite token from the admin's link or QR code, and the
  * email must belong to a team leader in the LR records. Name and team come from that record.
  * The team leader attends too, so this also saves their own registration (see lib/tl-ticket).
+ * Sent as a form, because it carries a formal photo of each person joining (used for their poster).
  */
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null)
-  if (!body || typeof body !== "object") return fail("Invalid request.")
+  const form = await request.formData().catch(() => null)
+  if (!form) return fail("Invalid request.")
+  const body: Record<string, unknown> = {}
+  for (const key of ["invite", "email", "contact_number", "password", "birth_date", "whatsapp_number", "polo_shirt_size", "attending"]) {
+    const value = form.get(key)
+    if (typeof value === "string") body[key] = value
+  }
+  const photos = photosIn(form)
 
   try {
     if (!(await isValidTlInvite(body.invite))) {
@@ -54,6 +62,8 @@ export async function POST(request: Request) {
     if (!ticket.ok) {
       return NextResponse.json({ success: false, field: ticket.field, message: ticket.message }, { status: ticket.status })
     }
+    const photoProblem = photosProblem(photos, ticket.ticket.attendee_count)
+    if (photoProblem) return NextResponse.json({ success: false, field: "photo", message: photoProblem }, { status: 400 })
 
     const supabase = createSupabaseAdmin()
     const { data: created, error: createError } = await supabase.auth.admin.createUser({
@@ -83,9 +93,12 @@ export async function POST(request: Request) {
       throw insertError ?? new Error("Team leader was not created")
     }
 
+    let photoPaths: string[] = []
     try {
-      await saveOwnTicket(leader as TeamLeader, ticket.ticket)
+      photoPaths = await storePhotos(photos)
+      await saveOwnTicket(leader as TeamLeader, ticket.ticket, photoPaths)
     } catch (ticketError) {
+      await removePhotos(photoPaths)
       // Undo the account, so they can simply try again.
       await supabase.from("team_leaders").delete().eq("id", (leader as TeamLeader).id)
       await supabase.auth.admin.deleteUser(created.user.id)

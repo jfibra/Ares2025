@@ -40,12 +40,14 @@ export async function checkOwnTicket(name: string, input: Record<string, unknown
 }
 
 /** Saves the team leader's own registration. "exists" means they already have one, which is left as it is. */
-export async function saveOwnTicket(leader: TeamLeader, ticket: OwnTicket): Promise<"saved" | "exists"> {
+/** `photoPaths` are the stored formal photos, one per person joining. */
+export async function saveOwnTicket(leader: TeamLeader, ticket: OwnTicket, photoPaths: string[]): Promise<"saved" | "exists"> {
   const { error } = await createSupabaseAdmin().from("registrations").insert({
     name: leader.name,
     email: leader.email,
     contact_number: leader.contact_number,
     ...ticket,
+    photo_paths: photoPaths,
     team: leader.team,
     team_leader_id: leader.id,
     team_leader_name: leader.name,

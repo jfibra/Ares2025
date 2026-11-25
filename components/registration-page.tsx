@@ -47,7 +47,7 @@ import {
   type Attending,
   type TlPaymentDetails,
 } from "@/lib/registrations"
-import { PHOTO_ACCEPT, preparePhoto } from "@/lib/photo"
+import { PhotoField } from "@/components/photo-field"
 import { GENERAL_REGISTRATION_NOTICE, generalRegistrationOpensAtMs } from "@/lib/registration-opening"
 import { Particles, Reveal, staggerContainer, staggerItem } from "@/components/motion"
 import {
@@ -82,80 +82,6 @@ function FieldCheck({ show }: { show: boolean }) {
         </motion.span>
       ) : null}
     </AnimatePresence>
-  )
-}
-
-/** One person's formal photo for their poster: pick it, see it, change it. */
-function PhotoField({
-  id,
-  label,
-  file,
-  onChange,
-}: {
-  id: string
-  label: string
-  file: File | null
-  onChange: (file: File | null) => void
-}) {
-  const [preparing, setPreparing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [preview, setPreview] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!file) return setPreview(null)
-    const url = URL.createObjectURL(file)
-    setPreview(url)
-    return () => URL.revokeObjectURL(url)
-  }, [file])
-
-  const pick = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const picked = e.target.files?.[0]
-    e.target.value = "" // so picking the same file again still counts as a change
-    if (!picked) return
-    setPreparing(true)
-    setError(null)
-    const result = await preparePhoto(picked)
-    setPreparing(false)
-    if (result.ok) return onChange(result.file)
-    onChange(null)
-    setError(result.message)
-  }
-
-  return (
-    <div>
-      <p className={labelClass}>
-        {label} <span className="text-[#b3261e]">*</span>
-      </p>
-      <div className="flex items-center gap-4 rounded-xl border border-[#e3d3a8] bg-white p-3">
-        <div className="grid h-24 w-20 shrink-0 place-items-center overflow-hidden rounded-lg border border-[#e3d3a8] bg-[#fdf8ea] text-[#b8862b]">
-          {preview ? <img src={preview} alt={`${label} preview`} className="h-full w-full object-cover" /> : <User size={32} />}
-        </div>
-        <div className="min-w-0">
-          <label
-            htmlFor={id}
-            className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg bg-[#2a1458] px-4 text-sm font-semibold text-[#fbe7a1] hover:bg-[#1a0d3d] focus-within:ring-4 focus-within:ring-[#d4a437]/40"
-          >
-            {preparing ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
-            {preparing ? "Preparing…" : file ? "Change photo" : "Upload photo"}
-            <input id={id} type="file" accept={PHOTO_ACCEPT} onChange={pick} disabled={preparing} className="sr-only" />
-          </label>
-          <p className="mt-1.5 text-xs text-[#7a6a4a]">
-            {file ? (
-              <span className="inline-flex items-center gap-1 font-semibold text-green-800">
-                <Check size={13} strokeWidth={3} /> Photo added
-              </span>
-            ) : (
-              "JPG, PNG or WEBP."
-            )}
-          </p>
-        </div>
-      </div>
-      {error ? (
-        <p role="alert" className="mt-2 text-sm font-medium text-[#9a1c15]">
-          {error}
-        </p>
-      ) : null}
-    </div>
   )
 }
 
@@ -1125,8 +1051,7 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                             Your formal photo <span className="text-[#b3261e]">*</span>
                           </p>
                           <p className="mt-1 text-sm text-[#7a6a4a]">
-                            Upload a <strong className="text-[#2a1458]">clear, formal photo</strong> of yourself. We will use it to
-                            make your ARES 2027 poster, so it is required to register.
+                            Upload a <strong className="text-[#2a1458]">clear, formal photo</strong> of yourself. We will use it for verification purposes, so it is required to register.
                           </p>
                           <ul className="mt-3 space-y-1.5 rounded-xl border border-[#e3d3a8] bg-[#fdf8ea] px-4 py-3 text-sm text-[#4a3413]">
                             {[

@@ -862,15 +862,38 @@ export default function PortalDashboard({
             </div>
           ) : null}
 
-          {!isAdmin && tab !== "payment" && !hasPaymentDetails(paymentDetails) ? (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e3d3a8] bg-[#fdf3d7] px-4 py-3 text-sm text-[#4a3413]">
-              <p>
-                <span className="font-semibold">Your agents cannot see where to pay you yet.</span> Add your bank or e-wallet
-                accounts and they will be shown to them after they register.
-              </p>
-              <button type="button" onClick={() => changeTab("payment")} className={goldButton}>
-                <QrCode size={16} /> Add payment details
-              </button>
+          {/* A team leader must say where their agents pay before using the portal: this cannot be closed. */}
+          {!isAdmin && !hasPaymentDetails(paymentDetails) ? (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="payment-first-title"
+              className="fixed inset-0 z-[100] overflow-y-auto bg-[#120a2e]/80 px-4 py-8 backdrop-blur-sm"
+            >
+              <div className="mx-auto max-w-3xl rounded-2xl border border-[#d4a437]/60 bg-[#fffdf7] p-6 shadow-2xl sm:p-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">First step</p>
+                <h2 id="payment-first-title" className="mt-2 text-2xl font-black text-[#2a1458]">
+                  Add your payment details
+                </h2>
+                <p className="mt-2 text-[#5c4a2a]">
+                  Before you continue, add the bank or e-wallet account where your agents will send their registration fee.
+                  It is shown to them after they register. You can add more accounts or change this later under
+                  &quot;Payment details&quot;.
+                </p>
+                <div className="mt-6">
+                  <PaymentAccountForm
+                    account={null}
+                    onSubmit={(form) => changePaymentAccounts("/api/tl/payment-details", { method: "POST", body: form })}
+                  />
+                </div>
+                <p className="mt-6 text-center text-sm text-[#7a6a4a]">
+                  Not ready yet?{" "}
+                  <button type="button" onClick={signOut} className="font-semibold text-[#6b4a12] underline-offset-2 hover:underline">
+                    Sign out
+                  </button>{" "}
+                  and come back later.
+                </p>
+              </div>
             </div>
           ) : null}
 
