@@ -5,7 +5,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, MotionConfig, motion } from "framer-motion"
-import { ArrowLeft, BadgeCheck, Camera, Check, Eye, EyeOff, Loader2, LockKeyhole, Mail, Phone, ShieldCheck, TriangleAlert, User, Users } from "lucide-react"
+import { ArrowLeft, BadgeCheck, Camera, Check, Eye, EyeOff, Loader2, LockKeyhole, Mail, Phone, ShieldCheck, TriangleAlert, User, Users, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { staggerContainer, staggerItem } from "@/components/motion"
@@ -20,126 +20,6 @@ const inputClass =
 const labelClass = "mb-2 block text-sm font-semibold text-[#4a3413]"
 const fieldIconClass = "pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#b8862b]"
 
-/**
- * For a team leader who is not joining: only the reason. Who they are is already known,
- * because their email was confirmed against the LR records in step 1.
- */
-function DeclineForm({ invite, leader, onBack }: { invite: string; leader: VerifiedLeader; onBack: () => void }) {
-  const [form, setForm] = useState({ reason: "" })
-  const [submitting, setSubmitting] = useState(false)
-  const [done, setDone] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
-  const update = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (submitting) return
-    if (!form.reason.trim()) return setErrorMessage("Please tell us why you are not joining.")
-    setSubmitting(true)
-    setErrorMessage(null)
-    try {
-      const response = await fetch("/api/tl/decline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invite, name: leader.name, email: leader.email, team: leader.team, reason: form.reason }),
-      })
-      const result = await response.json().catch(() => null)
-      if (!response.ok || !result?.success) {
-        setErrorMessage(result?.message || "We could not save your answer. Please try again.")
-        return
-      }
-      setDone(true)
-    } catch {
-      setErrorMessage("We could not save your answer. Please check your connection and try again.")
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  if (done) {
-    return (
-      <div className="py-6 text-center" role="status">
-        <span className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-full bg-[#fdf3d7] text-[#8a5a00]">
-          <Check size={26} />
-        </span>
-        <h2 className="text-2xl font-black text-[#2a1458]">Thank you for letting us know</h2>
-        <p className="mx-auto mt-3 max-w-sm text-[#5c4a2a]">
-          We have recorded that you are not joining ARES 2027, together with your reason. If your plans change, open this
-          same link again and register.
-        </p>
-        <button
-          type="button"
-          onClick={onBack}
-          className="mt-6 inline-flex h-12 items-center rounded-xl border border-[#c9972f] bg-white px-6 text-base font-semibold text-[#6b4a12] hover:bg-[#fdf3d7]"
-        >
-          I can join after all
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <>
-      <div className="mb-7 text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">ARES 2027</p>
-        <h2 className="mt-2 text-3xl font-black text-[#2a1458]">Not joining?</h2>
-        <p className="mt-2 text-sm text-[#7a6a4a]">Sorry you can&apos;t make it! Mind sharing what&apos;s keeping you from joining?</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label htmlFor="decline-reason" className={labelClass}>
-            Reason for not joining
-          </label>
-          <textarea
-            id="decline-reason"
-            name="reason"
-            value={form.reason}
-            onChange={update}
-            required
-            autoFocus
-            maxLength={1000}
-            rows={4}
-            placeholder="e.g. I have a schedule conflict on those dates."
-            className="w-full rounded-xl border border-[#e3d3a8] bg-white px-4 py-3 text-base text-[#2a1a3d] outline-none transition-all duration-300 placeholder:text-[#a89a7c] focus:border-[#c9972f] focus:shadow-[0_0_0_4px_rgba(212,164,55,0.18)]"
-          />
-        </div>
-
-        {errorMessage ? (
-          <p role="alert" className="flex items-start gap-2 rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
-            <TriangleAlert size={16} className="mt-0.5 shrink-0" /> {errorMessage}
-          </p>
-        ) : null}
-
-        <Button
-          type="submit"
-          disabled={submitting}
-          className="h-14 w-full rounded-xl border border-[#2a1458] bg-[#2a1458] text-lg font-bold text-[#fbe7a1] hover:bg-[#1a0d3d] disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          {submitting ? (
-            <span className="flex items-center justify-center gap-2">
-              <Loader2 className="animate-spin" size={20} /> Sending…
-            </span>
-          ) : (
-            "Submit: I am not joining"
-          )}
-        </Button>
-      </form>
-
-      <p className="mt-6 text-center text-sm text-[#7a6a4a]">
-        Joining after all?{" "}
-        <button type="button" onClick={onBack} className="font-semibold text-[#6b4a12] underline-offset-2 hover:underline">
-          Back to registration
-        </button>
-      </p>
-    </>
-  )
-}
-
 const STEPS = [
   { label: "Email", icon: Mail, hint: "Let us confirm you are a team leader." },
   { label: "Details", icon: User, hint: "Your details for your own registration." },
@@ -147,22 +27,24 @@ const STEPS = [
   { label: "Password", icon: LockKeyhole, hint: "Create a password for your account." },
 ] as const
 
-const emptyForm = { email: "", contact_number: "", password: "", confirm: "" }
+const emptyForm = { email: "", contact_number: "", password: "", confirm: "", reason: "" }
 
 /** The team leader as found in the LR records, once their email has passed the check. */
 type VerifiedLeader = { name: string; email: string; team: string }
 
 /**
- * Team leader sign-up, in two steps: first the LR email is checked against the LR records
- * to see that it belongs to a team leader, then they fill in their own registration (a team
- * leader attends too; a couple chooses who is joining) and add a contact number and password.
+ * Team leader sign-up: first the LR email is checked against the LR records to see that it
+ * belongs to a team leader, then they say whether they will attend. One who attends fills in
+ * their own registration (a couple chooses who is joining), a photo and a password. One who
+ * cannot attend still registers, so their agents have a team leader: a reason, a contact
+ * number and a password, all on the same step.
  * `invite` is null when the link's token is missing or no longer valid.
  */
 export default function TeamLeaderRegister({ invite }: { invite: string | null }) {
   const router = useRouter()
   const [form, setForm] = useState(emptyForm)
-  // A team leader who is not joining switches to the decline form.
-  const [declining, setDeclining] = useState(false)
+  // Asked first in step 2: "joining" shows the registration fields, "declining" the reason and password.
+  const [choice, setChoice] = useState<"joining" | "declining" | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   // Set once the LR records confirm this email is a team leader.
   const [leader, setLeader] = useState<VerifiedLeader | null>(null)
@@ -176,7 +58,7 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const update = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const update = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setForm((prev) => ({ ...prev, [name]: value }))
   }
@@ -204,6 +86,7 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
       setTicket(emptyOwnTicket)
       setPhotos(noPhotos)
       setPart(1)
+      setChoice(null)
       setLeader(result.leader)
     } catch {
       setErrorMessage("We could not check your details. Please check your connection and try again.")
@@ -219,6 +102,14 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
     setTicket(emptyOwnTicket)
     setPhotos(noPhotos)
     setPart(1)
+    setChoice(null)
+  }
+
+  const choose = (next: "joining" | "declining") => {
+    if (submitting) return
+    setErrorMessage(null)
+    setPart(1)
+    setChoice(next)
   }
 
   const goToPart = (next: 1 | 2 | 3) => {
@@ -230,13 +121,15 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (submitting || !invite || !leader) return
+    const declining = choice === "declining"
+    if (declining && !form.reason.trim()) return setErrorMessage("Please tell us why you can't attend.")
     // "Next" on the first two parts only checks that part and moves on.
-    if (part === 1) {
+    if (!declining && part === 1) {
       const detailsProblem = ownTicketDetailsProblem(leader.name, ticket)
       if (detailsProblem) return setErrorMessage(detailsProblem)
       return goToPart(2)
     }
-    if (part === 2) {
+    if (!declining && part === 2) {
       const photoProblem = photosProblem(leader.name, ticket.attending, photos)
       if (photoProblem) return setErrorMessage(photoProblem)
       return goToPart(3)
@@ -253,7 +146,13 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
       body.set("email", leader.email)
       body.set("contact_number", form.contact_number)
       body.set("password", form.password)
-      appendOwnTicket(body, leader.name, ticket, photos)
+      if (declining) {
+        // No registration of their own: just the account, with the reason they can't attend.
+        body.set("not_attending", "1")
+        body.set("reason", form.reason.trim())
+      } else {
+        appendOwnTicket(body, leader.name, ticket, photos)
+      }
       const response = await fetch("/api/tl/register", { method: "POST", body })
       const result = await response.json().catch(() => null)
       if (!response.ok || !result?.success) {
@@ -270,8 +169,80 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
     }
   }
 
+  const contactField = (autoFocus: boolean) => (
+                    <div>
+                      <label htmlFor="tl-contact" className={labelClass}>
+                        Contact number
+                      </label>
+                      <div className="relative">
+                        <Phone size={18} className={fieldIconClass} />
+                        <Input id="tl-contact" type="tel" name="contact_number" autoComplete="tel" autoFocus={autoFocus} value={form.contact_number} onChange={update} required minLength={5} maxLength={40} className={inputClass} />
+                      </div>
+                    </div>
+  )
+
+  const passwordFields = (autoFocus: boolean) => (
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="tl-password" className={labelClass}>
+                          Create a password
+                        </label>
+                        <div className="relative">
+                          <LockKeyhole size={18} className={fieldIconClass} />
+                          <Input
+                            id="tl-password"
+                            autoFocus={autoFocus}
+                            type={showPassword ? "text" : "password"}
+                            name="password"
+                            autoComplete="new-password"
+                            value={form.password}
+                            onChange={update}
+                            required
+                            minLength={8}
+                            maxLength={72}
+                            aria-describedby="tl-password-help"
+                            className={`${inputClass} pr-12`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword((v) => !v)}
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                            aria-pressed={showPassword}
+                            className="absolute right-1.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-[#7a6a4a] transition-colors hover:bg-[#fdf3d7] hover:text-[#6b4a12]"
+                          >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+                        <p id="tl-password-help" className="mt-1.5 text-xs text-[#7a6a4a]">
+                          At least 8 characters.
+                        </p>
+                      </div>
+                      <div>
+                        <label htmlFor="tl-confirm" className={labelClass}>
+                          Repeat password
+                        </label>
+                        <div className="relative">
+                          <LockKeyhole size={18} className={fieldIconClass} />
+                          <Input
+                            id="tl-confirm"
+                            type={showPassword ? "text" : "password"}
+                            name="confirm"
+                            autoComplete="new-password"
+                            value={form.confirm}
+                            onChange={update}
+                            required
+                            aria-invalid={passwordsDiffer || undefined}
+                            className={inputClass}
+                          />
+                        </div>
+                        {passwordsDiffer ? <p className="mt-1.5 text-xs font-medium text-[#9a1c15]">Passwords do not match.</p> : null}
+                      </div>
+                    </div>
+  )
+
   // 0 is the email check; 1 to 3 are the parts of the form after it.
   const currentStep = leader ? part : 0
+  const stepHint = !leader || part !== 1 ? STEPS[currentStep].hint : !choice ? "Will you attend ARES 2027?" : choice === "declining" ? "Register so your agents have a team leader." : STEPS[currentStep].hint
 
   return (
     <MotionConfig reducedMotion="user">
@@ -343,15 +314,13 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
                     Already registered? Sign in
                   </Link>
                 </div>
-              ) : declining && leader ? (
-                <DeclineForm invite={invite} leader={leader} onBack={() => setDeclining(false)} />
               ) : (
                 <>
                   <div id="tl-register-top" className="mb-7 scroll-mt-6 text-center">
                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">ARES 2027</p>
                     <h2 className="mt-2 text-3xl font-black text-[#2a1458]">Register as team leader</h2>
                     <p className="mt-2 text-sm text-[#7a6a4a]">
-                      {STEPS[currentStep].hint}
+                      {stepHint}
                     </p>
                     <div className="relative mt-6 rounded-2xl border border-[#e3d3a8] bg-gradient-to-b from-[#fffaf0] to-[#fdf3d7] px-2 pb-3 pt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
                       {/* The track runs between the centres of the first and last circles; the gold part grows as steps are done. */}
@@ -464,7 +433,7 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
                       </motion.div>
                     </form>
                   ) : (
-                  <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="space-y-5">
                     {part === 1 ? (
                     <>
                     <div className="rounded-xl border border-[#2e7d4f]/30 bg-[#2e7d4f]/5 px-4 py-4" role="status">
@@ -497,15 +466,80 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
                       </button>
                     </div>
 
-                    <div>
-                      <label htmlFor="tl-contact" className={labelClass}>
-                        Contact number
-                      </label>
-                      <div className="relative">
-                        <Phone size={18} className={fieldIconClass} />
-                        <Input id="tl-contact" type="tel" name="contact_number" autoComplete="tel" autoFocus value={form.contact_number} onChange={update} required minLength={5} maxLength={40} className={inputClass} />
+                    <div role="group" aria-labelledby="tl-choice-label">
+                      <p id="tl-choice-label" className={labelClass}>
+                        Will you attend ARES 2027?
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => choose("joining")}
+                          aria-pressed={choice === "joining"}
+                          className={`inline-flex h-14 items-center justify-center gap-2 rounded-xl border-2 px-3 text-base font-bold transition-all duration-300 ${
+                            choice === "joining"
+                              ? "border-[#8a6417] bg-gradient-to-r from-[#b8862b] via-[#f3d27a] to-[#b8862b] text-[#2a1408] shadow-[0_12px_30px_-12px_rgba(184,134,43,0.9)]"
+                              : "border-[#e3d3a8] bg-white text-[#6b4a12] hover:border-[#c9972f] hover:bg-[#fdf3d7]"
+                          }`}
+                        >
+                          <Check size={18} strokeWidth={3} className="shrink-0" /> I&apos;ll attend
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => choose("declining")}
+                          aria-pressed={choice === "declining"}
+                          className={`inline-flex h-14 items-center justify-center gap-2 rounded-xl border-2 px-3 text-base font-bold transition-all duration-300 ${
+                            choice === "declining"
+                              ? "border-[#2a1458] bg-[#2a1458] text-[#fbe7a1] shadow-[0_12px_30px_-12px_rgba(42,20,88,0.9)]"
+                              : "border-[#e3d3a8] bg-white text-[#6b4a12] hover:border-[#c9972f] hover:bg-[#fdf3d7]"
+                          }`}
+                        >
+                          <X size={18} strokeWidth={3} className="shrink-0" /> I can&apos;t attend
+                        </button>
                       </div>
                     </div>
+                    </>
+                    ) : null}
+
+                    {choice ? (
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                    {choice === "declining" ? (
+                    <>
+                    <div className="rounded-xl border border-dashed border-[#d4a437]/70 bg-[#fdf8ea] px-4 py-4 text-sm text-[#5c4a2a]">
+                      <p className="font-semibold text-[#2a1458]">Sorry you can&apos;t make it!</p>
+                      <p className="mt-1">
+                        Please still register, so the agents on your team who want to attend have a team leader to confirm
+                        them. Tell us your reason and create a password for your team leader portal.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label htmlFor="tl-reason" className={labelClass}>
+                        Reason for not attending
+                      </label>
+                      <textarea
+                        id="tl-reason"
+                        name="reason"
+                        value={form.reason}
+                        onChange={update}
+                        required
+                        autoFocus
+                        maxLength={1000}
+                        rows={4}
+                        placeholder="e.g. I have a schedule conflict on those dates."
+                        className="w-full rounded-xl border border-[#e3d3a8] bg-white px-4 py-3 text-base text-[#2a1a3d] outline-none transition-all duration-300 placeholder:text-[#a89a7c] focus:border-[#c9972f] focus:shadow-[0_0_0_4px_rgba(212,164,55,0.18)]"
+                      />
+                    </div>
+
+                    {contactField(false)}
+
+                    {passwordFields(false)}
+                    </>
+                    ) : null}
+
+                    {choice === "joining" && part === 1 ? (
+                    <>
+
+                    {contactField(true)}
 
                     <div className="border-t border-dashed border-[#e3d3a8] pt-5">
                       <p className="text-sm font-bold text-[#2a1458]">Your own registration</p>
@@ -517,68 +551,11 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
                     </>
                     ) : null}
 
-                    {part === 2 ? (
+                    {choice === "joining" && part === 2 ? (
                       <OwnTicketFields name={leader.name} fee={fee} value={ticket} onChange={setTicket} photos={photos} onPhotosChange={setPhotos} section="photo" idPrefix="tl-own" />
                     ) : null}
 
-                    {part === 3 ? (
-                    <div className="grid gap-5 sm:grid-cols-2">
-                      <div>
-                        <label htmlFor="tl-password" className={labelClass}>
-                          Create a password
-                        </label>
-                        <div className="relative">
-                          <LockKeyhole size={18} className={fieldIconClass} />
-                          <Input
-                            id="tl-password"
-                            autoFocus
-                            type={showPassword ? "text" : "password"}
-                            name="password"
-                            autoComplete="new-password"
-                            value={form.password}
-                            onChange={update}
-                            required
-                            minLength={8}
-                            maxLength={72}
-                            aria-describedby="tl-password-help"
-                            className={`${inputClass} pr-12`}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword((v) => !v)}
-                            aria-label={showPassword ? "Hide password" : "Show password"}
-                            aria-pressed={showPassword}
-                            className="absolute right-1.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-[#7a6a4a] transition-colors hover:bg-[#fdf3d7] hover:text-[#6b4a12]"
-                          >
-                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                        <p id="tl-password-help" className="mt-1.5 text-xs text-[#7a6a4a]">
-                          At least 8 characters.
-                        </p>
-                      </div>
-                      <div>
-                        <label htmlFor="tl-confirm" className={labelClass}>
-                          Repeat password
-                        </label>
-                        <div className="relative">
-                          <LockKeyhole size={18} className={fieldIconClass} />
-                          <Input
-                            id="tl-confirm"
-                            type={showPassword ? "text" : "password"}
-                            name="confirm"
-                            autoComplete="new-password"
-                            value={form.confirm}
-                            onChange={update}
-                            required
-                            aria-invalid={passwordsDiffer || undefined}
-                            className={inputClass}
-                          />
-                        </div>
-                        {passwordsDiffer ? <p className="mt-1.5 text-xs font-medium text-[#9a1c15]">Passwords do not match.</p> : null}
-                      </div>
-                    </div>
-                    ) : null}
+                    {choice === "joining" && part === 3 ? passwordFields(true) : null}
 
                     <AnimatePresence>
                       {errorMessage ? (
@@ -605,7 +582,7 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
                           <span className="flex items-center justify-center gap-2">
                             <Loader2 className="animate-spin" size={20} /> Registering…
                           </span>
-                        ) : part === 3 ? (
+                        ) : part === 3 || choice === "declining" ? (
                           "Register"
                         ) : (
                           "Next"
@@ -613,7 +590,7 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
                       </Button>
                     </motion.div>
 
-                    {part > 1 ? (
+                    {choice === "joining" && part > 1 ? (
                       <button
                         type="button"
                         onClick={() => goToPart(part === 3 ? 2 : 1)}
@@ -623,7 +600,9 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
                         <ArrowLeft size={16} /> Back
                       </button>
                     ) : null}
-                  </form>
+                    </form>
+                    ) : null}
+                  </div>
                   )}
 
                   <p className="mt-6 text-center text-sm text-[#7a6a4a]">
@@ -632,20 +611,6 @@ export default function TeamLeaderRegister({ invite }: { invite: string | null }
                       Sign in
                     </Link>
                   </p>
-
-                  {leader && part === 1 ? (
-                  <div className="mt-6 rounded-xl border border-dashed border-[#d4a437]/70 bg-[#fdf8ea] px-4 py-4 text-center text-sm text-[#5c4a2a]">
-                    <p className="font-semibold text-[#2a1458]">Can't make it to ARES 2027?</p>
-                    <p className="mt-1">No worries at all! Your account may still be used to monitor your team's registration. Thank you!</p>
-                    <button
-                      type="button"
-                      onClick={() => setDeclining(true)}
-                      className="mt-3 inline-flex h-11 items-center rounded-xl border border-[#c9972f] bg-white px-5 text-sm font-semibold text-[#6b4a12] hover:bg-[#fdf3d7]"
-                    >
-                      I am not joining
-                    </button>
-                  </div>
-                  ) : null}
                 </>
               )}
             </div>

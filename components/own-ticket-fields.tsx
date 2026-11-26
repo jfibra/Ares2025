@@ -174,7 +174,18 @@ export function OwnTicketFields({
 }
 
 /** Portal card for a team leader who has an account but no registration of their own yet. */
-export function OwnTicketCard({ name, fee, onSaved }: { name: string; fee: number | null; onSaved: () => void }) {
+/** `declinedReason` is set for one who registered as not attending: the card then notes that instead. */
+export function OwnTicketCard({
+  name,
+  fee,
+  onSaved,
+  declinedReason = null,
+}: {
+  name: string
+  fee: number | null
+  onSaved: () => void
+  declinedReason?: string | null
+}) {
   const [form, setForm] = useState(emptyOwnTicket)
   const [photos, setPhotos] = useState<PhotoPair>(noPhotos)
   const [open, setOpen] = useState(false)
@@ -209,17 +220,29 @@ export function OwnTicketCard({ name, fee, onSaved }: { name: string; fee: numbe
   return (
     <section className="mt-4 rounded-xl border border-[#e3d3a8] bg-[#fdf3d7] px-4 py-4 text-sm text-[#4a3413]">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p>
-          <span className="font-semibold">You have not registered yourself yet.</span> Team leaders attend too: add your own
-          registration so it is counted and paid with your team&apos;s.
-        </p>
+        {declinedReason ? (
+          <div className="min-w-0 flex-1">
+            <p>
+              <span className="font-semibold">You are not attending ARES 2027.</span> You can still confirm your agents and
+              send their payments from here.
+            </p>
+            <p className="mt-1 break-words text-[#5c4a2a]">
+              <span className="font-semibold">Your reason:</span> {declinedReason}
+            </p>
+          </div>
+        ) : (
+          <p>
+            <span className="font-semibold">You have not registered yourself yet.</span> Team leaders attend too: add your own
+            registration so it is counted and paid with your team&apos;s.
+          </p>
+        )}
         {!open ? (
           <button
             type="button"
             onClick={() => setOpen(true)}
             className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#8a6417] bg-gradient-to-r from-[#c9972f] to-[#f3d27a] px-4 text-sm font-bold text-[#2a1408] hover:brightness-105"
           >
-            <Ticket size={16} /> Register myself
+            <Ticket size={16} /> {declinedReason ? "I can attend after all" : "Register myself"}
           </button>
         ) : null}
       </div>

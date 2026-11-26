@@ -1,7 +1,9 @@
 "use client"
 
 import { CheckCircle2, ImageIcon, Loader2, Receipt, Trash2, Undo2 } from "lucide-react"
+import { PaymentCountdown } from "@/components/payment-countdown"
 import { splitCouple, type Registration } from "@/lib/registrations"
+import { isOnPaymentClock } from "@/lib/unpaid-rule"
 
 // Admin, on the "Not joining" tab: agents whose team leader is not joining ARES. They still
 // register, pay the admin directly, and only the admin can confirm their payment.
@@ -10,13 +12,31 @@ const dateFormat = new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeS
 const moneyFormat = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" })
 const linkClass = "flex items-center gap-1.5 font-semibold text-[#0078b6] hover:underline"
 
+const COPY = {
+  declined: {
+    heading: "Agents of team leaders not joining",
+    intro: "These agents registered even though their team leader is not joining. They pay you directly, using your payment details in Settings, and only you can confirm their payment.",
+    column: "Team leader (not joining)",
+    empty: "No agent of a team leader who is not joining has registered yet.",
+  },
+  guests: {
+    heading: "Registered guests",
+    intro: "Guests who registered through the guest link. They pay you directly, using your payment details in Settings, and only you can confirm their payment.",
+    column: "LR agent?",
+    empty: "No guest has registered yet. Share the guest registration link above.",
+  },
+} as const
+
 export default function AdminManagedAgents({
+  variant = "declined",
   agents,
   fee,
   busyKey,
   onConfirm,
   onDelete,
 }: {
+  /** "guests" lists special registrations and shows whether each guest is in the LR records. */
+  variant?: keyof typeof COPY
   agents: Registration[]
   /** Registration fee per person; null until it is set. */
   fee: number | null
@@ -26,13 +46,13 @@ export default function AdminManagedAgents({
   onDelete: (agent: Registration) => void
 }) {
   const unpaid = agents.filter((agent) => agent.payment_status === "unpaid").length
+  const copy = COPY[variant]
 
   return (
     <section className="mt-8">
-      <h2 className="text-xl font-black text-[#2a1458]">Agents of team leaders not joining</h2>
+      <h2 className="text-xl font-black text-[#2a1458]">{copy.heading}</h2>
       <p className="mt-1 max-w-3xl text-sm leading-relaxed text-[#5c4a2a]">
-        These agents registered even though their team leader is not joining. They pay you directly, using your payment
-        details in Settings, and only you can confirm their payment.
+        {copy.intro}
         {agents.length ? (
           <>
             {" "}
@@ -46,14 +66,14 @@ export default function AdminManagedAgents({
       <div className="mt-4 overflow-hidden rounded-2xl border border-[#d4a437]/50 bg-white shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)]">
         {agents.length === 0 ? (
           <p className="px-5 py-10 text-center text-sm text-[#7a6a4a]">
-            No agent of a team leader who is not joining has registered yet.
+            {copy.empty}
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1100px] border-collapse text-sm">
               <thead>
                 <tr className="bg-gradient-to-r from-[#2a1458] to-[#1a0d3d] text-left text-[#fbe7a1]">
-                  {["#", "Name", "Contact", "Team", "Team leader (not joining)", "Joining", "Polo", "Photo", "Receipt", "Registered", "Payment", ""].map(
+                  {["#", "Name", "Contact", "Team", copy.column, "Joining", "Polo", "Photo", "Receipt", "Registered", "Payment", ""].map(
                     (heading) => (
                       <th key={heading} scope="col" className="whitespace-nowrap px-3 py-3.5 font-semibold">
                         {heading || <span className="sr-only">Actions</span>}
@@ -81,7 +101,19 @@ export default function AdminManagedAgents({
                         {agent.whatsapp_number ? <p className="text-xs text-[#7a6a4a]">WhatsApp {agent.whatsapp_number}</p> : null}
                       </td>
                       <td className="px-3 py-3.5">{agent.team}</td>
-                      <td className="px-3 py-3.5">{agent.team_leader_name || "—"}</td>
+                      <td className="px-3 py-3.5">
+                        {variant !== "guests" ? (
+                          agent.team_leader_name || "—"
+                        ) : (
+                          <span
+                            className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                              agent.guest_type === "lr_agent" ? "border-green-200 bg-green-50 text-green-800" : "border-violet-200 bg-violet-50 text-violet-800"
+                            }`}
+                          >
+                            {agent.guest_type === "lr_agent" ? "Yes · LR agent" : "No · not in LR"}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-3 py-3.5">
                         {agent.attendee_count === 2 ? "Both · 2 people" : agent.attendees ? `${agent.attendees} only` : "1 person"}
                       </td>
@@ -128,6 +160,11 @@ export default function AdminManagedAgents({
                             ? agent.amount === null ? "" : moneyFormat.format(agent.amount)
                             : fee === null ? "Fee not set" : `To pay ${moneyFormat.format(fee * agent.attendee_count)}`}
                         </p>
+                        {isOnPaymentClock(agent) ? (
+                          <div className="mt-2">
+                            <PaymentCountdown registrationDate={agent.registration_date} />
+                          </div>
+                        ) : null}
                       </td>
                       <td className="px-3 py-3.5">
                         <div className="flex items-center gap-2">

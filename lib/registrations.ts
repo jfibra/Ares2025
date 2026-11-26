@@ -15,6 +15,8 @@ export type Registration = {
   team: string
   team_leader_id: number | null
   team_leader_name: string | null
+  /** Special registration through the admin's guest link: whether the guest is in the LR records. Null for everyone else. */
+  guest_type: "lr_agent" | "non_lr" | null
   confirmed_by_tl: boolean
   confirmed_at: string | null
   payment_status: PaymentStatus
@@ -29,7 +31,7 @@ export type Registration = {
 }
 
 export const REGISTRATION_COLUMNS =
-  "id,name,email,contact_number,birth_date,whatsapp_number,polo_shirt_size,attendee_count,attendees,team,team_leader_id,team_leader_name,confirmed_by_tl,confirmed_at,payment_status,amount,remittance_id,agent_receipt_at,agent_receipt_note,photo_count,registration_date"
+  "id,name,email,contact_number,birth_date,whatsapp_number,polo_shirt_size,attendee_count,attendees,team,team_leader_id,team_leader_name,guest_type,confirmed_by_tl,confirmed_at,payment_status,amount,remittance_id,agent_receipt_at,agent_receipt_note,photo_count,registration_date"
 
 export type TeamLeader = {
   id: number
@@ -130,10 +132,31 @@ export function validateAgentDetails(
 export const ATTENDING_CHOICES = ["first", "second", "both"] as const
 export type Attending = (typeof ATTENDING_CHOICES)[number]
 
-/** "Elddie John And Marjulie Benigay" -> ["Elddie John", "Marjulie Benigay"]. Null when the record is one person. */
+// Words that belong to the surname that follows them: "Dela Cruz", "De Los Santos".
+const SURNAME_PARTICLES = new Set(["de", "del", "dela", "delos", "la", "las", "los", "da", "dos", "san", "santa", "sto", "sta", "van", "von"])
+
+/** "Crislyn Dela Cruz" -> "Dela Cruz". Empty when the name is a single word. */
+function surnameOf(fullName: string): string {
+  const words = fullName.split(" ")
+  if (words.length < 2) return ""
+  let start = words.length - 1
+  while (start > 1 && SURNAME_PARTICLES.has(words[start - 1].toLowerCase().replace(/\.$/, ""))) start--
+  return words.slice(start).join(" ")
+}
+
+/**
+ * The two people on a couple's record, each with a full name. Null when the record is one person.
+ * The surname is written once, after the second person, and belongs to both:
+ * "Elddie John And Marjulie Benigay" -> ["Elddie John Benigay", "Marjulie Benigay"].
+ * A first person who already carries that surname is left alone, so splitting twice is safe.
+ */
 export function splitCouple(name: string): [string, string] | null {
   const parts = name.trim().replace(/\s+/g, " ").split(/\s+(?:and|&)\s+/i)
-  return parts.length === 2 && parts[0] && parts[1] ? [parts[0], parts[1]] : null
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null
+  const [first, second] = parts
+  const surname = surnameOf(second)
+  const hasIt = ` ${first} `.toLowerCase().endsWith(` ${surname} `.toLowerCase())
+  return [surname && !hasIt ? `${first} ${surname}` : first, second]
 }
 
 /** Who is joining and how many people pay. A single agent is always one; a couple must choose. */

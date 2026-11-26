@@ -5,6 +5,7 @@ import { getAdmin } from "@/lib/auth"
 import { loadDashboardData } from "@/lib/payments"
 import { TEAM_LEADER_COLUMNS, TL_DECLINE_COLUMNS, type TeamLeader, type TlDecline } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
+import { getGuestInviteCode } from "@/lib/guest-invite"
 import { getTlInviteCode } from "@/lib/tl-invite"
 import { getTlPaymentDetails } from "@/lib/tl-payment"
 
@@ -15,7 +16,7 @@ export default async function AdminPage() {
   const admin = await getAdmin()
   if (!admin) redirect("/admin/login")
 
-  const [data, teamLeaders, inviteToken, declines, adminAccounts] = await Promise.all([
+  const [data, teamLeaders, inviteToken, declines, adminAccounts, guestInviteToken] = await Promise.all([
     loadDashboardData().catch((error) => {
       console.error("Admin page could not load registrations:", error)
       return null
@@ -28,6 +29,10 @@ export default async function AdminPage() {
     createSupabaseAdmin().from("team_leader_declines").select(TL_DECLINE_COLUMNS).order("declined_at", { ascending: false }),
     getTlPaymentDetails("admin").catch((error) => {
       console.error("Admin page could not load the payment accounts:", error)
+      return null
+    }),
+    getGuestInviteCode().catch((error) => {
+      console.error("Admin page could not load the guest invite:", error)
       return null
     }),
   ])
@@ -44,6 +49,7 @@ export default async function AdminPage() {
       initialSlotLimit={data?.slotLimit}
       initialTeamLeaders={(teamLeaders.data ?? []) as TeamLeader[]}
       initialInviteToken={inviteToken}
+      initialGuestInviteToken={guestInviteToken}
       initialDeclines={(declines.data ?? []) as TlDecline[]}
       initialAdminAccounts={adminAccounts ?? []}
       loadFailed={!data || !adminAccounts || Boolean(teamLeaders.error) || Boolean(declines.error)}

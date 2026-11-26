@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getTeamLeader } from "@/lib/auth"
 import { photosIn, photosProblem, removePhotos, storePhotos } from "@/lib/photo-store"
+import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { checkOwnTicket, saveOwnTicket } from "@/lib/tl-ticket"
 
 export const runtime = "nodejs"
@@ -39,6 +40,9 @@ export async function POST(request: Request) {
       await removePhotos(photoPaths)
       return NextResponse.json({ success: false, message: "You are already registered. Refresh to see your registration." }, { status: 409 })
     }
+    // They are attending after all: drop the "can't attend" answer they gave when registering.
+    const { error: declineError } = await createSupabaseAdmin().from("team_leader_declines").delete().eq("email", leader.email)
+    if (declineError) console.error("Could not clear the team leader's decline:", declineError)
     return NextResponse.json({ success: true }, { status: 201 })
   } catch (error) {
     console.error("Team leader own registration failed:", error)

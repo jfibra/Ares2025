@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import PortalDashboard from "@/components/portal-dashboard"
 import { getTeamLeader } from "@/lib/auth"
 import { loadDashboardData } from "@/lib/payments"
+import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { getTlPaymentDetails } from "@/lib/tl-payment"
 
 export const metadata: Metadata = { title: "Team leader - My agents", robots: { index: false, follow: false } }
@@ -27,12 +28,21 @@ export default async function TeamLeaderPage() {
     return []
   })
 
+  // Set when they registered as "I can't attend": shown as a note on their dashboard.
+  const { data: decline, error: declineError } = await createSupabaseAdmin()
+    .from("team_leader_declines")
+    .select("reason")
+    .eq("email", leader.email)
+    .maybeSingle()
+  if (declineError) console.error("TL page could not load the decline reason:", declineError)
+
   return (
     <PortalDashboard
       role="tl"
       userLabel={`${leader.name} · ${leader.team}`}
       ownEmail={leader.email}
       ownName={leader.name}
+      ownDeclineReason={decline?.reason ?? null}
       initialRegistrations={data?.registrations ?? []}
       initialRemittances={data?.remittances ?? []}
       initialFee={data?.fee ?? null}

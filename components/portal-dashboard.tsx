@@ -26,6 +26,7 @@ import {
   Search,
   Send,
   Settings,
+  Sparkles,
   Trash2,
   Undo2,
   UserCog,
@@ -45,6 +46,8 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Counter } from "@/components/motion"
 import AdminManagedAgents from "@/components/admin-managed-agents"
+import { PaymentCountdown } from "@/components/payment-countdown"
+import { isOnPaymentClock, paymentDeadlineMs } from "@/lib/unpaid-rule"
 import { OwnTicketCard } from "@/components/own-ticket-fields"
 import PastAttendeesPanel from "@/components/past-attendees-panel"
 import TlAssignPanel from "@/components/tl-assign-panel"
@@ -67,7 +70,7 @@ import {
 const LOGO_URL = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
 
 type Role = "admin" | "tl"
-type Tab = "pending" | "confirmed" | "remittances" | "leaders" | "assign" | "declined" | "settings" | "payment" | "payadmin"
+type Tab = "pending" | "confirmed" | "remittances" | "leaders" | "assign" | "declined" | "guests" | "settings" | "payment" | "payadmin"
 type Row = Record<string, unknown> & { id: number }
 type Column = { key: string; label: string; render?: (row: Row) => React.ReactNode }
 type Sort = { key: string; direction: "asc" | "desc" }
@@ -76,6 +79,7 @@ type PendingAction =
   | { kind: "leader"; row: TeamLeader }
   | { kind: "decline"; row: TlDecline }
   | { kind: "regenerate" }
+  | { kind: "regenerateGuest" }
   | { kind: "verify"; row: Remittance }
   | null
 
@@ -149,11 +153,13 @@ export default function PortalDashboard({
   initialSlotLimit = 300,
   initialTeamLeaders = [],
   initialInviteToken = null,
+  initialGuestInviteToken = null,
   initialPaymentDetails = null,
   initialAdminAccounts = [],
   initialDeclines = [],
   ownEmail,
   ownName,
+  ownDeclineReason = null,
   loadFailed,
 }: {
   role: Role
@@ -164,12 +170,16 @@ export default function PortalDashboard({
   initialSlotLimit?: number
   initialTeamLeaders?: TeamLeader[]
   initialInviteToken?: string | null
+  /** Admin: the code in the guest registration link. */
+  initialGuestInviteToken?: string | null
   initialPaymentDetails?: TlPaymentDetails | null
   initialAdminAccounts?: TlPaymentAccount[]
   initialDeclines?: TlDecline[]
   /** Team leader: their email and LR record name, to pick out (or add) their own registration. */
   ownEmail?: string
   ownName?: string
+  /** Team leader: the reason they gave when they registered as not attending. */
+  ownDeclineReason?: string | null
   loadFailed: boolean
 }) {
   const router = useRouter()
@@ -192,6 +202,7 @@ export default function PortalDashboard({
   const [rejecting, setRejecting] = useState<Remittance | null>(null)
   const [expanded, setExpanded] = useState<number | null>(null)
   const [inviteToken, setInviteToken] = useState(initialInviteToken)
+  const [guestInviteToken, setGuestInviteToken] = useState(initialGuestInviteToken)
   const [tab, setTab] = useState<Tab>("pending")
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<Sort>({ key: "registration_date", direction: "desc" })
@@ -202,7 +213,9 @@ export default function PortalDashboard({
 
   // Admin: agents whose team leader is not joining have no team leader on their registration. The admin
   // looks after them on the "Not joining" tab, so they are kept out of the Pending and Confirmed lists.
-  const adminManaged = useMemo(() => (isAdmin ? rows.filter((r) => r.team_leader_id === null) : []), [isAdmin, rows])
+  // Guests (special registration through the admin's guest link) also pay the admin; they have their own tab.
+  const adminManaged = useMemo(() => (isAdmin ? rows.filter((r) => r.team_leader_id === null && !r.guest_type) : []), [isAdmin, rows])
+  const guests = useMemo(() => (isAdmin ? rows.filter((r) => Boolean(r.guest_type)) : []), [isAdmin, rows])
   const withLeader = useMemo(() => (isAdmin ? rows.filter((r) => r.team_leader_id !== null) : rows), [isAdmin, rows])
   const pending = useMemo(() => withLeader.filter((r) => !r.confirmed_by_tl), [withLeader])
   const confirmed = useMemo(() => withLeader.filter((r) => r.confirmed_by_tl), [withLeader])
@@ -314,6 +327,11 @@ export default function PortalDashboard({
       })
     } else if (action.kind === "verify") {
       reviewRemittance(action.row, "verified", "")
+    } else if (action.kind === "regenerateGuest") {
+      run("guest-invite", "Could not create a new link.", async () => {
+        const result = await call("/api/admin/guest-invite", { method: "POST" })
+        if (result) setGuestInviteToken(result.token)
+      })
     } else {
       run("invite", "Could not create a new link.", async () => {
         const result = await call("/api/admin/tl-invite", { method: "POST" })
@@ -495,7 +513,24 @@ export default function PortalDashboard({
           dash
         ),
     },
-    ...(tab === "pending" ? [{ key: "amount_due", label: "To Pay", render: (r: Row) => formatMoney(r.amount_due) }] : []),
+    ...(tab === "pending"
+      ? [
+          { key: "amount_due", label: "To Pay", render: (r: Row) => formatMoney(r.amount_due) },
+          {
+            // The 48 hours an agent has to pay. A team leader's own registration is not on the clock.
+            key: "time_left",
+            label: "Time Left To Pay",
+            render: (r: Row) =>
+              isLeaderRow(r) ? (
+                dash
+              ) : isOnPaymentClock(r) ? (
+                <PaymentCountdown registrationDate={String(r.registration_date)} />
+              ) : (
+                <Badge label="Receipt sent · timer stopped" className="border-green-200 bg-green-50 text-green-800" />
+              ),
+          },
+        ]
+      : []),
     ...(tab === "confirmed"
       ? [
           { key: "amount", label: "Amount", render: (r: Row) => formatMoney(r.amount) },
@@ -625,7 +660,7 @@ export default function PortalDashboard({
     setTab(next)
     setQuery("")
     setExpanded(null)
-    const key = { pending: "registration_date", confirmed: "registration_date", remittances: "submitted_at", leaders: "created_at", declined: "declined_at", settings: "", assign: "", payment: "", payadmin: "" }[next]
+    const key = { pending: "registration_date", confirmed: "registration_date", remittances: "submitted_at", leaders: "created_at", declined: "declined_at", guests: "", settings: "", assign: "", payment: "", payadmin: "" }[next]
     setSort({ key, direction: "desc" })
   }
 
@@ -641,6 +676,7 @@ export default function PortalDashboard({
       remittances: "remittances",
       leaders: "team-leaders",
       declined: "team-leaders-not-joining",
+      guests: "",
       settings: "",
       assign: "",
       payment: "",
@@ -648,6 +684,10 @@ export default function PortalDashboard({
     }
     const exportValue = (r: Row, key: string) => {
       if (key === "birth_date") return r[key] ?? ""
+      if (key === "time_left") {
+        if (isLeaderRow(r)) return ""
+        return isOnPaymentClock(r) ? `Pay by ${formatDate(new Date(paymentDeadlineMs(String(r.registration_date))).toISOString())}` : "Receipt sent"
+      }
       if (key === "agent_receipt_at") {
         return r[key] ? `Sent ${formatDate(r[key])}${r.agent_receipt_note ? ` - ${r.agent_receipt_note}` : ""}` : "No"
       }
@@ -671,7 +711,7 @@ export default function PortalDashboard({
   // Every person registered takes a slot; a couple who are both joining takes two.
   const slotsTaken = rows.reduce((total, r) => total + (Number(r.attendee_count) || 1), 0)
   // Money that reached the admin: remittances marked received, plus agents who paid the admin directly.
-  const verifiedTotal = sum(remittances.filter((r) => r.status === "verified")) + sum(adminManaged.filter((r) => r.payment_status === "verified"))
+  const verifiedTotal = sum(remittances.filter((r) => r.status === "verified")) + sum([...adminManaged, ...guests].filter((r) => r.payment_status === "verified"))
   const statCards: { label: string; icon: typeof Users; count?: number; money?: number; hint?: string }[] = isAdmin
     ? [
         { label: "Team leaders", icon: UserCog, count: leaders.length },
@@ -699,6 +739,7 @@ export default function PortalDashboard({
           { id: "leaders" as Tab, label: "Team leaders", count: leaders.length },
           { id: "assign" as Tab, label: "Assign TL", icon: UserCog },
           { id: "declined" as Tab, label: "Not joining", count: declines.length + adminManaged.length },
+          { id: "guests" as Tab, label: "Guests", count: guests.length, icon: Sparkles },
           { id: "settings" as Tab, label: "Settings", icon: Settings },
         ]
       : [
@@ -707,7 +748,7 @@ export default function PortalDashboard({
         ]),
   ]
 
-  const emptyText: Record<Exclude<Tab, "settings" | "payment" | "payadmin" | "assign">, [string, string]> = {
+  const emptyText: Record<Exclude<Tab, "settings" | "payment" | "payadmin" | "assign" | "guests">, [string, string]> = {
     pending: isAdmin
       ? ["No agents waiting to pay", "Agents appear here after they register, until their team leader confirms their payment."]
       : ["No one waiting for you", "Your own registration and your agents' appear here until the payment is confirmed. Check each receipt and confirm once they pay you."],
@@ -716,7 +757,7 @@ export default function PortalDashboard({
       ? ["No remittances yet", "When a team leader sends collected payments, the remittance appears here for you to check."]
       : ["No remittances yet", "Open Pay admin to see where to send the money and record your payment."],
     leaders: ["No team leaders yet", "Share the TL registration link so team leaders can register."],
-    declined: ["No team leader has declined", "A team leader who is not joining can say so, with their reason, from the TL registration link. Their agents can still register, and you manage them here."],
+    declined: ["No team leader has declined", "A team leader who can't attend still registers from the TL registration link and gives their reason, which is listed here. They confirm their own agents from their portal."],
   }
 
   const dialog =
@@ -735,8 +776,14 @@ export default function PortalDashboard({
         : pendingAction?.kind === "decline"
           ? {
               title: "Remove this entry?",
-              body: `${pendingAction.row.name} (${pendingAction.row.team}) will be removed from the "Not joining" list, along with their reason. Agents of theirs who have not registered yet will again be told their team leader has not registered; those already registered stay with you.`,
+              body: `${pendingAction.row.name} (${pendingAction.row.team}) will be removed from the "Not joining" list, along with their reason. If they have a team leader account, it is not affected. If they do not, agents of theirs who have not registered yet will again be told their team leader has not registered; those already registered stay with you.`,
               action: "Remove",
+            }
+          : pendingAction?.kind === "regenerateGuest"
+          ? {
+              title: "Create a new guest link?",
+              body: "The current guest link and QR code will stop working straight away. Guests who already registered are not affected.",
+              action: "Create new link",
             }
           : pendingAction?.kind === "regenerate"
           ? {
@@ -897,7 +944,7 @@ export default function PortalDashboard({
             </div>
           ) : null}
 
-          {needsOwnTicket && ownName ? <OwnTicketCard name={ownName} fee={fee} onSaved={refresh} /> : null}
+          {needsOwnTicket && ownName ? <OwnTicketCard name={ownName} fee={fee} onSaved={refresh} declinedReason={ownDeclineReason} /> : null}
 
           {/* Tabs */}
           <div role="tablist" aria-label="Lists" className="mt-8 flex gap-2 overflow-x-auto pb-1">
@@ -960,6 +1007,28 @@ export default function PortalDashboard({
               onViewHistory={() => changeTab("remittances")}
               onViewPending={() => changeTab("pending")}
             />
+          ) : tab === "guests" ? (
+            <>
+              <InvitePanel
+                audience="guest"
+                token={guestInviteToken}
+                busy={busyKey === "guest-invite"}
+                onRegenerate={() => setPendingAction({ kind: "regenerateGuest" })}
+              />
+              <div className="mt-6 flex justify-end">
+                <button type="button" onClick={refresh} disabled={refreshing} className={outlineButton}>
+                  <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} /> Refresh
+                </button>
+              </div>
+              <AdminManagedAgents
+                variant="guests"
+                agents={guests}
+                fee={fee}
+                busyKey={busyKey}
+                onConfirm={setConfirmed}
+                onDelete={(row) => setPendingAction({ kind: "registration", row })}
+              />
+            </>
           ) : tab === "assign" ? (
             <TlAssignPanel leaders={leaders} call={call} onOpenSettings={() => changeTab("settings")} />
           ) : tab === "settings" ? (
@@ -975,7 +1044,7 @@ export default function PortalDashboard({
                 onUpdate={(id, form) => changeAdminAccounts(`/api/admin/payment-details/${id}`, { method: "PUT", body: form })}
                 onDelete={(id) => changeAdminAccounts(`/api/admin/payment-details/${id}`, { method: "DELETE" })}
               />
-              <InvitePanel token={inviteToken} busy={busyKey === "invite"} onRegenerate={() => setPendingAction({ kind: "regenerate" })} />
+              <InvitePanel audience="tl" token={inviteToken} busy={busyKey === "invite"} onRegenerate={() => setPendingAction({ kind: "regenerate" })} />
             </>
           ) : (
             <>
@@ -2128,14 +2197,46 @@ function SlotsPanel({ limit, taken, busy, onSave }: { limit: number; taken: numb
   )
 }
 
-/** Admin only: the private link and QR code that let team leaders register. */
-function InvitePanel({ token, busy, onRegenerate }: { token: string | null; busy: boolean; onRegenerate: () => void }) {
+const INVITE_COPY = {
+  tl: {
+    path: "join",
+    eyebrow: "For team leaders only",
+    title: "Team leader registration link",
+    intro: "Team leaders can only register through this private link or its QR code. Send it to the team leaders yourself. It is not shown anywhere on the public site.",
+    regenerate: "Create a new link. The current link and QR code stop working at once; team leaders who already registered keep their accounts.",
+    qrAlt: "QR code for the team leader registration link",
+    qrFile: "ares-2027-team-leader-registration-qr.png",
+  },
+  guest: {
+    path: "guest",
+    eyebrow: "Special registration",
+    title: "Guest registration link",
+    intro: "Give this private link or its QR code to a guest you want to invite to ARES 2027. They can register whether or not they are in the LR records: their email is checked first, and each guest below is marked as an LR agent or not. Guests pay you directly, using your payment details in Settings.",
+    regenerate: "Create a new link. The current link and QR code stop working at once; guests who already registered are not affected.",
+    qrAlt: "QR code for the guest registration link",
+    qrFile: "ares-2027-guest-registration-qr.png",
+  },
+} as const
+
+/** Admin only: a private registration link and its QR code, for team leaders or for guests. */
+function InvitePanel({
+  audience,
+  token,
+  busy,
+  onRegenerate,
+}: {
+  audience: keyof typeof INVITE_COPY
+  token: string | null
+  busy: boolean
+  onRegenerate: () => void
+}) {
+  const copyText = INVITE_COPY[audience]
   const [origin, setOrigin] = useState("")
   const [qr, setQr] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => setOrigin(window.location.origin), [])
-  const link = token && origin ? `${origin}/join/${encodeURIComponent(token)}` : ""
+  const link = token && origin ? `${origin}/${copyText.path}/${encodeURIComponent(token)}` : ""
 
   useEffect(() => {
     if (!link) return setQr(null)
@@ -2169,19 +2270,16 @@ function InvitePanel({ token, busy, onRegenerate }: { token: string | null; busy
   return (
     <section className="mt-4 grid gap-6 rounded-2xl border border-[#d4a437]/50 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)] sm:p-8 lg:grid-cols-[1fr_auto]">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">For team leaders only</p>
-        <h2 className="mt-2 text-2xl font-black text-[#2a1458]">Team leader registration link</h2>
-        <p className="mt-3 max-w-xl leading-relaxed text-[#5c4a2a]">
-          Team leaders can only register through this private link or its QR code. Send it to the team leaders yourself. It
-          is not shown anywhere on the public site.
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">{copyText.eyebrow}</p>
+        <h2 className="mt-2 text-2xl font-black text-[#2a1458]">{copyText.title}</h2>
+        <p className="mt-3 max-w-xl leading-relaxed text-[#5c4a2a]">{copyText.intro}</p>
 
-        <label htmlFor="tl-invite-link" className="mt-6 flex items-center gap-2 text-sm font-semibold text-[#4a3413]">
+        <label htmlFor={`${audience}-invite-link`} className="mt-6 flex items-center gap-2 text-sm font-semibold text-[#4a3413]">
           <Link2 size={16} className="text-[#b8862b]" /> Registration link
         </label>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <input
-            id="tl-invite-link"
+            id={`${audience}-invite-link`}
             readOnly
             value={link}
             onFocus={(e) => e.currentTarget.select()}
@@ -2194,10 +2292,7 @@ function InvitePanel({ token, busy, onRegenerate }: { token: string | null; busy
 
         <div className="mt-8 border-t border-dashed border-[#d4a437]/60 pt-6">
           <h3 className="font-bold text-[#2a1458]">Link shared with the wrong people?</h3>
-          <p className="mt-1 max-w-xl text-sm leading-relaxed text-[#5c4a2a]">
-            Create a new link. The current link and QR code stop working at once; team leaders who already registered keep
-            their accounts.
-          </p>
+          <p className="mt-1 max-w-xl text-sm leading-relaxed text-[#5c4a2a]">{copyText.regenerate}</p>
           <button type="button" onClick={onRegenerate} disabled={busy} className={`${outlineButton} mt-4`}>
             {busy ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} Create new link
           </button>
@@ -2207,13 +2302,13 @@ function InvitePanel({ token, busy, onRegenerate }: { token: string | null; busy
       <div className="flex flex-col items-center gap-3">
         <div className="grid h-60 w-60 place-items-center rounded-2xl border border-[#d4a437]/60 bg-white p-3">
           {qr ? (
-            <img src={qr} alt="QR code for the team leader registration link" className="h-full w-full" />
+            <img src={qr} alt={copyText.qrAlt} className="h-full w-full" />
           ) : (
             <Loader2 className="animate-spin text-[#b8862b]" />
           )}
         </div>
         {qr ? (
-          <a href={qr} download="ares-2027-team-leader-registration-qr.png" className={outlineButton}>
+          <a href={qr} download={copyText.qrFile} className={outlineButton}>
             <Download size={16} /> Download QR code
           </a>
         ) : null}

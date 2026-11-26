@@ -97,7 +97,7 @@ const emptyDetails = { birth_date: "", whatsapp_number: "", polo_shirt_size: "" 
 type Notice = { tone: "info" | "warning"; title: string; text: string }
 
 /** Where to send the fee: every account and QR code the team leader listed, shown once the agent is registered. */
-function PaymentCard({ payment, teamLeader }: { payment: TlPaymentDetails | null; teamLeader: string }) {
+export function PaymentCard({ payment, teamLeader }: { payment: TlPaymentDetails | null; teamLeader: string }) {
   const [copied, setCopied] = useState<number | null>(null)
   const leader = teamLeader || "your team leader"
 
@@ -188,7 +188,7 @@ function PaymentCard({ payment, teamLeader }: { payment: TlPaymentDetails | null
 const receiptDateFormat = new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila" })
 
 /** After paying: the agent uploads their receipt, with an optional note, for their team leader to check. */
-function ReceiptUpload({
+export function ReceiptUpload({
   email,
   teamLeader,
   sentAt,
@@ -1142,6 +1142,12 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                             ? "to the ARES admin. Your team leader is not joining, so the admin will confirm it once received."
                             : `to your team leader${teamLeader ? `, ${teamLeader}` : ""}. They will confirm it once received.`}
                         </p>
+                        {receiptSentAt ? null : (
+                          <p className="mx-auto mt-4 max-w-md rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
+                            Please pay and upload your receipt within 48 hours of registering. A registration that is still
+                            unpaid after 48 hours is removed, and you would need to register again.
+                          </p>
+                        )}
                         <PaymentCard payment={payment} teamLeader={adminManaged ? "the ARES admin" : teamLeader} />
                         <ReceiptUpload
                           email={email}
