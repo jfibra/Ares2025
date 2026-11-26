@@ -8,6 +8,8 @@ export type Registration = {
   birth_date: string | null
   whatsapp_number: string | null
   polo_shirt_size: string | null
+  /** The second person's size, when both people on a couple's record are joining. */
+  polo_shirt_size_2: string | null
   /** 1, or 2 when both people on a couple's record are joining. Each person pays the fee. */
   attendee_count: number
   /** For a couple's record: who is joining. Null for a single agent. */
@@ -31,13 +33,15 @@ export type Registration = {
 }
 
 export const REGISTRATION_COLUMNS =
-  "id,name,email,contact_number,birth_date,whatsapp_number,polo_shirt_size,attendee_count,attendees,team,team_leader_id,team_leader_name,guest_type,confirmed_by_tl,confirmed_at,payment_status,amount,remittance_id,agent_receipt_at,agent_receipt_note,photo_count,registration_date"
+  "id,name,email,contact_number,birth_date,whatsapp_number,polo_shirt_size,polo_shirt_size_2,attendee_count,attendees,team,team_leader_id,team_leader_name,guest_type,confirmed_by_tl,confirmed_at,payment_status,amount,remittance_id,agent_receipt_at,agent_receipt_note,photo_count,registration_date"
 
 export type TeamLeader = {
   id: number
   name: string
   email: string
   contact_number: string
+  /** Where their agents can contact them. Null until they add it in the portal. */
+  facebook_url: string | null
   team: string
   created_at: string
 }
@@ -56,7 +60,7 @@ export const MAX_PAYMENT_ACCOUNTS = 10
 
 export const hasPaymentDetails = (details: TlPaymentDetails | null | undefined) => Boolean(details && details.length > 0)
 
-export const TEAM_LEADER_COLUMNS = "id,name,email,contact_number,team,created_at"
+export const TEAM_LEADER_COLUMNS = "id,name,email,contact_number,facebook_url,team,created_at"
 
 /** A team leader who said they are not joining ARES 2027. */
 export type TlDecline = {
@@ -129,6 +133,26 @@ export function validateAgentDetails(
   return { ok: true, details: { birth_date: birthDate, whatsapp_number: whatsapp, polo_shirt_size: size } }
 }
 
+/**
+ * The second person's polo shirt size. Needed only when both people on a couple's record are
+ * joining (two people, two shirts); otherwise nothing is kept.
+ */
+export function resolvePartnerPoloSize(
+  attendeeCount: number,
+  value: unknown,
+): { ok: true; polo_shirt_size_2: string | null } | { ok: false; message: string } {
+  if (attendeeCount !== 2) return { ok: true, polo_shirt_size_2: null }
+  const size = typeof value === "string" ? value.trim().toUpperCase() : ""
+  if (!(POLO_SHIRT_SIZES as readonly string[]).includes(size)) {
+    return { ok: false, message: "Please choose a polo shirt size for each of you." }
+  }
+  return { ok: true, polo_shirt_size_2: size }
+}
+
+/** "M", or "M / L" when a couple are both joining. */
+export const poloSizesLabel = (row: { polo_shirt_size?: unknown; polo_shirt_size_2?: unknown }) =>
+  [row.polo_shirt_size, row.polo_shirt_size_2].filter((size) => typeof size === "string" && size).join(" / ")
+
 export const ATTENDING_CHOICES = ["first", "second", "both"] as const
 export type Attending = (typeof ATTENDING_CHOICES)[number]
 
@@ -144,11 +168,18 @@ function surnameOf(fullName: string): string {
   return words.slice(start).join(" ")
 }
 
+const NAME_SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv", "v"])
+
 /**
  * The two people on a couple's record, each with a full name. Null when the record is one person.
- * The surname is written once, after the second person, and belongs to both:
- * "Elddie John And Marjulie Benigay" -> ["Elddie John Benigay", "Marjulie Benigay"].
- * A first person who already carries that surname is left alone, so splitting twice is safe.
+ * LR writes one surname, after the second person. Whether it also belongs to the first person
+ * has to be guessed from the first person's name:
+ * - one or two words are given names, so the surname is shared (a married couple):
+ *   "Elddie John And Marjulie Benigay" -> ["Elddie John Benigay", "Marjulie Benigay"].
+ * - three or more words already end in that person's own surname (partners with different surnames):
+ *   "Ralph Kane Dunlao and Ryan Galido Loriega" -> ["Ralph Kane Dunlao", "Ryan Galido Loriega"].
+ * "Jr", "III" and the like are not counted as words. A first person who already carries the
+ * surname is left alone, so splitting twice is safe.
  */
 export function splitCouple(name: string): [string, string] | null {
   const parts = name.trim().replace(/\s+/g, " ").split(/\s+(?:and|&)\s+/i)
@@ -156,7 +187,9 @@ export function splitCouple(name: string): [string, string] | null {
   const [first, second] = parts
   const surname = surnameOf(second)
   const hasIt = ` ${first} `.toLowerCase().endsWith(` ${surname} `.toLowerCase())
-  return [surname && !hasIt ? `${first} ${surname}` : first, second]
+  const ownWords = first.split(" ").filter((word) => !NAME_SUFFIXES.has(word.toLowerCase().replace(/\.$/, "")))
+  const hasOwnSurname = ownWords.length >= 3
+  return [surname && !hasIt && !hasOwnSurname ? `${first} ${surname}` : first, second]
 }
 
 /** Who is joining and how many people pay. A single agent is always one; a couple must choose. */

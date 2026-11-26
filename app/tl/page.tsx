@@ -42,6 +42,7 @@ export default async function TeamLeaderPage() {
       userLabel={`${leader.name} · ${leader.team}`}
       ownEmail={leader.email}
       ownName={leader.name}
+      initialFacebookUrl={leader.facebook_url}
       ownDeclineReason={decline?.reason ?? null}
       initialRegistrations={data?.registrations ?? []}
       initialRemittances={data?.remittances ?? []}

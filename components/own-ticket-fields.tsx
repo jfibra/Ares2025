@@ -2,17 +2,17 @@
 
 import type React from "react"
 import { useState } from "react"
-import { CalendarDays, Loader2, MessageCircle, Shirt, Ticket, TriangleAlert } from "lucide-react"
+import { CalendarDays, Loader2, MessageCircle, Shirt, Ticket, TriangleAlert, Users } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { FormalPhotos, noPhotos, photosProblem, photosToSend, type PhotoPair } from "@/components/photo-field"
-import { POLO_SHIRT_SIZES, splitCouple, validateAgentDetails, type Attending } from "@/lib/registrations"
+import { POLO_SHIRT_SIZES, resolvePartnerPoloSize, splitCouple, validateAgentDetails, type Attending } from "@/lib/registrations"
 
 // What a team leader fills in for their own ticket: who is joining (when their record is a
 // couple), the same three details an agent gives, and a formal photo of each person joining. Used when they register and, for a team
 // leader who has no registration yet, in their portal.
 
-export type OwnTicketForm = { attending: Attending | ""; birth_date: string; whatsapp_number: string; polo_shirt_size: string }
-export const emptyOwnTicket: OwnTicketForm = { attending: "", birth_date: "", whatsapp_number: "", polo_shirt_size: "" }
+export type OwnTicketForm = { attending: Attending | ""; birth_date: string; whatsapp_number: string; polo_shirt_size: string; polo_shirt_size_2: string }
+export const emptyOwnTicket: OwnTicketForm = { attending: "", birth_date: "", whatsapp_number: "", polo_shirt_size: "", polo_shirt_size_2: "" }
 
 const inputClass =
   "h-12 rounded-xl border-[#e3d3a8] bg-white pl-11 pr-4 text-base text-[#2a1a3d] placeholder:text-[#a89a7c] transition-all duration-300 focus:border-[#c9972f] focus:shadow-[0_0_0_4px_rgba(212,164,55,0.18)] focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -30,7 +30,9 @@ export function ownTicketProblem(name: string, form: OwnTicketForm, photos: Phot
 export function ownTicketDetailsProblem(name: string, form: OwnTicketForm): string | null {
   if (splitCouple(name) && !form.attending) return "Please tell us who is joining."
   const checked = validateAgentDetails(form)
-  return checked.ok ? null : checked.message
+  if (!checked.ok) return checked.message
+  const partnerSize = resolvePartnerPoloSize(form.attending === "both" ? 2 : 1, form.polo_shirt_size_2)
+  return partnerSize.ok ? null : partnerSize.message
 }
 
 /** Adds the ticket and its photos to the form that is sent to the server. */
@@ -38,6 +40,7 @@ export function appendOwnTicket(body: FormData, name: string, form: OwnTicketFor
   body.set("birth_date", form.birth_date)
   body.set("whatsapp_number", form.whatsapp_number)
   body.set("polo_shirt_size", form.polo_shirt_size)
+  if (form.attending === "both") body.set("polo_shirt_size_2", form.polo_shirt_size_2)
   if (form.attending) body.set("attending", form.attending)
   photosToSend(name, form.attending, photos).forEach((photo) => body.append("photo", photo))
   return body
@@ -66,6 +69,8 @@ export function OwnTicketFields({
   idPrefix?: string
 }) {
   const couple = splitCouple(name)
+  // Two people joining means two shirts, so a size is asked for each.
+  const both = Boolean(couple) && value.attending === "both"
   const today = new Date().toISOString().slice(0, 10)
   const set = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onChange({ ...value, [e.target.name]: e.target.value })
 
@@ -74,51 +79,47 @@ export function OwnTicketFields({
       {section === "photo" ? null : (
       <>
       {couple ? (
-        <fieldset>
-          <legend className="text-sm font-semibold text-[#4a3413]">Who is joining?</legend>
-          <p className="mt-1 text-xs text-[#7a6a4a]">Your record is for two people. Each person joining pays the registration fee.</p>
-          <div className="mt-3 space-y-2">
-            {(
-              [
-                { value: "first", label: `${couple[0]} only`, count: 1 },
-                { value: "second", label: `${couple[1]} only`, count: 1 },
-                { value: "both", label: "Both of us", count: 2 },
-              ] as const
-            ).map((option) => {
-              const chosen = value.attending === option.value
-              return (
-                <label
-                  key={option.value}
-                  className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${
-                    chosen ? "border-[#c9972f] bg-[#fdf3d7]" : "border-[#e3d3a8] bg-white hover:bg-[#fdf8ea]"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name={`${idPrefix}-attending`}
-                    value={option.value}
-                    checked={chosen}
-                    onChange={() => onChange({ ...value, attending: option.value })}
-                    required
-                    className="h-4 w-4 accent-[#2a1458]"
-                  />
-                  <span className="min-w-0 flex-1 break-words font-semibold text-[#2a1458]">{option.label}</span>
-                  <span className="shrink-0 text-right text-sm text-[#5c4a2a]">
-                    {option.count === 2 ? "2 people" : "1 person"}
-                    {fee !== null ? <span className="block font-bold tabular-nums text-[#2a1458]">{money(fee * option.count)}</span> : null}
-                  </span>
-                </label>
-              )
-            })}
+        <div>
+          <label htmlFor={`${idPrefix}-attending`} className={labelClass}>
+            Who is joining?
+          </label>
+          <p className="-mt-1 mb-2 text-xs text-[#7a6a4a]">Your record is for two people. Each person joining pays the registration fee.</p>
+          <div className="relative">
+            <Users size={18} className={fieldIconClass} />
+            <select
+              id={`${idPrefix}-attending`}
+              name="attending"
+              value={value.attending}
+              onChange={(e) => onChange({ ...value, attending: e.target.value as Attending, polo_shirt_size_2: "" })}
+              required
+              className={`${inputClass} w-full border outline-none ${value.attending ? "font-bold text-[#2a1458]" : "text-[#a89a7c]"}`}
+            >
+              <option value="" disabled>
+                Choose who is joining
+              </option>
+              <option value="first" className="font-bold text-[#2a1458]">{`${couple[0]} only`}</option>
+              <option value="second" className="font-bold text-[#2a1458]">{`${couple[1]} only`}</option>
+              <option value="both" className="font-bold text-[#2a1458]">Both of us</option>
+            </select>
           </div>
-        </fieldset>
+          {value.attending ? (
+            <p className="mt-2 text-sm text-[#5c4a2a]">
+              {both ? "2 people" : "1 person"}
+              {fee !== null ? (
+                <>
+                  {" · "}Registration fee: <span className="font-bold tabular-nums text-[#2a1458]">{money(fee * (both ? 2 : 1))}</span>
+                </>
+              ) : null}
+            </p>
+          ) : null}
+        </div>
       ) : fee !== null ? (
         <p className="text-sm text-[#5c4a2a]">
           Registration fee: <span className="font-bold text-[#2a1458]">{money(fee)}</span>
         </p>
       ) : null}
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid items-end gap-5 sm:grid-cols-2">
         <div>
           <label htmlFor={`${idPrefix}-birth-date`} className={labelClass}>
             Birth date
@@ -129,8 +130,17 @@ export function OwnTicketFields({
           </div>
         </div>
         <div>
+          <label htmlFor={`${idPrefix}-whatsapp`} className={labelClass}>
+            WhatsApp number
+          </label>
+          <div className="relative">
+            <MessageCircle size={18} className={fieldIconClass} />
+            <Input id={`${idPrefix}-whatsapp`} type="tel" inputMode="tel" name="whatsapp_number" autoComplete="tel" placeholder="+63 917 123 4567" value={value.whatsapp_number} onChange={set} required maxLength={25} className={inputClass} />
+          </div>
+        </div>
+        <div className={both ? undefined : "sm:col-span-2"}>
           <label htmlFor={`${idPrefix}-polo-size`} className={labelClass}>
-            Polo shirt size
+            {both && couple ? `Polo shirt size of ${couple[0]}` : "Polo shirt size"}
           </label>
           <div className="relative">
             <Shirt size={18} className={fieldIconClass} />
@@ -153,15 +163,33 @@ export function OwnTicketFields({
             </select>
           </div>
         </div>
-        <div className="sm:col-span-2">
-          <label htmlFor={`${idPrefix}-whatsapp`} className={labelClass}>
-            WhatsApp number
-          </label>
-          <div className="relative">
-            <MessageCircle size={18} className={fieldIconClass} />
-            <Input id={`${idPrefix}-whatsapp`} type="tel" inputMode="tel" name="whatsapp_number" autoComplete="tel" placeholder="+63 917 123 4567" value={value.whatsapp_number} onChange={set} required maxLength={25} className={inputClass} />
+        {both && couple ? (
+          <div>
+            <label htmlFor={`${idPrefix}-polo-size-2`} className={labelClass}>
+              Polo shirt size of {couple[1]}
+            </label>
+            <div className="relative">
+              <Shirt size={18} className={fieldIconClass} />
+              <select
+                id={`${idPrefix}-polo-size-2`}
+                name="polo_shirt_size_2"
+                value={value.polo_shirt_size_2}
+                onChange={set}
+                required
+                className={`${inputClass} w-full border outline-none ${value.polo_shirt_size_2 ? "" : "text-[#a89a7c]"}`}
+              >
+                <option value="" disabled>
+                  Choose a size
+                </option>
+                {POLO_SHIRT_SIZES.map((size) => (
+                  <option key={size} value={size} className="text-[#2a1a3d]">
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
       </>
       )}

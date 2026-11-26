@@ -21,6 +21,7 @@ import {
   Clock,
   Copy,
   Download,
+  Facebook,
   Info,
   Loader2,
   Mail,
@@ -44,10 +45,12 @@ import {
   hasPaymentDetails,
   splitCouple,
   validateAgentDetails,
+  resolvePartnerPoloSize,
   type Attending,
   type TlPaymentDetails,
 } from "@/lib/registrations"
 import { PhotoField } from "@/components/photo-field"
+import type { LeaderContact } from "@/lib/tl-contact"
 import { GENERAL_REGISTRATION_NOTICE, generalRegistrationOpensAtMs } from "@/lib/registration-opening"
 import { Particles, Reveal, staggerContainer, staggerItem } from "@/components/motion"
 import {
@@ -93,25 +96,67 @@ const steps = [
 
 type Agent = { name: string; email: string; contact_number: string; team: string; team_leader: string }
 type Stage = "email" | "confirm" | "done"
-const emptyDetails = { birth_date: "", whatsapp_number: "", polo_shirt_size: "" }
+const emptyDetails = { birth_date: "", whatsapp_number: "", polo_shirt_size: "", polo_shirt_size_2: "" }
 type Notice = { tone: "info" | "warning"; title: string; text: string }
 
+/** How to reach the team leader about the payment: their Facebook and contact number. Nothing when neither is known. */
+function LeaderContactRow({ contact, leader }: { contact: LeaderContact | null | undefined; leader: string }) {
+  if (!contact || (!contact.facebook_url && !contact.contact_number)) return null
+  return (
+    <div className="border-t border-[#e3d3a8] bg-white px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#7a6a4a]">Questions? Contact {leader}</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {contact.facebook_url ? (
+          <a
+            href={contact.facebook_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#2a1458] px-4 text-sm font-bold text-[#fbe7a1] hover:bg-[#3a1f74]"
+          >
+            <Facebook size={16} /> Message on Facebook
+          </a>
+        ) : null}
+        {contact.contact_number ? (
+          <a
+            href={`tel:${contact.contact_number.replace(/[^\d+]/g, "")}`}
+            className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#e3d3a8] bg-white px-4 text-sm font-bold tabular-nums text-[#2a1458] hover:bg-[#fdf3d7]"
+          >
+            <Phone size={16} className="text-[#b8862b]" /> {contact.contact_number}
+          </a>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
 /** Where to send the fee: every account and QR code the team leader listed, shown once the agent is registered. */
-export function PaymentCard({ payment, teamLeader }: { payment: TlPaymentDetails | null; teamLeader: string }) {
+export function PaymentCard({
+  payment,
+  teamLeader,
+  contact = null,
+}: {
+  payment: TlPaymentDetails | null
+  teamLeader: string
+  /** The team leader's Facebook and number. Left out when the admin handles the payment. */
+  contact?: LeaderContact | null
+}) {
   const [copied, setCopied] = useState<number | null>(null)
   const leader = teamLeader || "your team leader"
 
   if (!hasPaymentDetails(payment) || !payment) {
     return (
-      <div className="mt-6 flex w-full max-w-md gap-3 rounded-2xl border border-[#e3d3a8] bg-[#fdf8ea] px-4 py-4 text-left text-sm text-[#4a3413]">
-        <Info size={18} className="mt-0.5 shrink-0 text-[#b8862b]" />
-        <p className="leading-relaxed">
-          <span className="font-semibold">
-            {teamLeader ? teamLeader.charAt(0).toUpperCase() + teamLeader.slice(1) : "Your team leader"} has not added payment
-            details yet.
-          </span>{" "}
-          Please ask them directly how to send your payment.
-        </p>
+      <div className="mt-6 w-full max-w-md overflow-hidden rounded-2xl border border-[#e3d3a8] bg-[#fdf8ea] text-left text-sm text-[#4a3413]">
+        <div className="flex gap-3 px-4 py-4">
+          <Info size={18} className="mt-0.5 shrink-0 text-[#b8862b]" />
+          <p className="leading-relaxed">
+            <span className="font-semibold">
+              {teamLeader ? teamLeader.charAt(0).toUpperCase() + teamLeader.slice(1) : "Your team leader"} has not added payment
+              details yet.
+            </span>{" "}
+            Please ask them directly how to send your payment.
+          </p>
+        </div>
+        <LeaderContactRow contact={contact} leader={leader} />
       </div>
     )
   }
@@ -181,6 +226,7 @@ export function PaymentCard({ payment, teamLeader }: { payment: TlPaymentDetails
           </li>
         ))}
       </ul>
+      <LeaderContactRow contact={contact} leader={leader} />
     </div>
   )
 }
@@ -396,6 +442,8 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
   const [adminManaged, setAdminManaged] = useState(false)
   const [fee, setFee] = useState<number | null>(null)
   const [payment, setPayment] = useState<TlPaymentDetails | null>(null)
+  // The team leader's Facebook and number, shown with the payment details.
+  const [leaderContact, setLeaderContact] = useState<LeaderContact | null>(null)
   // True when someone who registered earlier came back to see how to pay.
   const [returning, setReturning] = useState(false)
   // When this agent uploaded proof of payment, if they have.
@@ -437,6 +485,7 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
         setTeamLeader(typeof result.teamLeaderName === "string" ? result.teamLeaderName : "")
         setFee(typeof result.fee === "number" ? result.fee : null)
         setPayment((result.payment as TlPaymentDetails | null) ?? null)
+        setLeaderContact((result.leader_contact as LeaderContact | null) ?? null)
         setPeople(result.attendee_count === 2 ? 2 : 1)
         setReceiptSentAt(typeof result.receipt_sent_at === "string" ? result.receipt_sent_at : null)
         setReturning(true)
@@ -475,6 +524,12 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
       setNotice({ tone: "warning", title: "Please check your details", text: "Please tell us who is joining." })
       return
     }
+    // Two people joining means two shirts.
+    const partnerSize = resolvePartnerPoloSize(couple && attending === "both" ? 2 : 1, form.polo_shirt_size_2)
+    if (!partnerSize.ok) {
+      setNotice({ tone: "warning", title: "Please check your details", text: partnerSize.message })
+      return
+    }
     if (photoSlots.some((slot) => !photos[slot.index])) {
       setNotice({
         tone: "warning",
@@ -490,6 +545,7 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
     body.set("email", email.trim())
     Object.entries(checked.details).forEach(([key, value]) => body.set(key, value))
     if (attending) body.set("attending", attending)
+    if (partnerSize.polo_shirt_size_2) body.set("polo_shirt_size_2", partnerSize.polo_shirt_size_2)
     photoSlots.forEach((slot) => body.append("photo", photos[slot.index] as File))
     setBusy(true)
     setNotice(null)
@@ -501,6 +557,7 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
         setTeamLeader(typeof result.team_leader === "string" ? result.team_leader : agent?.team_leader ?? "")
         setFee(typeof result.fee === "number" ? result.fee : null)
         setPayment((result.payment as TlPaymentDetails | null) ?? null)
+        setLeaderContact((result.leader_contact as LeaderContact | null) ?? null)
         setPeople(result.attendee_count === 2 ? 2 : 1)
         setReceiptSentAt(null)
         setReturning(false)
@@ -542,6 +599,7 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
     setPeople(1)
     setFee(null)
     setPayment(null)
+    setLeaderContact(null)
     setReturning(false)
     setForm(emptyDetails)
     setPhotos([null, null])
@@ -928,55 +986,51 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
 
                         <form onSubmit={register}>
                         {couple ? (
-                          <fieldset className="mt-6">
-                            <legend className="text-sm font-bold text-[#2a1458]">
+                          <div className="mt-6">
+                            <label htmlFor="reg-attending" className={labelClass}>
                               Who is joining? <span className="text-[#b3261e]">*</span>
-                            </legend>
-                            <p className="mt-1 text-sm text-[#7a6a4a]">
+                            </label>
+                            <p className="-mt-1 mb-2 text-sm text-[#7a6a4a]">
                               This record is for two people. Each person joining pays the registration fee.
                             </p>
-                            <div className="mt-3 space-y-2">
-                              {(
-                                [
-                                  { value: "first", label: `${couple[0]} only`, count: 1 },
-                                  { value: "second", label: `${couple[1]} only`, count: 1 },
-                                  { value: "both", label: "Both of us", count: 2 },
-                                ] as const
-                              ).map((option) => {
-                                const chosen = attending === option.value
-                                return (
-                                  <label
-                                    key={option.value}
-                                    className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${
-                                      chosen ? "border-[#c9972f] bg-[#fdf3d7]" : "border-[#e3d3a8] bg-white hover:bg-[#fdf8ea]"
-                                    }`}
-                                  >
-                                    <input
-                                      type="radio"
-                                      name="attending"
-                                      value={option.value}
-                                      checked={chosen}
-                                      onChange={() => setAttending(option.value)}
-                                      required
-                                      className="h-4 w-4 accent-[#2a1458]"
-                                    />
-                                    <span className="min-w-0 flex-1 break-words font-semibold text-[#2a1458]">{option.label}</span>
-                                    <span className="shrink-0 text-right text-sm text-[#5c4a2a]">
-                                      {option.count === 2 ? "2 people" : "1 person"}
-                                      {fee !== null ? (
-                                        <span className="block font-bold tabular-nums text-[#2a1458]">{money(fee * option.count)}</span>
-                                      ) : null}
-                                    </span>
-                                  </label>
-                                )
-                              })}
+                            <div className="relative">
+                              <Users size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#b8862b]" />
+                              <select
+                                id="reg-attending"
+                                name="attending"
+                                value={attending}
+                                onChange={(e) => {
+                                  setAttending(e.target.value as Attending)
+                                  setForm((current) => ({ ...current, polo_shirt_size_2: "" }))
+                                }}
+                                required
+                                className={`${inputClass} w-full border pl-11 outline-none ${attending ? "font-bold text-[#2a1458]" : "text-[#a89a7c]"}`}
+                              >
+                                <option value="" disabled>
+                                  Choose who is joining
+                                </option>
+                                <option value="first" className="font-bold text-[#2a1458]">{`${couple[0]} only`}</option>
+                                <option value="second" className="font-bold text-[#2a1458]">{`${couple[1]} only`}</option>
+                                <option value="both" className="font-bold text-[#2a1458]">Both of us</option>
+                              </select>
                             </div>
-                          </fieldset>
+                            {attending ? (
+                              <p className="mt-2 text-sm text-[#5c4a2a]">
+                                {attending === "both" ? "2 people" : "1 person"}
+                                {fee !== null ? (
+                                  <>
+                                    {" · "}Registration fee:{" "}
+                                    <span className="font-bold tabular-nums text-[#2a1458]">{money(fee * (attending === "both" ? 2 : 1))}</span>
+                                  </>
+                                ) : null}
+                              </p>
+                            ) : null}
+                          </div>
                         ) : null}
                         <div className="mt-6">
                           <p className="text-sm font-bold text-[#2a1458]">A few more details</p>
                           <p className="mt-1 text-sm text-[#7a6a4a]">All of these are required to register.</p>
-                          <div className="mt-4 grid gap-5 sm:grid-cols-2">
+                          <div className="mt-4 grid items-end gap-5 sm:grid-cols-2">
                             <div>
                               <label htmlFor="reg-birth-date" className={labelClass}>
                                 Birth date <span className="text-[#b3261e]">*</span>
@@ -998,8 +1052,30 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                               </div>
                             </div>
                             <div>
+                              <label htmlFor="reg-whatsapp" className={labelClass}>
+                                WhatsApp number <span className="text-[#b3261e]">*</span>
+                              </label>
+                              <div className="relative">
+                                <MessageCircle size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#b8862b]" />
+                                <Input
+                                  id="reg-whatsapp"
+                                  type="tel"
+                                  inputMode="tel"
+                                  name="whatsapp_number"
+                                  autoComplete="tel"
+                                  placeholder="+63 917 123 4567"
+                                  value={form.whatsapp_number}
+                                  onChange={updateForm}
+                                  required
+                                  maxLength={25}
+                                  className={`${inputClass} pl-11`}
+                                />
+                              </div>
+                            </div>
+                            <div className={couple && attending === "both" ? undefined : "sm:col-span-2"}>
                               <label htmlFor="reg-polo-size" className={labelClass}>
-                                Polo shirt size <span className="text-[#b3261e]">*</span>
+                                {couple && attending === "both" ? `Polo shirt size of ${couple[0]}` : "Polo shirt size"}{" "}
+                                <span className="text-[#b3261e]">*</span>
                               </label>
                               <div className="relative">
                                 <Shirt size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#b8862b]" />
@@ -1022,27 +1098,33 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                                 </select>
                               </div>
                             </div>
-                            <div className="sm:col-span-2">
-                              <label htmlFor="reg-whatsapp" className={labelClass}>
-                                WhatsApp number <span className="text-[#b3261e]">*</span>
-                              </label>
-                              <div className="relative">
-                                <MessageCircle size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#b8862b]" />
-                                <Input
-                                  id="reg-whatsapp"
-                                  type="tel"
-                                  inputMode="tel"
-                                  name="whatsapp_number"
-                                  autoComplete="tel"
-                                  placeholder="+63 917 123 4567"
-                                  value={form.whatsapp_number}
-                                  onChange={updateForm}
-                                  required
-                                  maxLength={25}
-                                  className={`${inputClass} pl-11`}
-                                />
+                            {couple && attending === "both" ? (
+                              <div>
+                                <label htmlFor="reg-polo-size-2" className={labelClass}>
+                                  Polo shirt size of {couple[1]} <span className="text-[#b3261e]">*</span>
+                                </label>
+                                <div className="relative">
+                                  <Shirt size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#b8862b]" />
+                                  <select
+                                    id="reg-polo-size-2"
+                                    name="polo_shirt_size_2"
+                                    value={form.polo_shirt_size_2}
+                                    onChange={updateForm}
+                                    required
+                                    className={`${inputClass} w-full border pl-11 outline-none ${form.polo_shirt_size_2 ? "" : "text-[#a89a7c]"}`}
+                                  >
+                                    <option value="" disabled>
+                                      Choose a size
+                                    </option>
+                                    {POLO_SHIRT_SIZES.map((size) => (
+                                      <option key={size} value={size} className="text-[#2a1a3d]">
+                                        {size}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
                               </div>
-                            </div>
+                            ) : null}
                           </div>
                         </div>
 
@@ -1148,7 +1230,11 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                             unpaid after 48 hours is removed, and you would need to register again.
                           </p>
                         )}
-                        <PaymentCard payment={payment} teamLeader={adminManaged ? "the ARES admin" : teamLeader} />
+                        <PaymentCard
+                          payment={payment}
+                          teamLeader={adminManaged ? "the ARES admin" : teamLeader}
+                          contact={adminManaged ? null : leaderContact}
+                        />
                         <ReceiptUpload
                           email={email}
                           teamLeader={adminManaged ? "the ARES admin" : teamLeader}

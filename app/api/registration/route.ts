@@ -3,9 +3,10 @@ import { NextResponse } from "next/server"
 import { EMAIL_PATTERN, resolveAgent } from "@/lib/agent-registration"
 import { getRegistrationFee, getSlotsLeft } from "@/lib/payments"
 import { MAX_PHOTO_BYTES, PHOTO_BUCKET, PHOTO_TYPES } from "@/lib/photo"
-import { resolveAttendance, validateAgentDetails } from "@/lib/registrations"
+import { resolveAttendance, resolvePartnerPoloSize, validateAgentDetails } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { getTlPaymentDetails } from "@/lib/tl-payment"
+import type { LeaderContact } from "@/lib/tl-contact"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
     birth_date: field("birth_date"),
     whatsapp_number: field("whatsapp_number"),
     polo_shirt_size: field("polo_shirt_size"),
+    polo_shirt_size_2: field("polo_shirt_size_2"),
     attending: field("attending"),
   }
   const photos = form.getAll("photo").filter((entry): entry is File => entry instanceof File && entry.size > 0)
@@ -58,6 +60,8 @@ export async function POST(request: Request) {
     // A couple's record must say who is joining; the name comes from our records, not the browser.
     const attendance = resolveAttendance(agent.name, body.attending)
     if (!attendance.ok) return invalid("attending", attendance.message)
+    const partnerSize = resolvePartnerPoloSize(attendance.attendee_count, body.polo_shirt_size_2)
+    if (!partnerSize.ok) return invalid("polo_shirt_size_2", partnerSize.message)
 
     // One clear, formal photo of each person joining.
     if (photos.length !== attendance.attendee_count) {
@@ -105,6 +109,7 @@ export async function POST(request: Request) {
       email: agent.email,
       contact_number: agent.contact_number || null,
       ...checked.details,
+      polo_shirt_size_2: partnerSize.polo_shirt_size_2,
       attendee_count: attendance.attendee_count,
       attendees: attendance.attendees,
       photo_paths: photoPaths,
@@ -136,6 +141,10 @@ export async function POST(request: Request) {
         fee: fee === null ? null : fee * attendance.attendee_count,
         attendee_count: attendance.attendee_count,
         payment,
+        // So the agent can reach their team leader about the payment.
+        leader_contact: (teamLeader
+          ? { facebook_url: teamLeader.facebook_url, contact_number: teamLeader.contact_number || null }
+          : null) satisfies LeaderContact | null,
       },
       { status: 201 },
     )

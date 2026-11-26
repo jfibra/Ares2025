@@ -13,6 +13,7 @@ import { OwnTicketFields, appendOwnTicket, emptyOwnTicket, ownTicketProblem } fr
 import { noPhotos, type PhotoPair } from "@/components/photo-field"
 import { PaymentCard, ReceiptUpload } from "@/components/registration-page"
 import type { TlPaymentDetails } from "@/lib/registrations"
+import type { LeaderContact } from "@/lib/tl-contact"
 import { UNPAID_HOURS } from "@/lib/unpaid-rule"
 
 const LOGO_URL = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
@@ -46,6 +47,9 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
   const [fee, setFee] = useState<number | null>(null)
   const [people, setPeople] = useState(1)
   const [payment, setPayment] = useState<TlPaymentDetails | null>(null)
+  // Set when the admin put this guest on a team: they then pay that team leader, not the admin.
+  const [teamLeader, setTeamLeader] = useState<string | null>(null)
+  const [leaderContact, setLeaderContact] = useState<LeaderContact | null>(null)
   const [receiptSentAt, setReceiptSentAt] = useState<string | null>(null)
   const [registeredName, setRegisteredName] = useState("")
   const [returning, setReturning] = useState(false)
@@ -55,6 +59,8 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
 
   // Only an LR record can be for a couple; a guest who types their name is one person.
   const recordName = agent?.name ?? ""
+  // Who takes this guest's payment and confirms it.
+  const payee = teamLeader ?? "the ARES admin"
 
   const update = (e: React.ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
 
@@ -66,6 +72,8 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
     setTicket(emptyOwnTicket)
     setPhotos(noPhotos)
     setReceiptSentAt(null)
+    setTeamLeader(null)
+    setLeaderContact(null)
     setReturning(false)
     setConfirmed(false)
     setErrorMessage(null)
@@ -96,6 +104,8 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
         setFee(typeof result.fee === "number" ? result.fee : null)
         setPeople(result.attendee_count === 2 ? 2 : 1)
         setPayment(result.payment ?? null)
+        setTeamLeader(typeof result.team_leader === "string" ? result.team_leader : null)
+        setLeaderContact(result.leader_contact ?? null)
         setReceiptSentAt(typeof result.receipt_sent_at === "string" ? result.receipt_sent_at : null)
         return setStage("done")
       }
@@ -138,6 +148,8 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
       setFee(typeof result.fee === "number" ? result.fee : null)
       setPeople(result.attendee_count === 2 ? 2 : 1)
       setPayment(result.payment ?? null)
+      setTeamLeader(null)
+      setLeaderContact(null)
       setReceiptSentAt(null)
       setStage("done")
       document.getElementById("guest-register-top")?.scrollIntoView({ behavior: "smooth", block: "start" })
@@ -269,7 +281,7 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
                   <GoldRule className="mt-4 w-48" />
                   {confirmed ? (
                     <p className="mx-auto mt-5 max-w-md text-[#5c4a2a]">
-                      The ARES admin has confirmed your payment. Your slot for ARES 2027 is secured. See you there!
+                      Your payment has been confirmed. Your slot for ARES 2027 is secured. See you there!
                     </p>
                   ) : (
                     <>
@@ -284,7 +296,7 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
                         ) : (
                           "the registration fee"
                         )}{" "}
-                        to the ARES admin. They will confirm it once received.
+                        to {teamLeader ? `your team leader, ${teamLeader}` : "the ARES admin"}. They will confirm it once received.
                       </p>
                       {receiptSentAt ? null : (
                         <p className="mx-auto mt-4 max-w-md rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
@@ -292,10 +304,10 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
                           still unpaid after {UNPAID_HOURS} hours is removed, and you would need to register again.
                         </p>
                       )}
-                      <PaymentCard payment={payment} teamLeader="the ARES admin" />
-                      <ReceiptUpload email={email} teamLeader="the ARES admin" sentAt={receiptSentAt} onSent={setReceiptSentAt} />
+                      <PaymentCard payment={payment} teamLeader={payee} contact={leaderContact} />
+                      <ReceiptUpload email={email} teamLeader={payee} sentAt={receiptSentAt} onSent={setReceiptSentAt} />
                       <p className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#e3d3a8] bg-[#fdf3d7] px-4 py-2 text-sm font-semibold text-[#8a5a00]">
-                        <Clock size={16} /> {receiptSentAt ? "Waiting for the ARES admin to confirm" : "Waiting for payment to the ARES admin"}
+                        <Clock size={16} /> {receiptSentAt ? `Waiting for ${payee} to confirm` : `Waiting for payment to ${payee}`}
                       </p>
                     </>
                   )}

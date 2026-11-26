@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto"
 import { MAX_PAYMENT_ACCOUNTS, type TlPaymentAccount } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
+import type { LeaderContact } from "@/lib/tl-contact"
 
 // Server only. The accounts and QR codes people pay into: a team leader's (for their agents)
 // or the admin's (for team leaders sending on what they collected).
@@ -156,4 +157,17 @@ export async function deletePaymentAccount(owner: PaymentOwner, id: number): Pro
   if (error) throw error
   if (data) await removeFiles([data.qr_path as string | null])
   return { ok: true } // already gone counts as deleted
+}
+
+/** How an agent reaches this team leader. Null for the admin (no team leader) or a leader who is gone. */
+export async function getLeaderContact(leaderId: number | null): Promise<LeaderContact | null> {
+  if (leaderId === null) return null
+  const { data, error } = await createSupabaseAdmin()
+    .from("team_leaders")
+    .select("facebook_url,contact_number")
+    .eq("id", leaderId)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return null
+  return { facebook_url: data.facebook_url ?? null, contact_number: data.contact_number || null }
 }

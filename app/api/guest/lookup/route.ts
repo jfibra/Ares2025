@@ -3,7 +3,7 @@ import { EMAIL_PATTERN } from "@/lib/agent-registration"
 import { isValidGuestInvite } from "@/lib/guest-invite"
 import { resolveGuest } from "@/lib/guest-registration"
 import { getRegistrationFee, getSlotsLeft } from "@/lib/payments"
-import { getTlPaymentDetails } from "@/lib/tl-payment"
+import { getLeaderContact, getTlPaymentDetails } from "@/lib/tl-payment"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -25,15 +25,22 @@ export async function POST(request: Request) {
     if (result.status === "already_registered") {
       // A guest still waiting to pay sees again where to send the fee.
       const waiting = result.guest && !result.confirmed
-      const [payment, fee] = waiting
-        ? await Promise.all([getTlPaymentDetails("admin").catch(() => null), getRegistrationFee().catch(() => null)])
-        : [null, null]
+      // On a team (the admin put them there): they pay that team leader instead of the admin.
+      const [payment, fee, leaderContact] = waiting
+        ? await Promise.all([
+            getTlPaymentDetails(result.teamLeaderId ?? "admin").catch(() => null),
+            getRegistrationFee().catch(() => null),
+            getLeaderContact(result.teamLeaderId).catch(() => null),
+          ])
+        : [null, null, null]
       return NextResponse.json({
         success: true,
         status: "already_registered",
         guest: result.guest,
         confirmed: result.confirmed,
         payment,
+        team_leader: result.guest && result.teamLeaderId !== null ? result.teamLeaderName : null,
+        leader_contact: leaderContact,
         fee: fee === null ? null : fee * result.attendeeCount,
         attendee_count: result.attendeeCount,
         receipt_sent_at: waiting ? result.receiptAt : null,

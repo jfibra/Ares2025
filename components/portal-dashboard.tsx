@@ -46,7 +46,9 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Counter } from "@/components/motion"
 import AdminManagedAgents from "@/components/admin-managed-agents"
+import AdminGuestForm from "@/components/admin-guest-form"
 import { PaymentCountdown } from "@/components/payment-countdown"
+import { FacebookLinkForm } from "@/components/facebook-link-form"
 import { isOnPaymentClock, paymentDeadlineMs } from "@/lib/unpaid-rule"
 import { OwnTicketCard } from "@/components/own-ticket-fields"
 import PastAttendeesPanel from "@/components/past-attendees-panel"
@@ -58,6 +60,7 @@ import {
   MAX_PAYMENT_ACCOUNTS,
   hasPaymentDetails,
   splitCouple,
+  poloSizesLabel,
   type PaymentStatus,
   type Registration,
   type Remittance,
@@ -155,6 +158,7 @@ export default function PortalDashboard({
   initialInviteToken = null,
   initialGuestInviteToken = null,
   initialPaymentDetails = null,
+  initialFacebookUrl = null,
   initialAdminAccounts = [],
   initialDeclines = [],
   ownEmail,
@@ -173,6 +177,8 @@ export default function PortalDashboard({
   /** Admin: the code in the guest registration link. */
   initialGuestInviteToken?: string | null
   initialPaymentDetails?: TlPaymentDetails | null
+  /** Team leader only: the Facebook link their agents use to contact them. */
+  initialFacebookUrl?: string | null
   initialAdminAccounts?: TlPaymentAccount[]
   initialDeclines?: TlDecline[]
   /** Team leader: their email and LR record name, to pick out (or add) their own registration. */
@@ -194,6 +200,7 @@ export default function PortalDashboard({
   const [declines, setDeclines] = useState(initialDeclines)
   // Team leader: where their agents send the registration fee.
   const [paymentDetails, setPaymentDetails] = useState(initialPaymentDetails)
+  const [facebookUrl, setFacebookUrl] = useState(initialFacebookUrl)
   // The organizer's accounts: the admin manages them, team leaders send their collections there.
   const [adminAccounts, setAdminAccounts] = useState(initialAdminAccounts)
   // Team leader: agents ticked to send to the admin in one remittance.
@@ -380,6 +387,27 @@ export default function PortalDashboard({
     if (result) setPaymentDetails(result.accounts)
   }
 
+  /** Admin: put a guest on a team, so its leader handles them, or take them back (null). */
+  const assignGuest = (row: Registration, teamLeaderId: number | null) =>
+    run(`registration-${row.id}`, "Could not change the team.", async () => {
+      const result = await call(`/api/admin/registrations/${row.id}/team`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ team_leader_id: teamLeaderId }),
+      })
+      if (result) setRows((all) => all.map((r) => (r.id === row.id ? { ...r, ...result.registration } : r)))
+    })
+
+  /** Team leader: save the Facebook link agents use to contact them. Throws so the form can show the reason. */
+  const saveFacebookUrl = async (value: string) => {
+    const result = await call("/api/tl/facebook", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ facebook_url: value }),
+    })
+    if (result) setFacebookUrl(result.facebook_url)
+  }
+
   /** Admin: add, change or delete one of the organizer's accounts. Throws so the panel can show the reason. */
   const changeAdminAccounts = async (url: string, init: RequestInit) => {
     const result = await call(url, init)
@@ -449,7 +477,7 @@ export default function PortalDashboard({
     { key: "contact_number", label: "Contact Number" },
     { key: "whatsapp_number", label: "WhatsApp" },
     { key: "birth_date", label: "Birth Date", render: (r: Row) => formatDay(r.birth_date) },
-    { key: "polo_shirt_size", label: "Polo Size" },
+    { key: "polo_shirt_size", label: "Polo Size", render: (r: Row) => poloSizesLabel(r as { polo_shirt_size?: unknown; polo_shirt_size_2?: unknown }) || "—" },
     {
       key: "attendee_count",
       label: "Joining",
@@ -684,6 +712,7 @@ export default function PortalDashboard({
     }
     const exportValue = (r: Row, key: string) => {
       if (key === "birth_date") return r[key] ?? ""
+      if (key === "polo_shirt_size") return poloSizesLabel(r as { polo_shirt_size?: unknown; polo_shirt_size_2?: unknown })
       if (key === "time_left") {
         if (isLeaderRow(r)) return ""
         return isOnPaymentClock(r) ? `Pay by ${formatDate(new Date(paymentDeadlineMs(String(r.registration_date))).toISOString())}` : "Receipt sent"
@@ -711,7 +740,7 @@ export default function PortalDashboard({
   // Every person registered takes a slot; a couple who are both joining takes two.
   const slotsTaken = rows.reduce((total, r) => total + (Number(r.attendee_count) || 1), 0)
   // Money that reached the admin: remittances marked received, plus agents who paid the admin directly.
-  const verifiedTotal = sum(remittances.filter((r) => r.status === "verified")) + sum([...adminManaged, ...guests].filter((r) => r.payment_status === "verified"))
+  const verifiedTotal = sum(remittances.filter((r) => r.status === "verified")) + sum([...adminManaged, ...guests].filter((r) => r.team_leader_id === null && r.payment_status === "verified"))
   const statCards: { label: string; icon: typeof Users; count?: number; money?: number; hint?: string }[] = isAdmin
     ? [
         { label: "Team leaders", icon: UserCog, count: leaders.length },
@@ -944,6 +973,37 @@ export default function PortalDashboard({
             </div>
           ) : null}
 
+          {/* Next, how agents reach them: asked right after the payment details, and cannot be closed either. */}
+          {!isAdmin && hasPaymentDetails(paymentDetails) && !facebookUrl ? (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="facebook-first-title"
+              className="fixed inset-0 z-[100] overflow-y-auto bg-[#120a2e]/80 px-4 py-8 backdrop-blur-sm"
+            >
+              <div className="mx-auto max-w-xl rounded-2xl border border-[#d4a437]/60 bg-[#fffdf7] p-6 shadow-2xl sm:p-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">One more step</p>
+                <h2 id="facebook-first-title" className="mt-2 text-2xl font-black text-[#2a1458]">
+                  Add your Facebook link
+                </h2>
+                <p className="mt-2 text-[#5c4a2a]">
+                  Your agents see this link and your contact number next to your payment details, so they can message you
+                  about their payment. You can change it later under &quot;Payment details&quot;.
+                </p>
+                <div className="mt-6">
+                  <FacebookLinkForm current={null} onSave={saveFacebookUrl} submitLabel="Save and continue" />
+                </div>
+                <p className="mt-6 text-center text-sm text-[#7a6a4a]">
+                  Not ready yet?{" "}
+                  <button type="button" onClick={signOut} className="font-semibold text-[#6b4a12] underline-offset-2 hover:underline">
+                    Sign out
+                  </button>{" "}
+                  and come back later.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           {needsOwnTicket && ownName ? <OwnTicketCard name={ownName} fee={fee} onSaved={refresh} declinedReason={ownDeclineReason} /> : null}
 
           {/* Tabs */}
@@ -986,13 +1046,25 @@ export default function PortalDashboard({
           ) : null}
 
           {tab === "payment" ? (
-            <PaymentDetailsPanel
-              accounts={paymentDetails ?? []}
-              fee={fee}
-              onAdd={(form) => changePaymentAccounts("/api/tl/payment-details", { method: "POST", body: form })}
-              onUpdate={(id, form) => changePaymentAccounts(`/api/tl/payment-details/${id}`, { method: "PUT", body: form })}
-              onDelete={(id) => changePaymentAccounts(`/api/tl/payment-details/${id}`, { method: "DELETE" })}
-            />
+            <>
+              <PaymentDetailsPanel
+                accounts={paymentDetails ?? []}
+                fee={fee}
+                onAdd={(form) => changePaymentAccounts("/api/tl/payment-details", { method: "POST", body: form })}
+                onUpdate={(id, form) => changePaymentAccounts(`/api/tl/payment-details/${id}`, { method: "PUT", body: form })}
+                onDelete={(id) => changePaymentAccounts(`/api/tl/payment-details/${id}`, { method: "DELETE" })}
+              />
+              <section className="mt-4 rounded-2xl border border-[#d4a437]/50 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)] sm:p-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">For your agents</p>
+                <h2 className="mt-2 text-2xl font-black text-[#2a1458]">How agents contact you</h2>
+                <p className="mt-3 max-w-2xl leading-relaxed text-[#5c4a2a]">
+                  Shown to your agents together with your contact number, below your payment details.
+                </p>
+                <div className="mt-5 max-w-xl">
+                  <FacebookLinkForm current={facebookUrl} onSave={saveFacebookUrl} />
+                </div>
+              </section>
+            </>
           ) : tab === "payadmin" ? (
             <PayAdminPanel
               accounts={adminAccounts}
@@ -1015,6 +1087,7 @@ export default function PortalDashboard({
                 busy={busyKey === "guest-invite"}
                 onRegenerate={() => setPendingAction({ kind: "regenerateGuest" })}
               />
+              <AdminGuestForm invite={guestInviteToken} onRegistered={refresh} />
               <div className="mt-6 flex justify-end">
                 <button type="button" onClick={refresh} disabled={refreshing} className={outlineButton}>
                   <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} /> Refresh
@@ -1022,6 +1095,8 @@ export default function PortalDashboard({
               </div>
               <AdminManagedAgents
                 variant="guests"
+                leaders={leaders}
+                onAssign={assignGuest}
                 agents={guests}
                 fee={fee}
                 busyKey={busyKey}

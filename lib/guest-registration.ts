@@ -9,7 +9,7 @@ export const GUEST_TEAM = "Guest"
 export type GuestResolution =
   /** `agent` is their LR record, or null when the email is not in the LR records. */
   | { status: "new"; agent: DirectoryAgent | null }
-  | { status: "already_registered"; guest: boolean; confirmed: boolean; attendeeCount: number; receiptAt: string | null }
+  | { status: "already_registered"; guest: boolean; confirmed: boolean; attendeeCount: number; receiptAt: string | null; teamLeaderId: number | null; teamLeaderName: string | null }
   /** The LR records could not be reached, so we cannot tell whether they are an LR agent. */
   | { status: "unavailable" }
 
@@ -17,7 +17,7 @@ export async function resolveGuest(rawEmail: string): Promise<GuestResolution> {
   const email = rawEmail.trim().toLowerCase()
   const { data: existing, error } = await createSupabaseAdmin()
     .from("registrations")
-    .select("guest_type,confirmed_by_tl,attendee_count,agent_receipt_at")
+    .select("guest_type,confirmed_by_tl,attendee_count,agent_receipt_at,team_leader_id,team_leader_name")
     .eq("email", email)
     .maybeSingle()
   if (error) throw error
@@ -28,6 +28,9 @@ export async function resolveGuest(rawEmail: string): Promise<GuestResolution> {
       confirmed: existing.confirmed_by_tl,
       attendeeCount: existing.attendee_count ?? 1,
       receiptAt: existing.agent_receipt_at ?? null,
+      // Set once the admin put this guest on a team: that team leader takes the payment.
+      teamLeaderId: existing.team_leader_id ?? null,
+      teamLeaderName: existing.team_leader_name ?? null,
     }
   }
   try {

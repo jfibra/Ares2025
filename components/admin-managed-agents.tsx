@@ -2,7 +2,7 @@
 
 import { CheckCircle2, ImageIcon, Loader2, Receipt, Trash2, Undo2 } from "lucide-react"
 import { PaymentCountdown } from "@/components/payment-countdown"
-import { splitCouple, type Registration } from "@/lib/registrations"
+import { poloSizesLabel, splitCouple, type Registration, type TeamLeader } from "@/lib/registrations"
 import { isOnPaymentClock } from "@/lib/unpaid-rule"
 
 // Admin, on the "Not joining" tab: agents whose team leader is not joining ARES. They still
@@ -17,12 +17,14 @@ const COPY = {
     heading: "Agents of team leaders not joining",
     intro: "These agents registered even though their team leader is not joining. They pay you directly, using your payment details in Settings, and only you can confirm their payment.",
     column: "Team leader (not joining)",
+    handler: null,
     empty: "No agent of a team leader who is not joining has registered yet.",
   },
   guests: {
     heading: "Registered guests",
-    intro: "Guests who registered through the guest link. They pay you directly, using your payment details in Settings, and only you can confirm their payment.",
+    intro: "Guests who registered through the guest link, or whom you registered. A guest pays you directly unless you put them on a team under \"Handled by\": then that team's leader takes the payment and confirms it, like one of their own agents.",
     column: "LR agent?",
+    handler: "Handled by",
     empty: "No guest has registered yet. Share the guest registration link above.",
   },
 } as const
@@ -34,6 +36,8 @@ export default function AdminManagedAgents({
   busyKey,
   onConfirm,
   onDelete,
+  leaders = [],
+  onAssign,
 }: {
   /** "guests" lists special registrations and shows whether each guest is in the LR records. */
   variant?: keyof typeof COPY
@@ -44,6 +48,10 @@ export default function AdminManagedAgents({
   busyKey: string | null
   onConfirm: (agent: Registration, received: boolean) => void
   onDelete: (agent: Registration) => void
+  /** Guests only: the registered team leaders a guest can be handed to. */
+  leaders?: TeamLeader[]
+  /** Guests only: hand the guest to a team leader, or back to the admin (null). */
+  onAssign?: (agent: Registration, teamLeaderId: number | null) => void
 }) {
   const unpaid = agents.filter((agent) => agent.payment_status === "unpaid").length
   const copy = COPY[variant]
@@ -70,10 +78,10 @@ export default function AdminManagedAgents({
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1100px] border-collapse text-sm">
+            <table className={`w-full ${copy.handler ? "min-w-[1320px]" : "min-w-[1100px]"} border-collapse text-sm`}>
               <thead>
                 <tr className="bg-gradient-to-r from-[#2a1458] to-[#1a0d3d] text-left text-[#fbe7a1]">
-                  {["#", "Name", "Contact", "Team", copy.column, "Joining", "Polo", "Photo", "Receipt", "Registered", "Payment", ""].map(
+                  {["#", "Name", "Contact", "Team", copy.column, ...(copy.handler ? [copy.handler] : []), "Joining", "Polo", "Photo", "Receipt", "Registered", "Payment", ""].map(
                     (heading) => (
                       <th key={heading} scope="col" className="whitespace-nowrap px-3 py-3.5 font-semibold">
                         {heading || <span className="sr-only">Actions</span>}
@@ -86,6 +94,8 @@ export default function AdminManagedAgents({
                 {agents.map((agent, index) => {
                   const busy = busyKey === `registration-${agent.id}`
                   const paid = agent.payment_status !== "unpaid"
+                  // A guest on a team is their team leader's to confirm, and the money reaches the admin in a remittance.
+                  const onTeam = agent.team_leader_id !== null
                   const names = agent.photo_count === 2 ? splitCouple(agent.attendees ?? "") : null
                   return (
                     <tr key={agent.id} className={`border-t border-[#f1e6c8] align-top odd:bg-white even:bg-[#fdfaf1] ${busy ? "opacity-55" : ""}`}>
@@ -114,10 +124,38 @@ export default function AdminManagedAgents({
                           </span>
                         )}
                       </td>
+                      {copy.handler ? (
+                        <td className="px-3 py-3.5">
+                          <label htmlFor={`guest-team-${agent.id}`} className="sr-only">
+                            Who handles {agent.name}
+                          </label>
+                          <select
+                            id={`guest-team-${agent.id}`}
+                            value={agent.team_leader_id ?? ""}
+                            onChange={(e) => onAssign?.(agent, e.target.value ? Number(e.target.value) : null)}
+                            disabled={busy || paid || !onAssign}
+                            className="h-10 w-56 max-w-full rounded-lg border border-[#e3d3a8] bg-white px-2.5 text-sm font-semibold text-[#2a1458] outline-none focus:border-[#c9972f] disabled:cursor-not-allowed disabled:bg-[#f7f1e1] disabled:text-[#7a6a4a]"
+                          >
+                            <option value="">ARES admin (no team)</option>
+                            {leaders.map((leader) => (
+                              <option key={leader.id} value={leader.id}>
+                                {leader.team} · {leader.name}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="mt-1 max-w-[14rem] text-xs text-[#7a6a4a]">
+                            {paid
+                              ? "Payment recorded, so this is locked."
+                              : onTeam
+                                ? `${agent.team_leader_name || "Their team leader"} takes the payment.`
+                                : "Pays you directly."}
+                          </p>
+                        </td>
+                      ) : null}
                       <td className="px-3 py-3.5">
                         {agent.attendee_count === 2 ? "Both · 2 people" : agent.attendees ? `${agent.attendees} only` : "1 person"}
                       </td>
-                      <td className="px-3 py-3.5">{agent.polo_shirt_size || "—"}</td>
+                      <td className="px-3 py-3.5">{poloSizesLabel(agent) || "—"}</td>
                       <td className="px-3 py-3.5">
                         {agent.photo_count ? (
                           <div className="space-y-1">
@@ -153,7 +191,7 @@ export default function AdminManagedAgents({
                             paid ? "border-green-200 bg-green-50 text-green-800" : "border-[#e3d3a8] bg-[#fdf3d7] text-[#8a5a00]"
                           }`}
                         >
-                          {paid ? "Fully paid" : "Not paid"}
+                          {!paid ? "Not paid" : agent.payment_status === "verified" ? "Fully paid" : agent.payment_status === "remitted" ? "Sent to admin" : "Paid to team leader"}
                         </span>
                         <p className="mt-1 whitespace-nowrap text-xs tabular-nums text-[#5c4a2a]">
                           {paid
@@ -171,7 +209,7 @@ export default function AdminManagedAgents({
                           <button
                             type="button"
                             onClick={() => onConfirm(agent, !paid)}
-                            disabled={busy || (!paid && fee === null)}
+                            disabled={busy || (!paid && fee === null) || (paid && onTeam && agent.payment_status !== "paid_to_tl")}
                             className={`inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
                               paid
                                 ? "border border-[#e3d3a8] bg-white text-[#6b4a12] hover:bg-[#fdf3d7]"

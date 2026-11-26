@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   const form = await request.formData().catch(() => null)
   if (!form) return fail("Invalid request.")
   const body: Record<string, unknown> = {}
-  for (const key of ["invite", "email", "contact_number", "password", "birth_date", "whatsapp_number", "polo_shirt_size", "attending", "not_attending", "reason"]) {
+  for (const key of ["invite", "email", "contact_number", "password", "birth_date", "whatsapp_number", "polo_shirt_size", "polo_shirt_size_2", "attending", "not_attending", "reason"]) {
     const value = form.get(key)
     if (typeof value === "string") body[key] = value
   }

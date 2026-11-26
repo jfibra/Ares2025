@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { EMAIL_PATTERN, maskContactNumber, resolveAgent } from "@/lib/agent-registration"
 import { getRegistrationFee, getSlotsLeft } from "@/lib/payments"
-import { getTlPaymentDetails } from "@/lib/tl-payment"
+import { getTlPaymentDetails, getLeaderContact } from "@/lib/tl-payment"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -21,15 +21,20 @@ export async function POST(request: Request) {
       // Still waiting to pay: show again where to send the fee. With no team leader on the
       // registration (theirs is not joining), the agent pays the admin.
       const waiting = !result.confirmed
-      const [payment, fee] = waiting
-        ? await Promise.all([getTlPaymentDetails(teamLeaderId ?? "admin").catch(() => null), getRegistrationFee().catch(() => null)])
-        : [null, null]
+      const [payment, fee, leaderContact] = waiting
+        ? await Promise.all([
+            getTlPaymentDetails(teamLeaderId ?? "admin").catch(() => null),
+            getRegistrationFee().catch(() => null),
+            getLeaderContact(teamLeaderId).catch(() => null),
+          ])
+        : [null, null, null]
       // `fee` is the total this registration owes: double when both people on a couple's record are joining.
       return NextResponse.json({
         success: true,
         ...rest,
         admin_managed: teamLeaderId === null,
         payment,
+        leader_contact: leaderContact,
         fee: fee === null ? null : fee * attendeeCount,
         attendee_count: attendeeCount,
         receipt_sent_at: waiting ? receiptAt : null,
