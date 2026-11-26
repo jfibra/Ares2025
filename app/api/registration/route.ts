@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import { EMAIL_PATTERN, resolveAgent } from "@/lib/agent-registration"
 import { getRegistrationFee, getSlotsLeft } from "@/lib/payments"
 import { MAX_PHOTO_BYTES, PHOTO_BUCKET, PHOTO_TYPES } from "@/lib/photo"
-import { resolveAttendance, resolvePartnerPoloSize, validateAgentDetails } from "@/lib/registrations"
+import { resolveAttendance, resolvePartnerBirthDate, resolvePartnerPoloSize, validateAgentDetails } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { getTlPaymentDetails } from "@/lib/tl-payment"
 import type { LeaderContact } from "@/lib/tl-contact"
@@ -27,6 +27,7 @@ export async function POST(request: Request) {
   }
   const body = {
     birth_date: field("birth_date"),
+    birth_date_2: field("birth_date_2"),
     whatsapp_number: field("whatsapp_number"),
     polo_shirt_size: field("polo_shirt_size"),
     polo_shirt_size_2: field("polo_shirt_size_2"),
@@ -62,6 +63,8 @@ export async function POST(request: Request) {
     if (!attendance.ok) return invalid("attending", attendance.message)
     const partnerSize = resolvePartnerPoloSize(attendance.attendee_count, body.polo_shirt_size_2)
     if (!partnerSize.ok) return invalid("polo_shirt_size_2", partnerSize.message)
+    const partnerBirth = resolvePartnerBirthDate(attendance.attendee_count, body.birth_date_2)
+    if (!partnerBirth.ok) return invalid("birth_date_2", partnerBirth.message)
 
     // One clear, formal photo of each person joining.
     if (photos.length !== attendance.attendee_count) {
@@ -110,6 +113,7 @@ export async function POST(request: Request) {
       contact_number: agent.contact_number || null,
       ...checked.details,
       polo_shirt_size_2: partnerSize.polo_shirt_size_2,
+      birth_date_2: partnerBirth.birth_date_2,
       attendee_count: attendance.attendee_count,
       attendees: attendance.attendees,
       photo_paths: photoPaths,

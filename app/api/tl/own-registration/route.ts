@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   const form = await request.formData().catch(() => null)
   if (!form) return NextResponse.json({ success: false, message: "Invalid request." }, { status: 400 })
   const body: Record<string, unknown> = {}
-  for (const key of ["birth_date", "whatsapp_number", "polo_shirt_size", "polo_shirt_size_2", "attending"]) {
+  for (const key of ["birth_date", "birth_date_2", "whatsapp_number", "polo_shirt_size", "polo_shirt_size_2", "attending"]) {
     const value = form.get(key)
     if (typeof value === "string") body[key] = value
   }

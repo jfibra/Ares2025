@@ -75,7 +75,18 @@ const LOGO_URL = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/
 type Role = "admin" | "tl"
 type Tab = "pending" | "confirmed" | "remittances" | "leaders" | "assign" | "declined" | "guests" | "settings" | "payment" | "payadmin"
 type Row = Record<string, unknown> & { id: number }
-type Column = { key: string; label: string; render?: (row: Row) => React.ReactNode }
+type Column = {
+  key: string
+  label: string
+  render?: (row: Row) => React.ReactNode
+  /** In the spreadsheet export only: the table shows this value inside another column's cell. */
+  hidden?: boolean
+  /** Extra classes for the cell. Cells stay on one line unless this allows wrapping. */
+  cell?: string
+}
+// Long text (names, teams, notes) wraps inside a sensible width instead of squeezing the other columns.
+const wrapCell = "whitespace-normal break-words"
+const subText = "mt-0.5 text-xs font-normal text-[#7a6a4a]"
 type Sort = { key: string; direction: "asc" | "desc" }
 type PendingAction =
   | { kind: "registration"; row: Registration }
@@ -89,6 +100,35 @@ type PendingAction =
 // A fixed time zone keeps the server-rendered and browser-rendered text identical.
 const dateFormat = new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila" })
 const formatDate = (value: unknown) => (typeof value === "string" && value ? dateFormat.format(new Date(value)) : "—")
+const dateOnlyFormat = new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeZone: "Asia/Manila" })
+const timeOnlyFormat = new Intl.DateTimeFormat("en-PH", { timeStyle: "short", timeZone: "Asia/Manila" })
+/** A date with its time on a second, quieter line, so the column stays narrow and easy to scan. */
+const DateCell = ({ value }: { value: unknown }) =>
+  typeof value === "string" && value ? (
+    <div>
+      <p className="text-[#2a1a3d]">{dateOnlyFormat.format(new Date(value))}</p>
+      <p className="mt-0.5 text-xs text-[#7a6a4a]">{timeOnlyFormat.format(new Date(value))}</p>
+    </div>
+  ) : (
+    <span className="text-[#a89a7c]">—</span>
+  )
+/** A person: name on top, email underneath. */
+const PersonCell = ({ name, email, badge }: { name: unknown; email: unknown; badge?: React.ReactNode }) => (
+  <div>
+    <p className="font-semibold leading-snug text-[#2a1458]">
+      {String(name)}
+      {badge ? <> {badge}</> : null}
+    </p>
+    {email ? (
+      <a href={`mailto:${email}`} className="mt-0.5 block break-all text-xs text-[#0078b6] hover:underline">
+        {String(email)}
+      </a>
+    ) : null}
+  </div>
+)
+const personCell = `${wrapCell} min-w-[13rem] max-w-[19rem]`
+// The action buttons stay in view while the rest of a wide table scrolls sideways.
+const stickyAction = "sticky right-0 shadow-[-10px_0_14px_-12px_rgba(42,20,88,0.45)]"
 // A birth date is a plain calendar day (YYYY-MM-DD), so it is formatted without a time or zone shift.
 const dayFormat = new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeZone: "UTC" })
 const formatDay = (value: unknown) => (typeof value === "string" && value ? dayFormat.format(new Date(`${value}T00:00:00Z`)) : "—")
@@ -453,56 +493,85 @@ export default function PortalDashboard({
     {
       key: "name",
       label: "Name",
+      cell: personCell,
       render: (r) => (
-        <span className="font-semibold text-[#2a1458]">
-          {String(r.name)}
-          {isLeaderRow(r) ? (
-            <>
-              {" "}
-              <Badge label={isAdmin ? "Team leader" : "You"} className="border-amber-300 bg-amber-50 text-amber-900" />
-            </>
-          ) : null}
-        </span>
+        <PersonCell
+          name={r.name}
+          email={r.email}
+          badge={isLeaderRow(r) ? <Badge label={isAdmin ? "Team leader" : "You"} className="border-amber-300 bg-amber-50 text-amber-900" /> : null}
+        />
       ),
     },
+    { key: "email", label: "Email", hidden: true },
     {
-      key: "email",
-      label: "Email",
+      key: "contact_number",
+      label: "Contact Number",
       render: (r) => (
-        <a href={`mailto:${r.email}`} className="text-[#0078b6] hover:underline">
-          {String(r.email)}
-        </a>
+        <div>
+          <p className="tabular-nums">{r.contact_number ? String(r.contact_number) : dash}</p>
+          {r.whatsapp_number ? <p className={`${subText} tabular-nums`}>WhatsApp {String(r.whatsapp_number)}</p> : null}
+        </div>
       ),
     },
-    { key: "contact_number", label: "Contact Number" },
-    { key: "whatsapp_number", label: "WhatsApp" },
-    { key: "birth_date", label: "Birth Date", render: (r: Row) => formatDay(r.birth_date) },
+    { key: "whatsapp_number", label: "WhatsApp", hidden: true },
+    {
+      key: "birth_date",
+      label: "Birth Date",
+      render: (r: Row) => (
+        <div>
+          <p>{formatDay(r.birth_date)}</p>
+          {r.birth_date_2 ? <p className="mt-0.5">{formatDay(r.birth_date_2)}</p> : null}
+        </div>
+      ),
+    },
     { key: "polo_shirt_size", label: "Polo Size", render: (r: Row) => poloSizesLabel(r as { polo_shirt_size?: unknown; polo_shirt_size_2?: unknown }) || "—" },
     {
       key: "attendee_count",
       label: "Joining",
-      render: (r: Row) =>
-        Number(r.attendee_count) === 2 ? (
-          <Badge label="Both · 2 people" className="border-violet-200 bg-violet-50 text-violet-800" />
-        ) : r.attendees ? (
-          `${String(r.attendees)} only`
-        ) : (
-          "1 person"
-        ),
+      cell: `${wrapCell} min-w-[9rem] max-w-[14rem]`,
+      render: (r: Row) => {
+        const both = Number(r.attendee_count) === 2
+        const names = both ? splitCouple(String(r.attendees ?? "")) : null
+        return (
+          <div>
+            <Badge label={both ? "2 people" : "1 person"} className={both ? "border-violet-200 bg-violet-50 text-violet-800" : "border-[#e3d3a8] bg-[#fdf8ea] text-[#6b4a12]"} />
+            {names ? (
+              names.map((name) => (
+                <p key={name} className={subText}>
+                  {name}
+                </p>
+              ))
+            ) : r.attendees ? (
+              <p className={subText}>{String(r.attendees)} only</p>
+            ) : null}
+          </div>
+        )
+      },
     },
-    { key: "team", label: "Team" },
-    ...(isAdmin ? [{ key: "team_leader_name", label: "Team Leader" }] : []),
-    { key: "registration_date", label: "Registered", render: (r: Row) => formatDate(r.registration_date) },
+    {
+      key: "team",
+      label: "Team",
+      cell: `${wrapCell} min-w-[9rem] max-w-[14rem]`,
+      render: (r: Row) => (
+        <div>
+          <p className="font-medium text-[#2a1a3d]">{r.team ? String(r.team) : dash}</p>
+          {isAdmin && r.team_leader_name ? <p className={subText}>TL: {String(r.team_leader_name)}</p> : null}
+        </div>
+      ),
+    },
+    ...(isAdmin ? [{ key: "team_leader_name", label: "Team Leader", hidden: true }] : []),
+    { key: "registration_date", label: "Registered", render: (r: Row) => <DateCell value={r.registration_date} /> },
     {
       key: "photo_count",
-      label: "Uploaded Photo",
+      label: "Photo",
+      cell: `${wrapCell} max-w-[14rem]`,
       render: (r: Row) => {
         const count = Number(r.photo_count) || 0
         if (!count) return <span className="text-xs text-[#7a6a4a]">No photo</span>
         // Two photos means both people on a couple's record are joining, in the order of their names.
         const names = count === 2 ? splitCouple(String(r.attendees ?? "")) : null
         return (
-          <div className="min-w-[8rem] space-y-1">
+          <div className="min-w-[7rem] space-y-1">
             {Array.from({ length: count }, (_, index) => (
               <a
                 key={index}
@@ -520,7 +589,8 @@ export default function PortalDashboard({
     },
     {
       key: "agent_receipt_at",
-      label: "Agent Receipt",
+      label: "Receipt",
+      cell: `${wrapCell} min-w-[13rem] max-w-[17rem]`,
       render: (r: Row) =>
         r.agent_receipt_at ? (
           <div className="min-w-[10rem]">
@@ -532,7 +602,7 @@ export default function PortalDashboard({
             >
               <Receipt size={15} /> View receipt
             </a>
-            <p className="text-xs text-[#7a6a4a]">Sent {formatDate(r.agent_receipt_at)}</p>
+            <p className="whitespace-nowrap text-xs text-[#7a6a4a]">Sent {formatDate(r.agent_receipt_at)}</p>
             {r.agent_receipt_note ? (
               <p className="mt-1 max-w-xs whitespace-pre-wrap break-words text-xs text-[#4a3413]">“{String(r.agent_receipt_note)}”</p>
             ) : null}
@@ -543,7 +613,7 @@ export default function PortalDashboard({
     },
     ...(tab === "pending"
       ? [
-          { key: "amount_due", label: "To Pay", render: (r: Row) => formatMoney(r.amount_due) },
+          { key: "amount_due", label: "To Pay", render: (r: Row) => <span className="font-semibold tabular-nums text-[#2a1458]">{formatMoney(r.amount_due)}</span> },
           {
             // The 48 hours an agent has to pay. A team leader's own registration is not on the clock.
             key: "time_left",
@@ -561,14 +631,23 @@ export default function PortalDashboard({
       : []),
     ...(tab === "confirmed"
       ? [
-          { key: "amount", label: "Amount", render: (r: Row) => formatMoney(r.amount) },
+          { key: "amount", label: "Amount", render: (r: Row) => <span className="font-semibold tabular-nums text-[#2a1458]">{formatMoney(r.amount)}</span> },
           { key: "payment_status", label: "Payment", render: (r: Row) => <Badge {...paymentBadge[r.payment_status as PaymentStatus]} /> },
         ]
       : []),
   ]
   const remittanceColumns: Column[] = [
-    { key: "submitted_at", label: "Sent", render: (r) => formatDate(r.submitted_at) },
-    ...(isAdmin ? [{ key: "team_leader_name", label: "Team Leader" }] : []),
+    { key: "submitted_at", label: "Sent", render: (r) => <DateCell value={r.submitted_at} /> },
+    ...(isAdmin
+      ? [
+          {
+            key: "team_leader_name",
+            label: "Team Leader",
+            cell: `${wrapCell} min-w-[13rem] max-w-[18rem]`,
+            render: (r: Row) => <span className="font-semibold text-[#2a1458]">{String(r.team_leader_name ?? "—")}</span>,
+          },
+        ]
+      : []),
     {
       key: "agent_count",
       label: "Agents",
@@ -587,12 +666,13 @@ export default function PortalDashboard({
         )
       },
     },
-    { key: "amount", label: "Amount", render: (r) => <span className="font-semibold tabular-nums">{formatMoney(r.amount)}</span> },
+    { key: "amount", label: "Amount", render: (r) => <span className="font-semibold tabular-nums text-[#2a1458]">{formatMoney(r.amount)}</span> },
     { key: "method", label: "Method" },
-    { key: "reference_no", label: "Reference No." },
+    { key: "reference_no", label: "Reference No.", cell: `${wrapCell} max-w-[14rem] break-all tabular-nums` },
     {
       key: "status",
       label: "Status",
+      cell: `${wrapCell} min-w-[10rem]`,
       render: (r) => (
         <div>
           <Badge {...remittanceBadge[r.status as Remittance["status"]]} />
@@ -619,47 +699,34 @@ export default function PortalDashboard({
     },
   ]
   const leaderColumns: Column[] = [
-    { key: "name", label: "Name", render: (l) => <span className="font-semibold text-[#2a1458]">{String(l.name)}</span> },
-    {
-      key: "email",
-      label: "Email",
-      render: (l) => (
-        <a href={`mailto:${l.email}`} className="text-[#0078b6] hover:underline">
-          {String(l.email)}
-        </a>
-      ),
-    },
-    { key: "contact_number", label: "Contact Number" },
-    { key: "team", label: "Team" },
-    { key: "pending_agents", label: "Pending Agents" },
-    { key: "confirmed_agents", label: "Confirmed Agents" },
-    { key: "created_at", label: "Registered", render: (l) => formatDate(l.created_at) },
+    { key: "name", label: "Name", cell: personCell, render: (l) => <PersonCell name={l.name} email={l.email} /> },
+    { key: "email", label: "Email", hidden: true },
+    { key: "contact_number", label: "Contact Number", render: (l) => <span className="tabular-nums">{l.contact_number ? String(l.contact_number) : "—"}</span> },
+    { key: "team", label: "Team", cell: `${wrapCell} min-w-[9rem] max-w-[14rem]`, render: (l) => <span className="font-medium text-[#2a1a3d]">{String(l.team)}</span> },
+    { key: "pending_agents", label: "Pending Agents", cell: "text-right tabular-nums" },
+    { key: "confirmed_agents", label: "Confirmed Agents", cell: "text-right tabular-nums" },
+    { key: "created_at", label: "Registered", render: (l) => <DateCell value={l.created_at} /> },
   ]
 
   const declineColumns: Column[] = [
-    { key: "name", label: "Name", render: (d) => <span className="font-semibold text-[#2a1458]">{String(d.name)}</span> },
-    {
-      key: "email",
-      label: "Email",
-      render: (d) => (
-        <a href={`mailto:${d.email}`} className="text-[#0078b6] hover:underline">
-          {String(d.email)}
-        </a>
-      ),
-    },
-    { key: "team", label: "Team" },
+    { key: "name", label: "Name", cell: personCell, render: (d) => <PersonCell name={d.name} email={d.email} /> },
+    { key: "email", label: "Email", hidden: true },
+    { key: "team", label: "Team", cell: `${wrapCell} min-w-[9rem] max-w-[14rem]`, render: (d) => <span className="font-medium text-[#2a1a3d]">{String(d.team)}</span> },
     {
       key: "reason",
       label: "Reason for not joining",
-      render: (d) => <p className="min-w-[16rem] max-w-md whitespace-pre-wrap break-words">{String(d.reason)}</p>,
+      cell: `${wrapCell} min-w-[18rem] max-w-[28rem]`,
+      render: (d) => <p className="whitespace-pre-wrap leading-relaxed">{String(d.reason)}</p>,
     },
-    { key: "declined_at", label: "Declined", render: (d) => formatDate(d.declined_at) },
+    { key: "declined_at", label: "Declined", render: (d) => <DateCell value={d.declined_at} /> },
   ]
 
   const isLeaderTab = tab === "leaders"
   const isDeclinedTab = tab === "declined"
   const isRemittanceTab = tab === "remittances"
   const columns = isLeaderTab ? leaderColumns : isDeclinedTab ? declineColumns : isRemittanceTab ? remittanceColumns : registrationColumns
+  // The table leaves out the columns that are folded into another cell; the spreadsheet export keeps them all.
+  const shownColumns = columns.filter((column) => !column.hidden)
   const selectable = !isAdmin && tab === "confirmed"
   const source: Row[] = useMemo(() => {
     if (tab === "leaders") {
@@ -711,7 +778,7 @@ export default function PortalDashboard({
       payadmin: "",
     }
     const exportValue = (r: Row, key: string) => {
-      if (key === "birth_date") return r[key] ?? ""
+      if (key === "birth_date") return [r.birth_date, r.birth_date_2].filter(Boolean).join(" / ")
       if (key === "polo_shirt_size") return poloSizesLabel(r as { polo_shirt_size?: unknown; polo_shirt_size_2?: unknown })
       if (key === "time_left") {
         if (isLeaderRow(r)) return ""
@@ -720,6 +787,7 @@ export default function PortalDashboard({
       if (key === "agent_receipt_at") {
         return r[key] ? `Sent ${formatDate(r[key])}${r.agent_receipt_note ? ` - ${r.agent_receipt_note}` : ""}` : "No"
       }
+      if (key === "amount_due" || key === "amount") return r[key] ?? ""
       if (key === "attendee_count") return Number(r[key]) === 2 ? `Both (2 people): ${r.attendees ?? ""}` : r.attendees ? `${r.attendees} only` : "1 person"
       if (/_at$|_date$/.test(key)) return r[key] ? formatDate(r[key]) : ""
       if (key === "payment_status") return paymentBadge[r[key] as PaymentStatus].label
@@ -776,6 +844,103 @@ export default function PortalDashboard({
           { id: "payment" as Tab, label: "Payment details", icon: QrCode },
         ]),
   ]
+
+  /** The buttons for one row: confirm or undo a payment, review a remittance, delete. Used by the table and the phone cards. */
+  const renderActions = (row: Row, busy: boolean) => {
+    const status = row.payment_status as PaymentStatus | undefined
+    return (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {isRemittanceTab ? (
+                                    isAdmin && row.status === "submitted" ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => setPendingAction({ kind: "verify", row: row as unknown as Remittance })}
+                                          disabled={busy}
+                                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#8a6417] bg-gradient-to-r from-[#c9972f] to-[#f3d27a] px-3 text-xs font-bold text-[#2a1408] transition-all hover:brightness-105 disabled:cursor-not-allowed"
+                                        >
+                                          {busy ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Received
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setRejecting(row as unknown as Remittance)}
+                                          disabled={busy}
+                                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#e3d3a8] bg-white px-3 text-xs font-bold text-[#9a1c15] transition-colors hover:bg-[#b3261e]/5 disabled:cursor-not-allowed"
+                                        >
+                                          <X size={14} /> Reject
+                                        </button>
+                                      </>
+                                    ) : (
+                                      dash
+                                    )
+                                  ) : isLeaderTab || isDeclinedTab ? null : status === "unpaid" || status === "paid_to_tl" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmed(row as unknown as Registration, status === "unpaid")}
+                                      disabled={busy || (status === "unpaid" && fee === null)}
+                                      className={`inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+                                        status === "unpaid" ? "w-[150px]" : "w-[84px]"
+                                      } ${
+                                        status === "unpaid"
+                                          ? "border border-[#8a6417] bg-gradient-to-r from-[#c9972f] to-[#f3d27a] text-[#2a1408] hover:brightness-105"
+                                          : "border border-[#e3d3a8] bg-white text-[#6b4a12] hover:bg-[#fdf3d7]"
+                                      }`}
+                                    >
+                                      {busy ? (
+                                        <Loader2 size={14} className="animate-spin" />
+                                      ) : status === "unpaid" ? (
+                                        <>
+                                          <CheckCircle2 size={14} /> {!isAdmin && isLeaderRow(row) ? "I have paid" : "Payment received"}
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Undo2 size={14} /> Undo
+                                        </>
+                                      )}
+                                    </button>
+                                  ) : (
+                                    dash
+                                  )}
+                                  {selectable && status === "paid_to_tl" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        // Send just this agent, without ticking boxes first.
+                                        setSelected(new Set([row.id]))
+                                        setRemitOpen(true)
+                                      }}
+                                      disabled={busy}
+                                      aria-label={`Send ${String(row.name)}'s payment to admin`}
+                                      className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#8a6417] bg-gradient-to-r from-[#c9972f] to-[#f3d27a] px-3 text-xs font-bold text-[#2a1408] transition-all hover:brightness-105 disabled:cursor-not-allowed"
+                                    >
+                                      <Send size={14} /> Send
+                                    </button>
+                                  ) : null}
+                                  {isAdmin && !isRemittanceTab && (isLeaderTab || isDeclinedTab || status === "unpaid" || status === "paid_to_tl") ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setPendingAction(
+                                          isDeclinedTab
+                                            ? { kind: "decline", row: row as unknown as TlDecline }
+                                            : isLeaderTab
+                                            ? { kind: "leader", row: row as unknown as TeamLeader }
+                                            : { kind: "registration", row: row as unknown as Registration },
+                                        )
+                                      }
+                                      disabled={busy}
+                                      aria-label={`Delete ${String(row.name)}`}
+                                      className={iconButton}
+                                    >
+                                      {(isLeaderTab || isDeclinedTab) && busy ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                                    </button>
+                                  ) : null}
+                                </div>
+    )
+  }
+  const rowKind = isLeaderTab ? "leader" : isDeclinedTab ? "decline" : isRemittanceTab ? "remittance" : "registration"
+  // On a phone each row is a card: these values need the card's full width.
+  const wideOnCard = new Set(["agent_receipt_at", "reason", "status", "time_left", "team", "team_leader_name", "reference_no"])
 
   const emptyText: Record<Exclude<Tab, "settings" | "payment" | "payadmin" | "assign" | "guests">, [string, string]> = {
     pending: isAdmin
@@ -842,7 +1007,7 @@ export default function PortalDashboard({
           <div aria-hidden className="absolute inset-0 opacity-[0.13]" style={{ backgroundImage: goldLattice }} />
           <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-80 w-80 rounded-full bg-[#d4a437]/20 blur-[110px]" />
 
-          <div className="relative mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+          <div className="relative mx-auto flex max-w-[1680px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
             <Link href="/" aria-label="ARES 2027 home" className="flex items-center">
               <img src={LOGO_URL} alt="Asian Real Estate Summit" className="h-10 w-auto sm:h-11" />
               <span className="ml-3 border-l border-white/40 pl-3 text-xl font-black leading-none tracking-tight sm:text-2xl">2027</span>
@@ -866,7 +1031,7 @@ export default function PortalDashboard({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="relative mx-auto mt-6 flex max-w-[1400px] items-end gap-5 px-4 sm:px-6"
+            className="relative mx-auto mt-6 flex max-w-[1680px] items-end gap-5 px-4 sm:px-6"
           >
             <Lotus bloom className="hidden h-14 w-24 shrink-0 text-[#f0c24b] sm:block" />
             <div>
@@ -880,7 +1045,7 @@ export default function PortalDashboard({
           </motion.div>
         </header>
 
-        <main className="relative mx-auto -mt-16 max-w-[1400px] px-4 pb-12 sm:px-6">
+        <main className="relative mx-auto -mt-16 max-w-[1680px] px-4 pb-12 sm:px-6">
           {/* Summary cards overlap the header band */}
           <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
             {statCards.map((stat, i) => (
@@ -1175,15 +1340,78 @@ export default function PortalDashboard({
                 </div>
               ) : null}
 
-              <div className="mt-4 overflow-hidden rounded-2xl border border-[#d4a437]/50 bg-white shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)]">
+              {/* Phones: one card per row, so nothing has to be scrolled sideways. */}
+              <div className="mt-4 space-y-3 md:hidden">
+                {visible.length === 0 ? (
+                  <div className="rounded-2xl border border-[#d4a437]/50 bg-white px-5 py-12 text-center">
+                    <Lotus className="mx-auto h-12 w-20 text-[#d4a437]" />
+                    <p className="mt-4 text-base font-semibold text-[#2a1458]">
+                      {source.length === 0 ? emptyText[tab as keyof typeof emptyText][0] : "Nothing matches your search"}
+                    </p>
+                    <p className="mt-1 text-sm text-[#7a6a4a]">
+                      {source.length === 0 ? emptyText[tab as keyof typeof emptyText][1] : "Try a different name, email or team."}
+                    </p>
+                  </div>
+                ) : (
+                  visible.map((row, index) => {
+                    const busy = busyKey === `${rowKind}-${row.id}`
+                    const [first, ...rest] = shownColumns
+                    const remitted = isRemittanceTab ? (agentsByRemittance.get(row.id) ?? []) : []
+                    const cell = (column: Column) => {
+                      const value = row[column.key]
+                      return column.render ? column.render(row) : value === null || value === "" ? dash : String(value)
+                    }
+                    return (
+                      <article
+                        key={`${tab}-card-${row.id}`}
+                        className={`rounded-2xl border border-[#d4a437]/50 bg-white p-4 text-sm text-[#2a1a3d] shadow-[0_18px_40px_-30px_rgba(58,13,42,0.5)] ${busy ? "opacity-55" : ""}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          {selectable && row.payment_status === "paid_to_tl" ? (
+                            <input
+                              type="checkbox"
+                              checked={selected.has(row.id)}
+                              onChange={() => toggleSelected(row.id)}
+                              aria-label={`Select ${String(row.name)} to send to admin`}
+                              className="mt-0.5 h-6 w-6 shrink-0 cursor-pointer rounded accent-[#2a1458]"
+                            />
+                          ) : (
+                            <span className="mt-0.5 grid h-6 min-w-6 shrink-0 place-items-center rounded-full bg-[#f1e6c8] px-1.5 text-xs font-semibold tabular-nums text-[#6b4a12]">
+                              {index + 1}
+                            </span>
+                          )}
+                          <div className="min-w-0 flex-1 break-words text-base">{cell(first)}</div>
+                        </div>
+                        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-[#f1e6c8] pt-4">
+                          {rest.map((column) => (
+                            <div key={column.key} className={`min-w-0 break-words ${wideOnCard.has(column.key) ? "col-span-2" : ""}`}>
+                              <dt className="text-[11px] font-semibold uppercase tracking-wider text-[#8a7a58]">{column.label}</dt>
+                              <dd className="mt-1">{cell(column)}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                        {isRemittanceTab && expanded === row.id && remitted.length > 0 ? (
+                          <p className="mt-3 rounded-xl bg-[#fdf8ea] px-3 py-2.5 leading-relaxed text-[#4a3413]">
+                            <span className="font-semibold">Agents in this remittance:</span>{" "}
+                            {remitted.map((agent) => `${agent.name} (${formatMoney(agent.amount)})`).join(", ")}
+                          </p>
+                        ) : null}
+                        <div className="mt-4 border-t border-[#f1e6c8] pt-3 empty:hidden">{renderActions(row, busy)}</div>
+                      </article>
+                    )
+                  })
+                )}
+              </div>
+
+              <div className="mt-4 hidden overflow-hidden rounded-2xl border border-[#d4a437]/50 bg-white shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)] md:block">
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[980px] border-collapse text-sm">
+                  <table className="w-full border-collapse text-sm text-[#2a1a3d]">
                     <thead>
                       <tr className="bg-gradient-to-r from-[#2a1458] to-[#1a0d3d] text-left text-[#fbe7a1]">
-                        <th scope="col" className="w-12 px-4 py-3.5 text-right font-semibold text-[#f3d27a]/70">
+                        <th scope="col" className="w-12 px-4 py-3 text-right text-xs font-semibold text-[#f3d27a]/70">
                           {selectable ? <span className="sr-only">Select</span> : "#"}
                         </th>
-                        {columns.map((column) => {
+                        {shownColumns.map((column) => {
                           const active = sort.key === column.key
                           const Icon = !active ? ArrowUpDown : sort.direction === "asc" ? ArrowUp : ArrowDown
                           return (
@@ -1191,12 +1419,12 @@ export default function PortalDashboard({
                               key={column.key}
                               scope="col"
                               aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
-                              className="px-3 py-3.5 font-semibold"
+                              className="px-4 py-3 text-xs font-semibold uppercase tracking-wider"
                             >
                               <button
                                 type="button"
                                 onClick={() => toggleSort(column.key)}
-                                className={`inline-flex w-full items-center justify-between gap-2 whitespace-nowrap transition-colors hover:text-white ${
+                                className={`inline-flex items-center gap-1.5 whitespace-nowrap uppercase tracking-wider transition-colors hover:text-white ${
                                   active ? "text-white" : ""
                                 }`}
                               >
@@ -1206,7 +1434,7 @@ export default function PortalDashboard({
                             </th>
                           )
                         })}
-                        <th scope="col" className="px-3 py-3.5 font-semibold">
+                        <th scope="col" className={`${stickyAction} bg-[#1a0d3d] px-4 py-3 text-xs font-semibold uppercase tracking-wider`}>
                           Action
                         </th>
                       </tr>
@@ -1214,7 +1442,7 @@ export default function PortalDashboard({
                     <tbody>
                       {visible.length === 0 ? (
                         <tr>
-                          <td colSpan={columns.length + 2} className="px-3 py-16 text-center">
+                          <td colSpan={shownColumns.length + 2} className="px-3 py-16 text-center">
                             <Lotus className="mx-auto h-12 w-20 text-[#d4a437]" />
                             <p className="mt-4 text-base font-semibold text-[#2a1458]">
                               {source.length === 0 ? emptyText[tab as keyof typeof emptyText][0] : "Nothing matches your search"}
@@ -1235,9 +1463,9 @@ export default function PortalDashboard({
                               initial={{ opacity: 0, y: 8 }}
                               animate={{ opacity: busy ? 0.55 : 1, y: 0 }}
                               transition={{ duration: 0.35, delay: Math.min(index, 12) * 0.03 }}
-                              className="border-b border-[#f1e6c8] transition-colors last:border-0 odd:bg-white even:bg-[#fdfaf1] hover:bg-[#fdf3d7]"
+                              className="border-b border-[#f1e6c8] align-top transition-colors last:border-0 odd:bg-white even:bg-[#fdfaf1] hover:bg-[#fdf3d7]"
                             >
-                              <td className="px-4 py-3.5 text-right tabular-nums text-[#a89a7c]">
+                              <td className="px-4 py-4 text-right tabular-nums text-[#a89a7c]">
                                 {selectable ? (
                                   status === "paid_to_tl" ? (
                                     <input
@@ -1252,108 +1480,22 @@ export default function PortalDashboard({
                                   index + 1
                                 )}
                               </td>
-                              {columns.map((column) => {
+                              {shownColumns.map((column) => {
                                 const value = row[column.key]
                                 return (
-                                  <td key={column.key} className="px-3 py-3.5">
+                                  <td key={column.key} className={`px-4 py-4 ${column.cell ?? "whitespace-nowrap"}`}>
                                     {column.render ? column.render(row) : value === null || value === "" ? dash : String(value)}
                                   </td>
                                 )
                               })}
-                              <td className="px-3 py-3.5">
-                                <div className="flex items-center gap-2">
-                                  {isRemittanceTab ? (
-                                    isAdmin && row.status === "submitted" ? (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={() => setPendingAction({ kind: "verify", row: row as unknown as Remittance })}
-                                          disabled={busy}
-                                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#8a6417] bg-gradient-to-r from-[#c9972f] to-[#f3d27a] px-3 text-xs font-bold text-[#2a1408] transition-all hover:brightness-105 disabled:cursor-not-allowed"
-                                        >
-                                          {busy ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Received
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => setRejecting(row as unknown as Remittance)}
-                                          disabled={busy}
-                                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#e3d3a8] bg-white px-3 text-xs font-bold text-[#9a1c15] transition-colors hover:bg-[#b3261e]/5 disabled:cursor-not-allowed"
-                                        >
-                                          <X size={14} /> Reject
-                                        </button>
-                                      </>
-                                    ) : (
-                                      dash
-                                    )
-                                  ) : isLeaderTab || isDeclinedTab ? null : status === "unpaid" || status === "paid_to_tl" ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => setConfirmed(row as unknown as Registration, status === "unpaid")}
-                                      disabled={busy || (status === "unpaid" && fee === null)}
-                                      className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
-                                        status === "unpaid" ? "w-[150px]" : "w-[84px]"
-                                      } ${
-                                        status === "unpaid"
-                                          ? "border border-[#8a6417] bg-gradient-to-r from-[#c9972f] to-[#f3d27a] text-[#2a1408] hover:brightness-105"
-                                          : "border border-[#e3d3a8] bg-white text-[#6b4a12] hover:bg-[#fdf3d7]"
-                                      }`}
-                                    >
-                                      {busy ? (
-                                        <Loader2 size={14} className="animate-spin" />
-                                      ) : status === "unpaid" ? (
-                                        <>
-                                          <CheckCircle2 size={14} /> {!isAdmin && isLeaderRow(row) ? "I have paid" : "Payment received"}
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Undo2 size={14} /> Undo
-                                        </>
-                                      )}
-                                    </button>
-                                  ) : (
-                                    dash
-                                  )}
-                                  {selectable && status === "paid_to_tl" ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        // Send just this agent, without ticking boxes first.
-                                        setSelected(new Set([row.id]))
-                                        setRemitOpen(true)
-                                      }}
-                                      disabled={busy}
-                                      aria-label={`Send ${String(row.name)}'s payment to admin`}
-                                      className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#8a6417] bg-gradient-to-r from-[#c9972f] to-[#f3d27a] px-3 text-xs font-bold text-[#2a1408] transition-all hover:brightness-105 disabled:cursor-not-allowed"
-                                    >
-                                      <Send size={14} /> Send
-                                    </button>
-                                  ) : null}
-                                  {isAdmin && !isRemittanceTab && (isLeaderTab || isDeclinedTab || status === "unpaid" || status === "paid_to_tl") ? (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setPendingAction(
-                                          isDeclinedTab
-                                            ? { kind: "decline", row: row as unknown as TlDecline }
-                                            : isLeaderTab
-                                            ? { kind: "leader", row: row as unknown as TeamLeader }
-                                            : { kind: "registration", row: row as unknown as Registration },
-                                        )
-                                      }
-                                      disabled={busy}
-                                      aria-label={`Delete ${String(row.name)}`}
-                                      className={iconButton}
-                                    >
-                                      {(isLeaderTab || isDeclinedTab) && busy ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
-                                    </button>
-                                  ) : null}
-                                </div>
+                              <td className={`${stickyAction} whitespace-nowrap bg-inherit px-4 py-3.5`}>
+                                {renderActions(row, busy)}
                               </td>
                             </motion.tr>
                             {isRemittanceTab && expanded === row.id && remitted.length > 0 ? (
                               <tr className="border-b border-[#f1e6c8] bg-[#fdf8ea]">
                                 <td />
-                                <td colSpan={columns.length + 1} className="px-3 py-3 text-sm text-[#4a3413]">
+                                <td colSpan={shownColumns.length + 1} className="px-4 py-3 text-sm leading-relaxed text-[#4a3413]">
                                   <span className="font-semibold">Agents in this remittance:</span>{" "}
                                   {remitted.map((agent) => `${agent.name} (${formatMoney(agent.amount)})`).join(", ")}
                                 </td>

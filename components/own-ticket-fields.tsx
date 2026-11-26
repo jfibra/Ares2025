@@ -5,14 +5,14 @@ import { useState } from "react"
 import { CalendarDays, Loader2, MessageCircle, Shirt, Ticket, TriangleAlert, Users } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { FormalPhotos, noPhotos, photosProblem, photosToSend, type PhotoPair } from "@/components/photo-field"
-import { POLO_SHIRT_SIZES, resolvePartnerPoloSize, splitCouple, validateAgentDetails, type Attending } from "@/lib/registrations"
+import { POLO_SHIRT_SIZES, resolvePartnerBirthDate, resolvePartnerPoloSize, splitCouple, validateAgentDetails, type Attending } from "@/lib/registrations"
 
 // What a team leader fills in for their own ticket: who is joining (when their record is a
 // couple), the same three details an agent gives, and a formal photo of each person joining. Used when they register and, for a team
 // leader who has no registration yet, in their portal.
 
-export type OwnTicketForm = { attending: Attending | ""; birth_date: string; whatsapp_number: string; polo_shirt_size: string; polo_shirt_size_2: string }
-export const emptyOwnTicket: OwnTicketForm = { attending: "", birth_date: "", whatsapp_number: "", polo_shirt_size: "", polo_shirt_size_2: "" }
+export type OwnTicketForm = { attending: Attending | ""; birth_date: string; birth_date_2: string; whatsapp_number: string; polo_shirt_size: string; polo_shirt_size_2: string }
+export const emptyOwnTicket: OwnTicketForm = { attending: "", birth_date: "", birth_date_2: "", whatsapp_number: "", polo_shirt_size: "", polo_shirt_size_2: "" }
 
 const inputClass =
   "h-12 rounded-xl border-[#e3d3a8] bg-white pl-11 pr-4 text-base text-[#2a1a3d] placeholder:text-[#a89a7c] transition-all duration-300 focus:border-[#c9972f] focus:shadow-[0_0_0_4px_rgba(212,164,55,0.18)] focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -31,7 +31,10 @@ export function ownTicketDetailsProblem(name: string, form: OwnTicketForm): stri
   if (splitCouple(name) && !form.attending) return "Please tell us who is joining."
   const checked = validateAgentDetails(form)
   if (!checked.ok) return checked.message
-  const partnerSize = resolvePartnerPoloSize(form.attending === "both" ? 2 : 1, form.polo_shirt_size_2)
+  const people = form.attending === "both" ? 2 : 1
+  const partnerBirth = resolvePartnerBirthDate(people, form.birth_date_2)
+  if (!partnerBirth.ok) return partnerBirth.message
+  const partnerSize = resolvePartnerPoloSize(people, form.polo_shirt_size_2)
   return partnerSize.ok ? null : partnerSize.message
 }
 
@@ -40,7 +43,10 @@ export function appendOwnTicket(body: FormData, name: string, form: OwnTicketFor
   body.set("birth_date", form.birth_date)
   body.set("whatsapp_number", form.whatsapp_number)
   body.set("polo_shirt_size", form.polo_shirt_size)
-  if (form.attending === "both") body.set("polo_shirt_size_2", form.polo_shirt_size_2)
+  if (form.attending === "both") {
+    body.set("polo_shirt_size_2", form.polo_shirt_size_2)
+    body.set("birth_date_2", form.birth_date_2)
+  }
   if (form.attending) body.set("attending", form.attending)
   photosToSend(name, form.attending, photos).forEach((photo) => body.append("photo", photo))
   return body
@@ -90,7 +96,7 @@ export function OwnTicketFields({
               id={`${idPrefix}-attending`}
               name="attending"
               value={value.attending}
-              onChange={(e) => onChange({ ...value, attending: e.target.value as Attending, polo_shirt_size_2: "" })}
+              onChange={(e) => onChange({ ...value, attending: e.target.value as Attending, polo_shirt_size_2: "", birth_date_2: "" })}
               required
               className={`${inputClass} w-full border outline-none ${value.attending ? "font-bold text-[#2a1458]" : "text-[#a89a7c]"}`}
             >
@@ -122,14 +128,25 @@ export function OwnTicketFields({
       <div className="grid items-end gap-5 sm:grid-cols-2">
         <div>
           <label htmlFor={`${idPrefix}-birth-date`} className={labelClass}>
-            Birth date
+            {both && couple ? `Birth date of ${couple[0]}` : "Birth date"}
           </label>
           <div className="relative">
             <CalendarDays size={18} className={fieldIconClass} />
             <Input id={`${idPrefix}-birth-date`} type="date" name="birth_date" autoComplete="bday" min="1900-01-01" max={today} value={value.birth_date} onChange={set} required className={inputClass} />
           </div>
         </div>
-        <div>
+        {both && couple ? (
+          <div>
+            <label htmlFor={`${idPrefix}-birth-date-2`} className={labelClass}>
+              Birth date of {couple[1]}
+            </label>
+            <div className="relative">
+              <CalendarDays size={18} className={fieldIconClass} />
+              <Input id={`${idPrefix}-birth-date-2`} type="date" name="birth_date_2" min="1900-01-01" max={today} value={value.birth_date_2} onChange={set} required className={inputClass} />
+            </div>
+          </div>
+        ) : null}
+        <div className={both ? "sm:col-span-2" : undefined}>
           <label htmlFor={`${idPrefix}-whatsapp`} className={labelClass}>
             WhatsApp number
           </label>

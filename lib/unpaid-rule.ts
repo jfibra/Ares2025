@@ -6,7 +6,7 @@ export const UNPAID_HOURS = 48
 
 // The rule counts from this moment for anyone who registered before it, so nobody is removed
 // for time that passed before the rule existed.
-export const UNPAID_RULE_STARTS_AT = "2026-11-27T12:00:00+08:00" // Nov 27, 2026, 12:00 noon Philippine time
+export const UNPAID_RULE_STARTS_AT = "2026-11-30T08:00:00+08:00" // Nov 30, 2026, 8:00 AM Philippine time, when registration opens
 
 /** When an unpaid registration made at `registrationDate` is removed, in milliseconds. */
 export function paymentDeadlineMs(registrationDate: string): number {

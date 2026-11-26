@@ -46,6 +46,7 @@ import {
   splitCouple,
   validateAgentDetails,
   resolvePartnerPoloSize,
+  resolvePartnerBirthDate,
   type Attending,
   type TlPaymentDetails,
 } from "@/lib/registrations"
@@ -96,7 +97,7 @@ const steps = [
 
 type Agent = { name: string; email: string; contact_number: string; team: string; team_leader: string }
 type Stage = "email" | "confirm" | "done"
-const emptyDetails = { birth_date: "", whatsapp_number: "", polo_shirt_size: "", polo_shirt_size_2: "" }
+const emptyDetails = { birth_date: "", birth_date_2: "", whatsapp_number: "", polo_shirt_size: "", polo_shirt_size_2: "" }
 type Notice = { tone: "info" | "warning"; title: string; text: string }
 
 /** How to reach the team leader about the payment: their Facebook and contact number. Nothing when neither is known. */
@@ -524,6 +525,11 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
       setNotice({ tone: "warning", title: "Please check your details", text: "Please tell us who is joining." })
       return
     }
+    const partnerBirth = resolvePartnerBirthDate(couple && attending === "both" ? 2 : 1, form.birth_date_2)
+    if (!partnerBirth.ok) {
+      setNotice({ tone: "warning", title: "Please check your details", text: partnerBirth.message })
+      return
+    }
     // Two people joining means two shirts.
     const partnerSize = resolvePartnerPoloSize(couple && attending === "both" ? 2 : 1, form.polo_shirt_size_2)
     if (!partnerSize.ok) {
@@ -546,6 +552,7 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
     Object.entries(checked.details).forEach(([key, value]) => body.set(key, value))
     if (attending) body.set("attending", attending)
     if (partnerSize.polo_shirt_size_2) body.set("polo_shirt_size_2", partnerSize.polo_shirt_size_2)
+    if (partnerBirth.birth_date_2) body.set("birth_date_2", partnerBirth.birth_date_2)
     photoSlots.forEach((slot) => body.append("photo", photos[slot.index] as File))
     setBusy(true)
     setNotice(null)
@@ -1001,7 +1008,7 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                                 value={attending}
                                 onChange={(e) => {
                                   setAttending(e.target.value as Attending)
-                                  setForm((current) => ({ ...current, polo_shirt_size_2: "" }))
+                                  setForm((current) => ({ ...current, polo_shirt_size_2: "", birth_date_2: "" }))
                                 }}
                                 required
                                 className={`${inputClass} w-full border pl-11 outline-none ${attending ? "font-bold text-[#2a1458]" : "text-[#a89a7c]"}`}
@@ -1033,7 +1040,8 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                           <div className="mt-4 grid items-end gap-5 sm:grid-cols-2">
                             <div>
                               <label htmlFor="reg-birth-date" className={labelClass}>
-                                Birth date <span className="text-[#b3261e]">*</span>
+                                {couple && attending === "both" ? `Birth date of ${couple[0]}` : "Birth date"}{" "}
+                                <span className="text-[#b3261e]">*</span>
                               </label>
                               <div className="relative">
                                 <CalendarDays size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#b8862b]" />
@@ -1051,7 +1059,28 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                                 />
                               </div>
                             </div>
-                            <div>
+                            {couple && attending === "both" ? (
+                              <div>
+                                <label htmlFor="reg-birth-date-2" className={labelClass}>
+                                  Birth date of {couple[1]} <span className="text-[#b3261e]">*</span>
+                                </label>
+                                <div className="relative">
+                                  <CalendarDays size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#b8862b]" />
+                                  <Input
+                                    id="reg-birth-date-2"
+                                    type="date"
+                                    name="birth_date_2"
+                                    min="1900-01-01"
+                                    max={today}
+                                    value={form.birth_date_2}
+                                    onChange={updateForm}
+                                    required
+                                    className={`${inputClass} pl-11`}
+                                  />
+                                </div>
+                              </div>
+                            ) : null}
+                            <div className={couple && attending === "both" ? "sm:col-span-2" : undefined}>
                               <label htmlFor="reg-whatsapp" className={labelClass}>
                                 WhatsApp number <span className="text-[#b3261e]">*</span>
                               </label>

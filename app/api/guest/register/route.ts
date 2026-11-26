@@ -4,7 +4,7 @@ import { isValidGuestInvite } from "@/lib/guest-invite"
 import { GUEST_TEAM, resolveGuest } from "@/lib/guest-registration"
 import { getRegistrationFee, getSlotsLeft } from "@/lib/payments"
 import { photosIn, photosProblem, removePhotos, storePhotos } from "@/lib/photo-store"
-import { resolveAttendance, resolvePartnerPoloSize, validateAgentDetails } from "@/lib/registrations"
+import { resolveAttendance, resolvePartnerBirthDate, resolvePartnerPoloSize, validateAgentDetails } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { getTlPaymentDetails } from "@/lib/tl-payment"
 
@@ -57,6 +57,8 @@ export async function POST(request: Request) {
     if (!attendance.ok) return fail(attendance.message, 400, "attending")
     const partnerSize = resolvePartnerPoloSize(attendance.attendee_count, field("polo_shirt_size_2"))
     if (!partnerSize.ok) return fail(partnerSize.message, 400, "polo_shirt_size_2")
+    const partnerBirth = resolvePartnerBirthDate(attendance.attendee_count, field("birth_date_2"))
+    if (!partnerBirth.ok) return fail(partnerBirth.message, 400, "birth_date_2")
     const photoProblem = photosProblem(photos, attendance.attendee_count)
     if (photoProblem) return fail(photoProblem, 400, "photo")
 
@@ -73,6 +75,7 @@ export async function POST(request: Request) {
       contact_number: contactNumber,
       ...details.details,
       polo_shirt_size_2: partnerSize.polo_shirt_size_2,
+      birth_date_2: partnerBirth.birth_date_2,
       attendee_count: attendance.attendee_count,
       attendees: attendance.attendees,
       photo_paths: photoPaths,

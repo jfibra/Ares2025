@@ -9,7 +9,11 @@ import { isOnPaymentClock } from "@/lib/unpaid-rule"
 // register, pay the admin directly, and only the admin can confirm their payment.
 
 const dateFormat = new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila" })
+const dayFormat = new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeZone: "Asia/Manila" })
+const timeFormat = new Intl.DateTimeFormat("en-PH", { timeStyle: "short", timeZone: "Asia/Manila" })
 const moneyFormat = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" })
+// The action buttons stay in view while the rest of a wide table scrolls sideways.
+const stickyAction = "lg:sticky lg:right-0 lg:shadow-[-10px_0_14px_-12px_rgba(42,20,88,0.45)]"
 const linkClass = "flex items-center gap-1.5 font-semibold text-[#0078b6] hover:underline"
 
 const COPY = {
@@ -78,12 +82,16 @@ export default function AdminManagedAgents({
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className={`w-full ${copy.handler ? "min-w-[1320px]" : "min-w-[1100px]"} border-collapse text-sm`}>
+            <table className="w-full border-collapse text-sm text-[#2a1a3d]">
               <thead>
                 <tr className="bg-gradient-to-r from-[#2a1458] to-[#1a0d3d] text-left text-[#fbe7a1]">
                   {["#", "Name", "Contact", "Team", copy.column, ...(copy.handler ? [copy.handler] : []), "Joining", "Polo", "Photo", "Receipt", "Registered", "Payment", ""].map(
                     (heading) => (
-                      <th key={heading} scope="col" className="whitespace-nowrap px-3 py-3.5 font-semibold">
+                      <th
+                        key={heading}
+                        scope="col"
+                        className={`whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider ${heading ? "" : `${stickyAction} bg-[#1a0d3d]`}`}
+                      >
                         {heading || <span className="sr-only">Actions</span>}
                       </th>
                     ),
@@ -99,19 +107,19 @@ export default function AdminManagedAgents({
                   const names = agent.photo_count === 2 ? splitCouple(agent.attendees ?? "") : null
                   return (
                     <tr key={agent.id} className={`border-t border-[#f1e6c8] align-top odd:bg-white even:bg-[#fdfaf1] ${busy ? "opacity-55" : ""}`}>
-                      <td className="px-3 py-3.5 tabular-nums text-[#a89a7c]">{index + 1}</td>
-                      <td className="px-3 py-3.5">
-                        <p className="font-semibold text-[#2a1458]">{agent.name}</p>
-                        <a href={`mailto:${agent.email}`} className="break-all text-[#0078b6] hover:underline">
+                      <td className="px-4 py-4 text-right tabular-nums text-[#a89a7c]">{index + 1}</td>
+                      <td className="min-w-[13rem] max-w-[19rem] break-words px-4 py-4">
+                        <p className="font-semibold leading-snug text-[#2a1458]">{agent.name}</p>
+                        <a href={`mailto:${agent.email}`} className="mt-0.5 block break-all text-xs text-[#0078b6] hover:underline">
                           {agent.email}
                         </a>
                       </td>
-                      <td className="px-3 py-3.5">
+                      <td className="whitespace-nowrap px-4 py-4 tabular-nums">
                         <p>{agent.contact_number || "—"}</p>
-                        {agent.whatsapp_number ? <p className="text-xs text-[#7a6a4a]">WhatsApp {agent.whatsapp_number}</p> : null}
+                        {agent.whatsapp_number ? <p className="mt-0.5 text-xs text-[#7a6a4a]">WhatsApp {agent.whatsapp_number}</p> : null}
                       </td>
-                      <td className="px-3 py-3.5">{agent.team}</td>
-                      <td className="px-3 py-3.5">
+                      <td className="min-w-[10rem] max-w-[15rem] break-words px-4 py-4 font-medium">{agent.team}</td>
+                      <td className="px-4 py-4">
                         {variant !== "guests" ? (
                           agent.team_leader_name || "—"
                         ) : (
@@ -125,7 +133,7 @@ export default function AdminManagedAgents({
                         )}
                       </td>
                       {copy.handler ? (
-                        <td className="px-3 py-3.5">
+                        <td className="px-4 py-4">
                           <label htmlFor={`guest-team-${agent.id}`} className="sr-only">
                             Who handles {agent.name}
                           </label>
@@ -152,11 +160,26 @@ export default function AdminManagedAgents({
                           </p>
                         </td>
                       ) : null}
-                      <td className="px-3 py-3.5">
-                        {agent.attendee_count === 2 ? "Both · 2 people" : agent.attendees ? `${agent.attendees} only` : "1 person"}
+                      <td className="min-w-[10rem] max-w-[15rem] break-words px-4 py-4">
+                        <span
+                          className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                            agent.attendee_count === 2 ? "border-violet-200 bg-violet-50 text-violet-800" : "border-[#e3d3a8] bg-[#fdf8ea] text-[#6b4a12]"
+                          }`}
+                        >
+                          {agent.attendee_count === 2 ? "2 people" : "1 person"}
+                        </span>
+                        {agent.attendee_count === 2
+                          ? (splitCouple(agent.attendees ?? "") ?? []).map((name) => (
+                              <p key={name} className="mt-0.5 text-xs text-[#7a6a4a]">
+                                {name}
+                              </p>
+                            ))
+                          : agent.attendees
+                            ? <p className="mt-0.5 text-xs text-[#7a6a4a]">{agent.attendees} only</p>
+                            : null}
                       </td>
-                      <td className="px-3 py-3.5">{poloSizesLabel(agent) || "—"}</td>
-                      <td className="px-3 py-3.5">
+                      <td className="whitespace-nowrap px-4 py-4">{poloSizesLabel(agent) || "—"}</td>
+                      <td className="px-4 py-4">
                         {agent.photo_count ? (
                           <div className="space-y-1">
                             {Array.from({ length: agent.photo_count }, (_, n) => (
@@ -166,26 +189,29 @@ export default function AdminManagedAgents({
                             ))}
                           </div>
                         ) : (
-                          <span className="text-xs text-[#7a6a4a]">No photo</span>
+                          <span className="whitespace-nowrap text-xs text-[#7a6a4a]">No photo</span>
                         )}
                       </td>
-                      <td className="px-3 py-3.5">
+                      <td className="px-4 py-4">
                         {agent.agent_receipt_at ? (
-                          <div className="min-w-[9rem]">
+                          <div className="min-w-[13rem] max-w-[17rem]">
                             <a href={`/api/registrations/${agent.id}/receipt`} target="_blank" rel="noopener noreferrer" className={linkClass}>
                               <Receipt size={15} className="shrink-0" /> View receipt
                             </a>
-                            <p className="text-xs text-[#7a6a4a]">Sent {dateFormat.format(new Date(agent.agent_receipt_at))}</p>
+                            <p className="whitespace-nowrap text-xs text-[#7a6a4a]">Sent {dateFormat.format(new Date(agent.agent_receipt_at))}</p>
                             {agent.agent_receipt_note ? (
                               <p className="mt-1 max-w-xs whitespace-pre-wrap break-words text-xs text-[#4a3413]">“{agent.agent_receipt_note}”</p>
                             ) : null}
                           </div>
                         ) : (
-                          <span className="text-xs text-[#7a6a4a]">Not sent yet</span>
+                          <span className="whitespace-nowrap text-xs text-[#7a6a4a]">Not sent yet</span>
                         )}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3.5">{dateFormat.format(new Date(agent.registration_date))}</td>
-                      <td className="px-3 py-3.5">
+                      <td className="whitespace-nowrap px-4 py-4">
+                        <p>{dayFormat.format(new Date(agent.registration_date))}</p>
+                        <p className="mt-0.5 text-xs text-[#7a6a4a]">{timeFormat.format(new Date(agent.registration_date))}</p>
+                      </td>
+                      <td className="px-4 py-4">
                         <span
                           className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${
                             paid ? "border-green-200 bg-green-50 text-green-800" : "border-[#e3d3a8] bg-[#fdf3d7] text-[#8a5a00]"
@@ -204,7 +230,7 @@ export default function AdminManagedAgents({
                           </div>
                         ) : null}
                       </td>
-                      <td className="px-3 py-3.5">
+                      <td className={`${stickyAction} bg-inherit px-4 py-4`}>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"

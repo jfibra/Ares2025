@@ -6,6 +6,8 @@ export type Registration = {
   email: string
   contact_number: string | null
   birth_date: string | null
+  /** The second person's birth date, when both people on a couple's record are joining. */
+  birth_date_2: string | null
   whatsapp_number: string | null
   polo_shirt_size: string | null
   /** The second person's size, when both people on a couple's record are joining. */
@@ -33,7 +35,7 @@ export type Registration = {
 }
 
 export const REGISTRATION_COLUMNS =
-  "id,name,email,contact_number,birth_date,whatsapp_number,polo_shirt_size,polo_shirt_size_2,attendee_count,attendees,team,team_leader_id,team_leader_name,guest_type,confirmed_by_tl,confirmed_at,payment_status,amount,remittance_id,agent_receipt_at,agent_receipt_note,photo_count,registration_date"
+  "id,name,email,contact_number,birth_date,birth_date_2,whatsapp_number,polo_shirt_size,polo_shirt_size_2,attendee_count,attendees,team,team_leader_id,team_leader_name,guest_type,confirmed_by_tl,confirmed_at,payment_status,amount,remittance_id,agent_receipt_at,agent_receipt_note,photo_count,registration_date"
 
 export type TeamLeader = {
   id: number
@@ -147,6 +149,25 @@ export function resolvePartnerPoloSize(
     return { ok: false, message: "Please choose a polo shirt size for each of you." }
   }
   return { ok: true, polo_shirt_size_2: size }
+}
+
+/**
+ * The second person's birth date. Needed only when both people on a couple's record are joining;
+ * otherwise nothing is kept.
+ */
+export function resolvePartnerBirthDate(
+  attendeeCount: number,
+  value: unknown,
+): { ok: true; birth_date_2: string | null } | { ok: false; message: string } {
+  if (attendeeCount !== 2) return { ok: true, birth_date_2: null }
+  const birthDate = typeof value === "string" ? value.trim() : ""
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(birthDate) ? new Date(`${birthDate}T00:00:00Z`) : null
+  const realDate = parsed && !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === birthDate
+  if (!realDate) return { ok: false, message: "Please enter a birth date for each of you." }
+  if (birthDate < "1900-01-01" || parsed.getTime() > Date.now()) {
+    return { ok: false, message: "Please enter a valid birth date for each of you." }
+  }
+  return { ok: true, birth_date_2: birthDate }
 }
 
 /** "M", or "M / L" when a couple are both joining. */
