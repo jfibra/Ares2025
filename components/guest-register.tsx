@@ -182,7 +182,7 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
     <MotionConfig reducedMotion="user">
       <main className="grid min-h-screen font-sans lg:grid-cols-2">
         {/* Brand panel */}
-        <section className="relative flex flex-col overflow-hidden bg-[#120a2e] px-6 py-8 text-white sm:px-10 lg:min-h-screen lg:py-10">
+        <section className="relative flex flex-col overflow-hidden bg-[#120a2e] px-6 py-8 text-white sm:px-10 lg:sticky lg:top-0 lg:h-screen lg:self-start lg:py-10">
           <img src="/bangkok.png" alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
           <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-[#2a1458]/95 via-[#1a0d3d]/85 to-[#3a0d2a]/90" />
           <div aria-hidden className="absolute inset-0 opacity-[0.14]" style={{ backgroundImage: goldLattice }} />
