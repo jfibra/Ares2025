@@ -7,6 +7,7 @@ import { resolveAttendance, resolvePartnerBirthDate, resolvePartnerPoloSize, val
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { getTlPaymentDetails } from "@/lib/tl-payment"
 import type { LeaderContact } from "@/lib/tl-contact"
+import { getAdminPaymentFor } from "@/lib/admin-team"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -132,10 +133,13 @@ export async function POST(request: Request) {
       }
       throw error
     }
-    const [fee, payment] = await Promise.all([
+    const [fee, paid] = await Promise.all([
       getRegistrationFee().catch(() => null),
-      getTlPaymentDetails(teamLeader?.id ?? "admin").catch(() => null),
+      teamLeader
+        ? getTlPaymentDetails(teamLeader.id).then((payment) => ({ payment, payee: null, contact: null }), () => null)
+        : getAdminPaymentFor(agent.team),
     ])
+    const payment = paid?.payment ?? null
     // `fee` is the total owed: double when both people on a couple's record are joining.
     return NextResponse.json(
       {
@@ -148,7 +152,9 @@ export async function POST(request: Request) {
         // So the agent can reach their team leader about the payment.
         leader_contact: (teamLeader
           ? { facebook_url: teamLeader.facebook_url, contact_number: teamLeader.contact_number || null }
-          : null) satisfies LeaderContact | null,
+          : (paid?.contact ?? null)) satisfies LeaderContact | null,
+        // The named person who takes the payment for a team the admin handles; null otherwise.
+        payee: paid?.payee ?? null,
       },
       { status: 201 },
     )

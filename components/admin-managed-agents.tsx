@@ -24,6 +24,13 @@ const COPY = {
     handler: null,
     empty: "No agent of a team leader who is not joining has registered yet.",
   },
+  team: {
+    heading: "Registered agents",
+    intro: "This team has no team leader for ARES, so you handle it. Its agents pay you directly, using your payment details in Settings, and only you can confirm their payment.",
+    column: "Team leader in LR",
+    handler: null,
+    empty: "No agent of this team has registered yet.",
+  },
   guests: {
     heading: "Registered guests",
     intro: "Guests who registered through the guest link, or whom you registered. A guest pays you directly unless you put them on a team under \"Handled by\": then that team's leader takes the payment and confirms it, like one of their own agents.",

@@ -47,6 +47,7 @@ export default async function TeamLeaderPage() {
       initialRegistrations={data?.registrations ?? []}
       initialRemittances={data?.remittances ?? []}
       initialFee={data?.fee ?? null}
+      initialFeeChangedAt={data?.feeChangedAt ?? null}
       initialPaymentDetails={paymentDetails}
       initialAdminAccounts={adminAccounts}
       loadFailed={!data}

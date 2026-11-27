@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { EMAIL_PATTERN, maskContactNumber, resolveAgent } from "@/lib/agent-registration"
-import { getRegistrationFee, getSlotsLeft } from "@/lib/payments"
+import { getFeeChangedAt, getRegistrationFee, getSlotsLeft } from "@/lib/payments"
 import { getTlPaymentDetails, getLeaderContact } from "@/lib/tl-payment"
+import { getAdminPaymentFor } from "@/lib/admin-team"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -17,17 +18,24 @@ export async function POST(request: Request) {
   try {
     const result = await resolveAgent(email)
     if (result.status === "already_registered") {
-      const { teamLeaderId, attendeeCount, receiptAt, ...rest } = result
+      const { teamLeaderId, attendeeCount, receiptAt, registeredAt, team, ...rest } = result
       // Still waiting to pay: show again where to send the fee. With no team leader on the
       // registration (theirs is not joining), the agent pays the admin.
       const waiting = !result.confirmed
-      const [payment, fee, leaderContact] = waiting
+      const [paid, fee, tlContact] = waiting
         ? await Promise.all([
-            getTlPaymentDetails(teamLeaderId ?? "admin").catch(() => null),
+            teamLeaderId === null
+              ? getAdminPaymentFor(team)
+              : getTlPaymentDetails(teamLeaderId).then((payment) => ({ payment, payee: null, contact: null }), () => null),
             getRegistrationFee().catch(() => null),
             getLeaderContact(teamLeaderId).catch(() => null),
           ])
         : [null, null, null]
+      const payment = paid?.payment ?? null
+      const leaderContact = tlContact ?? paid?.contact ?? null
+      // The fee changed after they registered and they have not paid: they owe the new fee.
+      const feeChangedAt = waiting ? await getFeeChangedAt().catch(() => null) : null
+      const feeChanged = Boolean(feeChangedAt) && new Date(registeredAt) < new Date(feeChangedAt as string)
       // `fee` is the total this registration owes: double when both people on a couple's record are joining.
       return NextResponse.json({
         success: true,
@@ -35,6 +43,9 @@ export async function POST(request: Request) {
         admin_managed: teamLeaderId === null,
         payment,
         leader_contact: leaderContact,
+        // The named person who takes the payment for a team the admin handles; null otherwise.
+        payee: paid?.payee ?? null,
+        fee_changed: feeChanged,
         fee: fee === null ? null : fee * attendeeCount,
         attendee_count: attendeeCount,
         receipt_sent_at: waiting ? receiptAt : null,

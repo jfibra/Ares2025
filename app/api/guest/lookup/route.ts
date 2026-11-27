@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { EMAIL_PATTERN } from "@/lib/agent-registration"
 import { isValidGuestInvite } from "@/lib/guest-invite"
 import { resolveGuest } from "@/lib/guest-registration"
-import { getRegistrationFee, getSlotsLeft } from "@/lib/payments"
+import { getFeeChangedAt, getRegistrationFee, getSlotsLeft } from "@/lib/payments"
 import { getLeaderContact, getTlPaymentDetails } from "@/lib/tl-payment"
 
 export const runtime = "nodejs"
@@ -33,6 +33,9 @@ export async function POST(request: Request) {
             getLeaderContact(result.teamLeaderId).catch(() => null),
           ])
         : [null, null, null]
+      // The fee changed after they registered and they have not paid: they owe the new fee.
+      const feeChangedAt = waiting ? await getFeeChangedAt().catch(() => null) : null
+      const feeChanged = Boolean(feeChangedAt) && new Date(result.registeredAt) < new Date(feeChangedAt as string)
       return NextResponse.json({
         success: true,
         status: "already_registered",
@@ -41,6 +44,7 @@ export async function POST(request: Request) {
         payment,
         team_leader: result.guest && result.teamLeaderId !== null ? result.teamLeaderName : null,
         leader_contact: leaderContact,
+        fee_changed: feeChanged,
         fee: fee === null ? null : fee * result.attendeeCount,
         attendee_count: result.attendeeCount,
         receipt_sent_at: waiting ? result.receiptAt : null,

@@ -51,6 +51,7 @@ import {
   type TlPaymentDetails,
 } from "@/lib/registrations"
 import { PhotoField } from "@/components/photo-field"
+import { isAdminTeam } from "@/lib/direct-teams"
 import type { LeaderContact } from "@/lib/tl-contact"
 import { GENERAL_REGISTRATION_NOTICE, generalRegistrationOpensAtMs } from "@/lib/registration-opening"
 import { Particles, Reveal, staggerContainer, staggerItem } from "@/components/motion"
@@ -445,8 +446,12 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
   const [payment, setPayment] = useState<TlPaymentDetails | null>(null)
   // The team leader's Facebook and number, shown with the payment details.
   const [leaderContact, setLeaderContact] = useState<LeaderContact | null>(null)
+  // The named person who takes the payment for a team the admin handles; null means "the ARES admin".
+  const [payee, setPayee] = useState<string | null>(null)
   // True when someone who registered earlier came back to see how to pay.
   const [returning, setReturning] = useState(false)
+  // The fee changed after they registered and they have not paid yet.
+  const [feeChanged, setFeeChanged] = useState(false)
   // When this agent uploaded proof of payment, if they have.
   const [receiptSentAt, setReceiptSentAt] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -487,8 +492,10 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
         setFee(typeof result.fee === "number" ? result.fee : null)
         setPayment((result.payment as TlPaymentDetails | null) ?? null)
         setLeaderContact((result.leader_contact as LeaderContact | null) ?? null)
+        setPayee(typeof result.payee === "string" ? result.payee : null)
         setPeople(result.attendee_count === 2 ? 2 : 1)
         setReceiptSentAt(typeof result.receipt_sent_at === "string" ? result.receipt_sent_at : null)
+        setFeeChanged(result.fee_changed === true)
         setReturning(true)
         setStage("done")
       } else {
@@ -502,6 +509,8 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
   }
 
   const couple = agent ? splitCouple(agent.name) : null
+  // Their team has no team leader for ARES: the admin handles it.
+  const adminTeam = agent ? isAdminTeam(agent.team) : false
   // Whose photo is needed: everyone joining. A couple chooses who is joining first.
   const photoSlots: { index: 0 | 1; label: string }[] = !couple
     ? [{ index: 0, label: "Upload your photo" }]
@@ -565,8 +574,10 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
         setFee(typeof result.fee === "number" ? result.fee : null)
         setPayment((result.payment as TlPaymentDetails | null) ?? null)
         setLeaderContact((result.leader_contact as LeaderContact | null) ?? null)
+        setPayee(typeof result.payee === "string" ? result.payee : null)
         setPeople(result.attendee_count === 2 ? 2 : 1)
         setReceiptSentAt(null)
+        setFeeChanged(false)
         setReturning(false)
         setStage("done")
       } else if (result?.status === "invalid_details") {
@@ -607,6 +618,7 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
     setFee(null)
     setPayment(null)
     setLeaderContact(null)
+    setPayee(null)
     setReturning(false)
     setForm(emptyDetails)
     setPhotos([null, null])
@@ -673,7 +685,7 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
         {
           icon: UserCheck,
           label: "Team leader",
-          value: adminManaged ? `${agent.team_leader ? `${agent.team_leader} ` : ""}(not joining ARES 2027)` : agent.team_leader,
+          value: adminTeam ? "Handled by the ARES admin" : adminManaged ? `${agent.team_leader ? `${agent.team_leader} ` : ""}(not joining ARES 2027)` : agent.team_leader,
         },
       ]
     : []
@@ -952,8 +964,11 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                           <div className="mb-6 flex gap-3 rounded-xl border border-[#e3d3a8] bg-[#fdf8ea] px-4 py-3 text-sm text-[#4a3413]">
                             <Info size={18} className="mt-0.5 shrink-0 text-[#b8862b]" />
                             <p className="leading-relaxed">
-                              <span className="font-semibold text-[#2a1458]">Your team leader is not joining ARES 2027.</span> You can
-                              still register: the ARES admin will receive your payment and confirm your registration.
+                              <span className="font-semibold text-[#2a1458]">
+                                {adminTeam ? `${agent?.team ?? "Your team"} is handled by the ARES admin.` : "Your team leader is not joining ARES 2027."}
+                              </span>{" "}
+                              {adminTeam ? "The" : "You can still register: the"} ARES admin will receive your payment and confirm your
+                              registration.
                             </p>
                           </div>
                         ) : null}
@@ -1250,9 +1265,16 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                             "the registration fee"
                           )}{" "}
                           {adminManaged
-                            ? "to the ARES admin. Your team leader is not joining, so the admin will confirm it once received."
+                            ? `to ${payee ?? "the ARES admin"}. ${payee ? "It" : "The admin"} will ${payee ? "be confirmed" : "confirm it"} once received.`
                             : `to your team leader${teamLeader ? `, ${teamLeader}` : ""}. They will confirm it once received.`}
                         </p>
+{feeChanged && fee !== null ? (
+                          <p className="mx-auto mt-4 max-w-md rounded-xl border border-[#d4a437]/60 bg-[#fdf3d7] px-4 py-3 text-sm font-medium text-[#4a3413]">
+                            <span className="font-bold text-[#2a1458]">Updated registration fee.</span> The fee is now{" "}
+                            <span className="font-bold text-[#2a1458]">{money(fee / people)} per person</span>. Because your payment has not been
+                            received yet, this is the amount to pay.
+                          </p>
+                        ) : null}
                         {receiptSentAt ? null : (
                           <p className="mx-auto mt-4 max-w-md rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
                             Please pay and upload your receipt within 3 days of registering. A registration that is still
@@ -1261,19 +1283,19 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                         )}
                         <PaymentCard
                           payment={payment}
-                          teamLeader={adminManaged ? "the ARES admin" : teamLeader}
-                          contact={adminManaged ? null : leaderContact}
+                          teamLeader={adminManaged ? (payee ?? "the ARES admin") : teamLeader}
+                          contact={leaderContact}
                         />
                         <ReceiptUpload
                           email={email}
-                          teamLeader={adminManaged ? "the ARES admin" : teamLeader}
+                          teamLeader={adminManaged ? (payee ?? "the ARES admin") : teamLeader}
                           sentAt={receiptSentAt}
                           onSent={setReceiptSentAt}
                         />
                         <p className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#e3d3a8] bg-[#fdf3d7] px-4 py-2 text-sm font-semibold text-[#8a5a00]">
                           <Clock size={16} /> {receiptSentAt
                             ? `Waiting for ${adminManaged ? "the ARES admin" : "your team leader"} to confirm`
-                            : `Waiting for payment to ${adminManaged ? "the ARES admin" : "your team leader"}`}
+                            : `Waiting for payment to ${adminManaged ? (payee ?? "the ARES admin") : "your team leader"}`}
                         </p>
                         <Button
                           type="button"

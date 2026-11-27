@@ -20,7 +20,16 @@ export async function getRegistrationFee(): Promise<number | null> {
   return Number.isFinite(fee) && fee >= 0 ? fee : null
 }
 
+/** When the fee was last changed, or null if it was never set. Someone who registered before this and has not paid owes the new fee. */
+export async function getFeeChangedAt(): Promise<string | null> {
+  const { data, error } = await createSupabaseAdmin().from("app_settings").select("updated_at").eq("key", FEE_KEY).maybeSingle()
+  if (error) throw error
+  return data?.updated_at ?? null
+}
+
 export async function setRegistrationFee(fee: number) {
+  // Saving the same fee again is not a change, so it must not move the "changed at" time.
+  if ((await getRegistrationFee()) === fee) return
   const { error } = await createSupabaseAdmin()
     .from("app_settings")
     .upsert({ key: FEE_KEY, value: fee.toFixed(2), updated_at: new Date().toISOString() }, { onConflict: "key" })
@@ -65,6 +74,8 @@ export async function loadDashboardData(teamLeaderId?: number): Promise<{
   registrations: Registration[]
   remittances: Remittance[]
   fee: number | null
+  /** When the fee last changed: unpaid registrations made before this now owe the new fee. */
+  feeChangedAt: string | null
   slotLimit: number
 }> {
   const supabase = createSupabaseAdmin()
@@ -74,13 +85,20 @@ export async function loadDashboardData(teamLeaderId?: number): Promise<{
     registrations = registrations.eq("team_leader_id", teamLeaderId)
     remittances = remittances.eq("team_leader_id", teamLeaderId)
   }
-  const [regs, rems, fee, slotLimit] = await Promise.all([registrations, remittances, getRegistrationFee(), getSlotLimit()])
+  const [regs, rems, fee, slotLimit, feeChangedAt] = await Promise.all([
+    registrations,
+    remittances,
+    getRegistrationFee(),
+    getSlotLimit(),
+    getFeeChangedAt().catch(() => null),
+  ])
   if (regs.error) throw regs.error
   if (rems.error) throw rems.error
   return {
     registrations: (regs.data ?? []).map((r) => ({ ...r, amount: r.amount === null ? null : Number(r.amount) })) as Registration[],
     remittances: (rems.data ?? []).map((r) => toRemittance(r as Record<string, unknown>)),
     fee,
+    feeChangedAt,
     slotLimit,
   }
 }

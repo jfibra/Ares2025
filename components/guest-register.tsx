@@ -53,6 +53,8 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
   const [receiptSentAt, setReceiptSentAt] = useState<string | null>(null)
   const [registeredName, setRegisteredName] = useState("")
   const [returning, setReturning] = useState(false)
+  // The fee changed after they registered and they have not paid yet.
+  const [feeChanged, setFeeChanged] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -75,6 +77,7 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
     setTeamLeader(null)
     setLeaderContact(null)
     setReturning(false)
+    setFeeChanged(false)
     setConfirmed(false)
     setErrorMessage(null)
   }
@@ -106,6 +109,7 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
         setPayment(result.payment ?? null)
         setTeamLeader(typeof result.team_leader === "string" ? result.team_leader : null)
         setLeaderContact(result.leader_contact ?? null)
+        setFeeChanged(result.fee_changed === true)
         setReceiptSentAt(typeof result.receipt_sent_at === "string" ? result.receipt_sent_at : null)
         return setStage("done")
       }
@@ -298,6 +302,13 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
                         )}{" "}
                         to {teamLeader ? `your team leader, ${teamLeader}` : "the ARES admin"}. They will confirm it once received.
                       </p>
+{feeChanged && fee !== null ? (
+                        <p className="mx-auto mt-4 max-w-md rounded-xl border border-[#d4a437]/60 bg-[#fdf3d7] px-4 py-3 text-sm font-medium text-[#4a3413]">
+                          <span className="font-bold text-[#2a1458]">Updated registration fee.</span> The fee is now{" "}
+                          <span className="font-bold text-[#2a1458]">{money(fee / people)} per person</span>. Because your payment has not been
+                          received yet, this is the amount to pay.
+                        </p>
+                      ) : null}
                       {receiptSentAt ? null : (
                         <p className="mx-auto mt-4 max-w-md rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
                           Please pay and upload your receipt within {UNPAID_WINDOW} of registering. A registration that is

@@ -17,6 +17,7 @@ import {
   Copy,
   Download,
   ImageIcon,
+  Info,
   Link2,
   Loader2,
   LogOut,
@@ -47,8 +48,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Counter } from "@/components/motion"
 import AdminManagedAgents from "@/components/admin-managed-agents"
 import AdminGuestForm from "@/components/admin-guest-form"
+import AdminTeamHandlerForm, { type TeamHandler } from "@/components/admin-team-handler-form"
 import { PaymentCountdown } from "@/components/payment-countdown"
 import { FacebookLinkForm } from "@/components/facebook-link-form"
+import { ADMIN_TEAMS, isAdminTeam } from "@/lib/direct-teams"
 import { isOnPaymentClock, paymentDeadlineMs } from "@/lib/unpaid-rule"
 import { OwnTicketCard } from "@/components/own-ticket-fields"
 import PastAttendeesPanel from "@/components/past-attendees-panel"
@@ -73,7 +76,7 @@ import {
 const LOGO_URL = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
 
 type Role = "admin" | "tl"
-type Tab = "pending" | "confirmed" | "remittances" | "leaders" | "assign" | "declined" | "guests" | "settings" | "payment" | "payadmin"
+type Tab = "pending" | "confirmed" | "remittances" | "leaders" | "assign" | "declined" | "guests" | "adminteam" | "settings" | "payment" | "payadmin"
 type Row = Record<string, unknown> & { id: number }
 type Column = {
   key: string
@@ -193,6 +196,7 @@ export default function PortalDashboard({
   initialRegistrations,
   initialRemittances,
   initialFee,
+  initialFeeChangedAt = null,
   initialSlotLimit = 300,
   initialTeamLeaders = [],
   initialInviteToken = null,
@@ -200,6 +204,8 @@ export default function PortalDashboard({
   initialPaymentDetails = null,
   initialFacebookUrl = null,
   initialAdminAccounts = [],
+  initialTeamAccounts = [],
+  initialTeamHandler = null,
   initialDeclines = [],
   ownEmail,
   ownName,
@@ -211,6 +217,8 @@ export default function PortalDashboard({
   initialRegistrations: Registration[]
   initialRemittances: Remittance[]
   initialFee: number | null
+  /** When the fee last changed: unpaid registrations made before this now owe the new fee. */
+  initialFeeChangedAt?: string | null
   initialSlotLimit?: number
   initialTeamLeaders?: TeamLeader[]
   initialInviteToken?: string | null
@@ -220,6 +228,9 @@ export default function PortalDashboard({
   /** Team leader only: the Facebook link their agents use to contact them. */
   initialFacebookUrl?: string | null
   initialAdminAccounts?: TlPaymentAccount[]
+  /** Admin only: the accounts and the contact person shown to the agents of the team the admin handles. */
+  initialTeamAccounts?: TlPaymentAccount[]
+  initialTeamHandler?: TeamHandler | null
   initialDeclines?: TlDecline[]
   /** Team leader: their email and LR record name, to pick out (or add) their own registration. */
   ownEmail?: string
@@ -233,6 +244,7 @@ export default function PortalDashboard({
   const [rows, setRows] = useState(initialRegistrations)
   const [remittances, setRemittances] = useState(initialRemittances)
   const [fee, setFee] = useState(initialFee)
+  const [feeChangedAt, setFeeChangedAt] = useState(initialFeeChangedAt)
   // Admin: how many people can register in total.
   const [slotLimit, setSlotLimit] = useState(initialSlotLimit)
   const [leaders, setLeaders] = useState(initialTeamLeaders)
@@ -243,6 +255,8 @@ export default function PortalDashboard({
   const [facebookUrl, setFacebookUrl] = useState(initialFacebookUrl)
   // The organizer's accounts: the admin manages them, team leaders send their collections there.
   const [adminAccounts, setAdminAccounts] = useState(initialAdminAccounts)
+  const [teamAccounts, setTeamAccounts] = useState(initialTeamAccounts)
+  const [teamHandler, setTeamHandler] = useState(initialTeamHandler)
   // Team leader: agents ticked to send to the admin in one remittance.
   const [selected, setSelected] = useState<Set<number>>(() => new Set())
   const [remitOpen, setRemitOpen] = useState(false)
@@ -261,7 +275,15 @@ export default function PortalDashboard({
   // Admin: agents whose team leader is not joining have no team leader on their registration. The admin
   // looks after them on the "Not joining" tab, so they are kept out of the Pending and Confirmed lists.
   // Guests (special registration through the admin's guest link) also pay the admin; they have their own tab.
-  const adminManaged = useMemo(() => (isAdmin ? rows.filter((r) => r.team_leader_id === null && !r.guest_type) : []), [isAdmin, rows])
+  // Agents of the teams the admin handles directly (no team leader), shown on their own tab.
+  const adminTeamAgents = useMemo(
+    () => (isAdmin ? rows.filter((r) => r.team_leader_id === null && !r.guest_type && isAdminTeam(r.team)) : []),
+    [isAdmin, rows],
+  )
+  const adminManaged = useMemo(
+    () => (isAdmin ? rows.filter((r) => r.team_leader_id === null && !r.guest_type && !isAdminTeam(r.team)) : []),
+    [isAdmin, rows],
+  )
   const guests = useMemo(() => (isAdmin ? rows.filter((r) => Boolean(r.guest_type)) : []), [isAdmin, rows])
   const withLeader = useMemo(() => (isAdmin ? rows.filter((r) => r.team_leader_id !== null) : rows), [isAdmin, rows])
   const pending = useMemo(() => withLeader.filter((r) => !r.confirmed_by_tl), [withLeader])
@@ -291,6 +313,13 @@ export default function PortalDashboard({
     }
     return counts
   }, [rows])
+
+  // Unpaid registrations made before the fee last changed: they owe the new fee.
+  const owingNewFee = useMemo(() => {
+    if (!feeChangedAt) return 0
+    const changed = new Date(feeChangedAt).getTime()
+    return rows.filter((r) => r.payment_status === "unpaid" && new Date(r.registration_date).getTime() < changed).length
+  }, [rows, feeChangedAt])
 
   // ---- Requests ----------------------------------------------------------------
   /** Runs a request; sends the visitor back to sign-in if the session has ended. */
@@ -326,6 +355,7 @@ export default function PortalDashboard({
         setRows(result.registrations)
         setRemittances(result.remittances)
         setFee(result.fee)
+        setFeeChangedAt(result.feeChangedAt ?? null)
         if (typeof result.slotLimit === "number") setSlotLimit(result.slotLimit)
         setSelected(new Set())
         if (result.adminAccounts) setAdminAccounts(result.adminAccounts)
@@ -425,6 +455,22 @@ export default function PortalDashboard({
   const changePaymentAccounts = async (url: string, init: RequestInit) => {
     const result = await call(url, init)
     if (result) setPaymentDetails(result.accounts)
+  }
+
+  /** Admin: add, change or delete an account shown to the agents of the team the admin handles. */
+  const changeTeamAccounts = async (url: string, init: RequestInit) => {
+    const result = await call(url, init)
+    if (result) setTeamAccounts(result.accounts)
+  }
+
+  /** Admin: who looks after the team the admin handles. Throws so the form can show the reason. */
+  const saveTeamHandler = async (next: { name: string; contact_number: string; facebook_url: string }) => {
+    const result = await call("/api/admin/team-handler", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(next),
+    })
+    if (result) setTeamHandler(result.handler)
   }
 
   /** Admin: put a guest on a team, so its leader handles them, or take them back (null). */
@@ -755,7 +801,7 @@ export default function PortalDashboard({
     setTab(next)
     setQuery("")
     setExpanded(null)
-    const key = { pending: "registration_date", confirmed: "registration_date", remittances: "submitted_at", leaders: "created_at", declined: "declined_at", guests: "", settings: "", assign: "", payment: "", payadmin: "" }[next]
+    const key = { pending: "registration_date", confirmed: "registration_date", remittances: "submitted_at", leaders: "created_at", declined: "declined_at", guests: "", adminteam: "", settings: "", assign: "", payment: "", payadmin: "" }[next]
     setSort({ key, direction: "desc" })
   }
 
@@ -772,6 +818,7 @@ export default function PortalDashboard({
       leaders: "team-leaders",
       declined: "team-leaders-not-joining",
       guests: "",
+      adminteam: "",
       settings: "",
       assign: "",
       payment: "",
@@ -808,7 +855,7 @@ export default function PortalDashboard({
   // Every person registered takes a slot; a couple who are both joining takes two.
   const slotsTaken = rows.reduce((total, r) => total + (Number(r.attendee_count) || 1), 0)
   // Money that reached the admin: remittances marked received, plus agents who paid the admin directly.
-  const verifiedTotal = sum(remittances.filter((r) => r.status === "verified")) + sum([...adminManaged, ...guests].filter((r) => r.team_leader_id === null && r.payment_status === "verified"))
+  const verifiedTotal = sum(remittances.filter((r) => r.status === "verified")) + sum([...adminManaged, ...adminTeamAgents, ...guests].filter((r) => r.team_leader_id === null && r.payment_status === "verified"))
   const statCards: { label: string; icon: typeof Users; count?: number; money?: number; hint?: string }[] = isAdmin
     ? [
         { label: "Team leaders", icon: UserCog, count: leaders.length },
@@ -836,6 +883,7 @@ export default function PortalDashboard({
           { id: "leaders" as Tab, label: "Team leaders", count: leaders.length },
           { id: "assign" as Tab, label: "Assign TL", icon: UserCog },
           { id: "declined" as Tab, label: "Not joining", count: declines.length + adminManaged.length },
+          { id: "adminteam" as Tab, label: ADMIN_TEAMS.join(" / "), count: adminTeamAgents.length, icon: Users },
           { id: "guests" as Tab, label: "Guests", count: guests.length, icon: Sparkles },
           { id: "settings" as Tab, label: "Settings", icon: Settings },
         ]
@@ -942,7 +990,7 @@ export default function PortalDashboard({
   // On a phone each row is a card: these values need the card's full width.
   const wideOnCard = new Set(["agent_receipt_at", "reason", "status", "time_left", "team", "team_leader_name", "reference_no"])
 
-  const emptyText: Record<Exclude<Tab, "settings" | "payment" | "payadmin" | "assign" | "guests">, [string, string]> = {
+  const emptyText: Record<Exclude<Tab, "settings" | "payment" | "payadmin" | "assign" | "guests" | "adminteam">, [string, string]> = {
     pending: isAdmin
       ? ["No agents waiting to pay", "Agents appear here after they register, until their team leader confirms their payment."]
       : ["No one waiting for you", "Your own registration and your agents' appear here until the payment is confirmed. Check each receipt and confirm once they pay you."],
@@ -1169,6 +1217,19 @@ export default function PortalDashboard({
             </div>
           ) : null}
 
+          {/* The fee changed after some people registered: those who have not paid owe the new fee. */}
+          {fee !== null && owingNewFee > 0 ? (
+            <div role="status" className="mt-4 flex items-start gap-3 rounded-xl border border-[#d4a437]/60 bg-[#fdf3d7] px-4 py-3 text-sm text-[#4a3413]">
+              <Info size={18} className="mt-0.5 shrink-0 text-[#b8862b]" />
+              <p className="leading-relaxed">
+                <span className="font-bold text-[#2a1458]">The registration fee is now {formatMoney(fee)} per person.</span>{" "}
+                {owingNewFee === 1 ? "1 registration" : `${owingNewFee.toLocaleString()} registrations`} made before this change{" "}
+                {owingNewFee === 1 ? "has" : "have"} not paid yet and now {owingNewFee === 1 ? "owes" : "owe"} the new fee
+                {isAdmin ? "." : ". Please collect the new amount from them, and pay it for your own registration if you have not yet."}
+              </p>
+            </div>
+          ) : null}
+
           {needsOwnTicket && ownName ? <OwnTicketCard name={ownName} fee={fee} onSaved={refresh} declinedReason={ownDeclineReason} /> : null}
 
           {/* Tabs */}
@@ -1244,6 +1305,68 @@ export default function PortalDashboard({
               onViewHistory={() => changeTab("remittances")}
               onViewPending={() => changeTab("pending")}
             />
+          ) : tab === "adminteam" ? (
+            <>
+              <section className="mt-4 rounded-2xl border border-[#d4a437]/50 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)] sm:p-8">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="max-w-2xl">
+                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">Handled by you</p>
+                    <h2 className="mt-2 text-2xl font-black text-[#2a1458]">{ADMIN_TEAMS.join(" / ")}</h2>
+                    <p className="mt-2 leading-relaxed text-[#5c4a2a]">
+                      This team has no team leader for ARES 2027. Its agents register on the normal registration page without
+                      waiting for a team leader, pay you directly, and you confirm each payment here.
+                    </p>
+                  </div>
+                  <button type="button" onClick={refresh} disabled={refreshing} className={outlineButton}>
+                    <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} /> Refresh
+                  </button>
+                </div>
+                <dl className="mt-6 grid gap-3 sm:grid-cols-3">
+                  {[
+                    { label: "Registered", value: adminTeamAgents.length.toLocaleString() },
+                    { label: "Not paid yet", value: adminTeamAgents.filter((r) => r.payment_status === "unpaid").length.toLocaleString() },
+                    { label: "Received", value: formatMoney(sum(adminTeamAgents.filter((r) => r.payment_status === "verified"))) },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-xl border border-[#e3d3a8] bg-[#fdf8ea] px-4 py-3">
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-[#8a7a58]">{item.label}</dt>
+                      <dd className="mt-1 text-2xl font-black tabular-nums text-[#2a1458]">{item.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+              <section className="mt-4 rounded-2xl border border-[#d4a437]/50 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)] sm:p-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">Shown to the agents</p>
+                <h2 className="mt-2 text-2xl font-black text-[#2a1458]">Who handles {ADMIN_TEAMS.join(" / ")}</h2>
+                <p className="mt-3 max-w-2xl leading-relaxed text-[#5c4a2a]">
+                  After registering, the team&apos;s agents are told to pay this person and can contact them by number or
+                  Facebook. You still confirm each payment here.{" "}
+                  {teamHandler ? null : <span className="font-semibold text-[#2a1458]">Until you save a name, they are told to pay the ARES admin.</span>}
+                </p>
+                <div className="mt-6 max-w-2xl">
+                  <AdminTeamHandlerForm handler={teamHandler} onSave={saveTeamHandler} />
+                </div>
+              </section>
+              <PaymentDetailsPanel
+                accounts={teamAccounts}
+                fee={fee}
+                onAdd={(form) => changeTeamAccounts("/api/admin/payment-details?scope=team", { method: "POST", body: form })}
+                onUpdate={(id, form) => changeTeamAccounts(`/api/admin/payment-details/${id}?scope=team`, { method: "PUT", body: form })}
+                onDelete={(id) => changeTeamAccounts(`/api/admin/payment-details/${id}?scope=team`, { method: "DELETE" })}
+              />
+              {teamAccounts.length === 0 ? (
+                <p className="mt-3 text-sm text-[#7a6a4a]">
+                  No account added here yet, so {ADMIN_TEAMS.join(" / ")} agents are shown your general payment details from Settings.
+                </p>
+              ) : null}
+              <AdminManagedAgents
+                variant="team"
+                agents={adminTeamAgents}
+                fee={fee}
+                busyKey={busyKey}
+                onConfirm={setConfirmed}
+                onDelete={(row) => setPendingAction({ kind: "registration", row })}
+              />
+            </>
           ) : tab === "guests" ? (
             <>
               <InvitePanel

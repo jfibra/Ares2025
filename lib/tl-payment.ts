@@ -17,11 +17,15 @@ type AccountRow = { id: number; bank: string; account_name: string | null; accou
 export type AccountResult = { ok: true } | { ok: false; status: number; message: string }
 const refuse = (message: string, status = 400): AccountResult => ({ ok: false, status, message })
 
-/** Whose accounts: one team leader's (their id) or the organizer's. */
-export type PaymentOwner = number | "admin"
-const tableOf = (owner: PaymentOwner) => (owner === "admin" ? ADMIN_TABLE : TABLE)
-/** Filter for `.match()` that limits a query to the owner's rows. Every row of the admin table is the admin's. */
-const ownedBy = (owner: PaymentOwner): Record<string, number> => (owner === "admin" ? {} : { team_leader_id: owner })
+/**
+ * Whose accounts: one team leader's (their id), the organizer's general ones ("admin"), or the
+ * organizer's accounts for the team it handles directly ("admin-team").
+ */
+export type PaymentOwner = number | "admin" | "admin-team"
+const tableOf = (owner: PaymentOwner) => (typeof owner === "number" ? TABLE : ADMIN_TABLE)
+/** Filter for `.match()` that limits a query to the owner's rows. */
+const ownedBy = (owner: PaymentOwner): Record<string, number | string> =>
+  typeof owner === "number" ? { team_leader_id: owner } : { audience: owner === "admin" ? "general" : "team" }
 
 /** Every account of one owner, oldest first. QR storage paths become links that expire. */
 export async function getTlPaymentDetails(owner: PaymentOwner, qrLinkSeconds = 60 * 60): Promise<TlPaymentAccount[]> {
@@ -96,7 +100,7 @@ export async function addPaymentAccount(owner: PaymentOwner, form: FormData): Pr
 
   const qrPath = input.qr ? await uploadQr(owner, input.qr) : null
   const { error } = await supabase.from(tableOf(owner)).insert({
-    ...(owner === "admin" ? {} : { team_leader_id: owner }),
+    ...ownedBy(owner),
     bank: input.bank,
     account_name: input.accountName || null,
     account_number: input.accountNumber || null,

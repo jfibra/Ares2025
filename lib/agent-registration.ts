@@ -3,6 +3,7 @@ import { isPastAttendee } from "@/lib/past-attendees"
 import { generalRegistrationOpensAtMs } from "@/lib/registration-opening"
 import { TEAM_LEADER_COLUMNS, type TeamLeader } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
+import { isAdminTeam } from "@/lib/direct-teams"
 import { getAssignmentForTeam, normaliseTeam, type TlAssignment } from "@/lib/tl-assignments"
 
 export const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
@@ -50,7 +51,7 @@ export type AgentResolution =
   /** Pre-registration is on and this agent did not attend ARES 2025: they wait for general registration. */
   | { status: "general_only" }
   | { status: "tl_not_registered"; team: string; teamLeaderName: string }
-  | { status: "already_registered"; confirmed: boolean; teamLeaderName: string | null; teamLeaderId: number | null; attendeeCount: number; receiptAt: string | null }
+  | { status: "already_registered"; confirmed: boolean; teamLeaderName: string | null; teamLeaderId: number | null; attendeeCount: number; receiptAt: string | null; registeredAt: string; team: string }
   | { status: "unavailable" }
 
 /** Everything the server needs to know before an agent may register. Never trusts the browser. */
@@ -59,7 +60,7 @@ export async function resolveAgent(rawEmail: string): Promise<AgentResolution> {
 
   const { data: existing, error } = await createSupabaseAdmin()
     .from("registrations")
-    .select("confirmed_by_tl,team_leader_name,team_leader_id,attendee_count,agent_receipt_at")
+    .select("confirmed_by_tl,team_leader_name,team_leader_id,attendee_count,agent_receipt_at,registration_date,team")
     .eq("email", email)
     .maybeSingle()
   if (error) throw error
@@ -71,6 +72,8 @@ export async function resolveAgent(rawEmail: string): Promise<AgentResolution> {
       teamLeaderId: existing.team_leader_id,
       attendeeCount: existing.attendee_count ?? 1,
       receiptAt: existing.agent_receipt_at ?? null,
+      registeredAt: existing.registration_date,
+      team: existing.team,
     }
   }
 
@@ -89,6 +92,9 @@ export async function resolveAgent(rawEmail: string): Promise<AgentResolution> {
   // Until general registration opens, only people who attended ARES 2025 may register.
   const pastAttendee = await isPastAttendee(agent.email)
   if (!pastAttendee && Date.now() < generalRegistrationOpensAtMs) return { status: "general_only" }
+
+  // A team the admin handles has no team leader: its agents register straight away and pay the admin.
+  if (isAdminTeam(agent.team)) return { status: "found", agent, teamLeader: null, pastAttendee }
 
   const assigned = await getAssignmentForTeam(agent.team)
   const teamLeader = await findTeamLeaderFor(agent, assigned)
