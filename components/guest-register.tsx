@@ -14,7 +14,7 @@ import { noPhotos, type PhotoPair } from "@/components/photo-field"
 import { PaymentCard, ReceiptUpload } from "@/components/registration-page"
 import type { TlPaymentDetails } from "@/lib/registrations"
 import type { LeaderContact } from "@/lib/tl-contact"
-import { UNPAID_HOURS } from "@/lib/unpaid-rule"
+import { UNPAID_WINDOW } from "@/lib/unpaid-rule"
 
 const LOGO_URL = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
 
@@ -300,8 +300,8 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
                       </p>
                       {receiptSentAt ? null : (
                         <p className="mx-auto mt-4 max-w-md rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
-                          Please pay and upload your receipt within {UNPAID_HOURS} hours of registering. A registration that is
-                          still unpaid after {UNPAID_HOURS} hours is removed, and you would need to register again.
+                          Please pay and upload your receipt within {UNPAID_WINDOW} of registering. A registration that is
+                          still unpaid after {UNPAID_WINDOW} is removed, and you would need to register again.
                         </p>
                       )}
                       <PaymentCard payment={payment} teamLeader={payee} contact={leaderContact} />

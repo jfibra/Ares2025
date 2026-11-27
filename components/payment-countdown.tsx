@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { Clock, TriangleAlert } from "lucide-react"
-import { UNPAID_HOURS, paymentDeadlineMs } from "@/lib/unpaid-rule"
+import { UNPAID_WINDOW, paymentDeadlineMs } from "@/lib/unpaid-rule"
 
 const deadlineFormat = new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila" })
 const two = (value: number) => String(value).padStart(2, "0")
 
 /**
- * Live countdown of the 48 hours an agent has to pay, counted from when they registered.
+ * Live countdown of the 3 days an agent has to pay, counted from when they registered.
  * Gold while there is time, red in the last 12 hours, and "Overdue" once it has run out
  * (the registration is then removed at the next hourly check).
  */
@@ -32,7 +32,7 @@ export function PaymentCountdown({ registrationDate }: { registrationDate: strin
         <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-800">
           <TriangleAlert size={13} /> Overdue
         </span>
-        <p className="mt-1 text-xs text-[#7a6a4a]">The {UNPAID_HOURS} hours are up. This registration will be removed.</p>
+        <p className="mt-1 text-xs text-[#7a6a4a]">The {UNPAID_WINDOW} are up. This registration will be removed.</p>
       </div>
     )
   }

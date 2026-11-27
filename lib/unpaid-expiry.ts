@@ -4,9 +4,9 @@ import { sendEmail } from "@/lib/mailer"
 import { RECEIPT_BUCKET } from "@/lib/payments"
 import { PHOTO_BUCKET } from "@/lib/photo"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
-import { UNPAID_HOURS, UNPAID_RULE_STARTS_AT } from "@/lib/unpaid-rule"
+import { UNPAID_HOURS, UNPAID_RULE_STARTS_AT, UNPAID_WINDOW } from "@/lib/unpaid-rule"
 
-// An agent has 48 hours from registering to pay. One who has neither uploaded a receipt nor
+// An agent has 3 days from registering to pay. One who has neither uploaded a receipt nor
 // been confirmed by their team leader by then loses the registration (and the slot it held),
 // and is emailed to say so; they may register again.
 
@@ -23,12 +23,12 @@ export function removalEmail(name: string, guestUrl?: string) {
   const text = [
     `Hi ${name},`,
     "",
-    `Your registration for ARES 2027 has been removed because the payment was not completed within ${UNPAID_HOURS} hours of registering.`,
+    `Your registration for ARES 2027 has been removed because the payment was not completed within ${UNPAID_WINDOW} of registering.`,
     "",
     "If you still want to attend, please register again while slots are available:",
     registerUrl,
     "",
-    `After registering, please pay ${payee} and upload your receipt within ${UNPAID_HOURS} hours to keep your slot.`,
+    `After registering, please pay ${payee} and upload your receipt within ${UNPAID_WINDOW} to keep your slot.`,
     "",
     `If you already paid, please contact ${contact}.`,
     "",
@@ -38,11 +38,11 @@ export function removalEmail(name: string, guestUrl?: string) {
   const html = aresEmail({
     thai: "สวัสดี",
     title: "Your registration was removed",
-    preview: `Your payment was not completed within ${UNPAID_HOURS} hours. You can register again while slots are available.`,
+    preview: `Your payment was not completed within ${UNPAID_WINDOW}. You can register again while slots are available.`,
     body: [
       emailParagraph(`Hi <strong style="color:#2a1458;">${escapeHtml(name)}</strong>,`),
       emailParagraph(
-        `Your registration for <strong style="color:#2a1458;">ARES 2027</strong> has been removed because the payment was not completed within <strong style="color:#2a1458;">${UNPAID_HOURS} hours</strong> of registering.`,
+        `Your registration for <strong style="color:#2a1458;">ARES 2027</strong> has been removed because the payment was not completed within <strong style="color:#2a1458;">${UNPAID_WINDOW}</strong> of registering.`,
       ),
       emailNotice(
         `<strong style="color:#2a1458;">Your slot has been released.</strong> If you still want to attend, please register again while slots are available.`,
@@ -52,7 +52,7 @@ export function removalEmail(name: string, guestUrl?: string) {
       emailSteps([
         "Register again on the ARES 2027 website.",
         `Pay the registration fee to ${payee}.`,
-        `Upload your receipt within <strong style="color:#2a1458;">${UNPAID_HOURS} hours</strong> of registering.`,
+        `Upload your receipt within <strong style="color:#2a1458;">${UNPAID_WINDOW}</strong> of registering.`,
       ]),
       emailParagraph(
         `<span style="font-size:14px;color:#7a6a4a;">Already paid? Please contact ${contact}.</span>`,
@@ -65,11 +65,11 @@ export function removalEmail(name: string, guestUrl?: string) {
 type Expired = { id: number; name: string; email: string; guest_type: string | null; agent_receipt_path: string | null; photo_paths: string[] | null }
 
 /**
- * Removes every agent registration that is still unpaid, with no receipt uploaded, 48 hours
+ * Removes every agent registration that is still unpaid, with no receipt uploaded, 3 days
  * after it was made, and emails each agent. A team leader's own registration is never removed.
  */
 export async function removeUnpaidRegistrations(now = Date.now()) {
-  // Nothing can be overdue until 48 hours after the rule began.
+  // Nothing can be overdue until 3 days after the rule began.
   if (now < new Date(UNPAID_RULE_STARTS_AT).getTime() + UNPAID_HOURS * 3_600_000) return { removed: 0, emailed: 0, failedEmails: [] as string[] }
   const cutoff = new Date(now - UNPAID_HOURS * 3_600_000).toISOString()
   const supabase = createSupabaseAdmin()

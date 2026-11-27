@@ -1255,8 +1255,8 @@ const RegistrationPage = ({ slots = null }: { slots?: { limit: number; left: num
                         </p>
                         {receiptSentAt ? null : (
                           <p className="mx-auto mt-4 max-w-md rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
-                            Please pay and upload your receipt within 48 hours of registering. A registration that is still
-                            unpaid after 48 hours is removed, and you would need to register again.
+                            Please pay and upload your receipt within 3 days of registering. A registration that is still
+                            unpaid after 3 days is removed, and you would need to register again.
                           </p>
                         )}
                         <PaymentCard

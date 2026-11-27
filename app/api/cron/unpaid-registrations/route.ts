@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
 /**
- * Run on a schedule (about once an hour): removes registrations left unpaid for 48 hours and
+ * Run on a schedule (about once an hour): removes registrations left unpaid for 3 days and
  * emails those agents. Needs "Authorization: Bearer <CRON_SECRET>".
  */
 export async function GET(request: Request) {

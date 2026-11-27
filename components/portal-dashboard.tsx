@@ -615,7 +615,7 @@ export default function PortalDashboard({
       ? [
           { key: "amount_due", label: "To Pay", render: (r: Row) => <span className="font-semibold tabular-nums text-[#2a1458]">{formatMoney(r.amount_due)}</span> },
           {
-            // The 48 hours an agent has to pay. A team leader's own registration is not on the clock.
+            // The 3 days an agent has to pay. A team leader's own registration is not on the clock.
             key: "time_left",
             label: "Time Left To Pay",
             render: (r: Row) =>
