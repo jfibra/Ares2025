@@ -1,7 +1,7 @@
 // Teams that have no team leader in the LR records ("direct" teams). The admin assigns one of
 // each team's own agents as its team leader. Safe to import in the browser.
 
-export const DIRECT_TEAMS = ["Davao Eagles DIRECT", "FH Kaizen Ozamiz Team", "Team Grateful"] as const
+export const DIRECT_TEAMS = ["Davao Eagles DIRECT", "FH Kaizen Ozamiz Team", "Team Grateful", "Luzon Leaders"] as const
 
 // Teams the admin handles directly: they have no team leader for ARES. Their agents register and
 // pay into the admin's accounts. The admin gives each team an account (for a secretary) that
