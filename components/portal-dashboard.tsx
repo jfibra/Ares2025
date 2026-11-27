@@ -1509,6 +1509,7 @@ export default function PortalDashboard({
               </div>
               <AdminManagedAgents
                 variant="guests"
+                inviters={rows}
                 leaders={leaders}
                 onAssign={assignGuest}
                 agents={guests}
@@ -1795,6 +1796,7 @@ export default function PortalDashboard({
           call={call}
           onOpen={setDetail}
           onLeaderChange={(leaderId, guestCode) => setLeaders((all) => all.map((l) => (l.id === leaderId ? { ...l, guest_code: guestCode } : l)))}
+          onRegistrationChange={(registrationId, guestCode) => setRows((all) => all.map((r) => (r.id === registrationId ? { ...r, guest_code: guestCode } : r)))}
           onClose={() => setDetail(null)}
         />
 

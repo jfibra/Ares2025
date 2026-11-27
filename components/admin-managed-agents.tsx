@@ -57,6 +57,7 @@ export default function AdminManagedAgents({
   onConfirm,
   onDelete,
   onOpen,
+  inviters = [],
   leaders = [],
   onAssign,
 }: {
@@ -76,14 +77,20 @@ export default function AdminManagedAgents({
   onDelete?: (agent: Registration) => void
   /** Opens the full details of the person on a clicked row. */
   onOpen?: (agent: Registration) => void
+  /** Guests only: every registration, to name the agent who invited a guest. */
+  inviters?: Registration[]
   /** Guests only: the registered team leaders a guest can be handed to. */
   leaders?: TeamLeader[]
   /** Guests only: hand the guest to a team leader, or back to the admin (null). */
   onAssign?: (agent: Registration, teamLeaderId: number | null) => void
 }) {
-  /** The team leader whose guest link a guest registered through, by name. */
+  /** The team leader or agent whose guest link a guest registered through, by name. */
   const invitedBy = (agent: Registration) =>
-    agent.guest_of_team_leader_id === null ? null : (leaders.find((leader) => leader.id === agent.guest_of_team_leader_id)?.name ?? null)
+    agent.guest_of_team_leader_id !== null
+      ? (leaders.find((leader) => leader.id === agent.guest_of_team_leader_id)?.name ?? null)
+      : agent.guest_of_registration_id !== null
+        ? (inviters.find((person) => person.id === agent.guest_of_registration_id)?.name ?? null)
+        : null
   const unpaid = agents.filter((agent) => agent.payment_status === "unpaid").length
   const copy = COPY[variant]
 

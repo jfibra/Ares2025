@@ -83,6 +83,7 @@ export default function PersonDetail({
   call,
   onOpen,
   onLeaderChange,
+  onRegistrationChange,
   onClose,
 }: {
   /** Who to show; null closes the page. */
@@ -97,6 +98,8 @@ export default function PersonDetail({
   onOpen: (next: PersonTarget) => void
   /** Called with the team leader's new guest code after the admin makes or replaces the link. */
   onLeaderChange: (leaderId: number, guestCode: string) => void
+  /** The same, for a registered agent's own guest link. */
+  onRegistrationChange: (registrationId: number, guestCode: string) => void
   onClose: () => void
 }) {
   const [origin, setOrigin] = useState("")
@@ -113,21 +116,23 @@ export default function PersonDetail({
     setConfirmReplace(false)
   }, [targetKey])
 
-  const row = target?.kind === "registration" ? target.row : null
+  // The freshest copy of the registration, so a link made a moment ago shows at once.
+  const row = target?.kind === "registration" ? (registrations.find((r) => r.id === target.row.id) ?? target.row) : null
   // The freshest copy of the leader, so a link made a moment ago shows at once.
   const leader = target?.kind === "leader" ? (leaders.find((l) => l.id === target.leader.id) ?? target.leader) : null
 
   const makeLink = async (replace: boolean) => {
-    if (!leader || busy) return
+    if ((!leader && !row) || busy) return
     setBusy(true)
     setError(null)
     try {
-      const result = await call(`/api/admin/team-leaders/${leader.id}/guest-link`, {
+      const result = await call(leader ? `/api/admin/team-leaders/${leader.id}/guest-link` : `/api/admin/registrations/${row?.id}/guest-link`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ replace }),
       })
-      if (result) onLeaderChange(leader.id, result.guest_code)
+      if (result && leader) onLeaderChange(leader.id, result.guest_code)
+      else if (result && row) onRegistrationChange(row.id, result.guest_code)
       setConfirmReplace(false)
     } catch (linkError) {
       setError(linkError instanceof Error ? linkError.message : "We could not create the link.")
@@ -146,6 +151,72 @@ export default function PersonDetail({
     }
   }
 
+  /** The guest link of one person (a team leader or an agent) and the guests who came through it. Admin only. */
+  const guestSection = (ownerName: string, code: string | null, guests: Registration[]) => {
+    const link = code ? `${origin}/guest/${code}` : ""
+    return (
+      <section className="rounded-2xl border border-[#d4a437]/60 bg-[#fdf8ea] p-5">
+        <h3 className="flex items-center gap-2 text-base font-black text-[#2a1458]">
+          <Sparkles size={18} className="text-[#b8862b]" /> Guest link for {ownerName}
+        </h3>
+        <p className="mt-2 text-sm leading-relaxed text-[#5c4a2a]">
+          Give this link to {ownerName} for the guests they want to bring. Anyone who registers through it is recorded as their
+          guest, so you know who invited them. Guests still pay you unless you put them on a team in the Guests page.
+        </p>
+        {error ? (
+          <p role="alert" className="mt-3 flex items-start gap-2 rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
+            <TriangleAlert size={18} className="mt-0.5 shrink-0" /> {error}
+          </p>
+        ) : null}
+        {code ? (
+          <>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <p className="min-w-0 flex-1 break-all rounded-xl border border-[#e3d3a8] bg-white px-4 py-3 text-sm font-semibold text-[#2a1458]">
+                <Link2 size={15} className="mr-2 inline text-[#b8862b]" />
+                {link}
+              </p>
+              <button
+                type="button"
+                onClick={() => copyLink(link)}
+                className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#8a6417] bg-gradient-to-r from-[#b8862b] via-[#f3d27a] to-[#b8862b] px-4 text-sm font-bold text-[#2a1408] hover:brightness-105"
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? "Copied" : "Copy link"}
+              </button>
+            </div>
+            {confirmReplace ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-[#9a1c15]">The current link will stop working. Guests already registered are kept.</span>
+                <button type="button" onClick={() => makeLink(true)} disabled={busy} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#b3261e] px-3 text-xs font-bold text-white hover:bg-[#9a1c15] disabled:opacity-60">
+                  {busy ? <Loader2 size={14} className="animate-spin" /> : null} Yes, replace it
+                </button>
+                <button type="button" onClick={() => setConfirmReplace(false)} disabled={busy} className="h-9 rounded-lg border border-[#e3d3a8] bg-white px-3 text-xs font-bold text-[#6b4a12]">
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setConfirmReplace(true)} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[#6b4a12] underline-offset-2 hover:underline">
+                <RefreshCw size={14} /> Replace with a new link
+              </button>
+            )}
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => makeLink(false)}
+            disabled={busy}
+            className="mt-4 inline-flex h-11 items-center gap-2 rounded-xl border border-[#8a6417] bg-gradient-to-r from-[#b8862b] via-[#f3d27a] to-[#b8862b] px-5 text-sm font-bold text-[#2a1408] hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={16} />} Create guest link
+          </button>
+        )}
+        <h4 className="mt-5 text-sm font-bold text-[#2a1458]">
+          Guests of {ownerName} <span className="font-normal text-[#7a6a4a]">({guests.length.toLocaleString()})</span>
+        </h4>
+        <PeopleList people={guests} empty="No guest has registered through this link yet." onOpen={(person) => onOpen({ kind: "registration", row: person })} />
+      </section>
+    )
+  }
+
   let body: React.ReactNode = null
   let title = ""
   let subtitle = ""
@@ -153,6 +224,8 @@ export default function PersonDetail({
   if (row) {
     const couple = row.attendee_count === 2 ? splitCouple(row.attendees ?? "") : null
     const invitedBy = row.guest_of_team_leader_id !== null ? leaders.find((l) => l.id === row.guest_of_team_leader_id) : null
+    const invitedByAgent = row.guest_of_registration_id !== null ? registrations.find((r) => r.id === row.guest_of_registration_id) : null
+    const ownGuests = registrations.filter((r) => r.guest_of_registration_id === row.id)
     const ownLeader = leaders.find((l) => l.email.toLowerCase() === row.email.toLowerCase())
     title = row.name
     subtitle = ownLeader ? "Team leader's own registration" : row.guest_type ? "Guest registration" : "Agent registration"
@@ -182,6 +255,14 @@ export default function PersonDetail({
                           {invitedBy.name}
                         </button>{" "}
                         ({invitedBy.team})
+                      </>
+                    ) : invitedByAgent ? (
+                      <>
+                        Guest of{" "}
+                        <button type="button" onClick={() => onOpen({ kind: "registration", row: invitedByAgent })} className="font-semibold text-[#0078b6] hover:underline">
+                          {invitedByAgent.name}
+                        </button>{" "}
+                        ({invitedByAgent.team})
                       </>
                     ) : (
                       "Registered through the admin's guest link"
@@ -252,13 +333,27 @@ export default function PersonDetail({
             </Field>
           </dl>
         </section>
+
+        {/* A registered agent can bring guests too. A team leader's link is on the team leader's own page. */}
+        {isAdmin && !row.guest_type ? (
+          ownLeader ? (
+            <p className="rounded-xl border border-[#e3d3a8] bg-[#fdf8ea] px-4 py-3 text-sm text-[#5c4a2a]">
+              This is a team leader&apos;s own registration. Their guest link is on{" "}
+              <button type="button" onClick={() => onOpen({ kind: "leader", leader: ownLeader })} className="font-semibold text-[#0078b6] hover:underline">
+                the team leader&apos;s page
+              </button>
+              .
+            </p>
+          ) : (
+            guestSection(row.name, row.guest_code, ownGuests)
+          )
+        ) : null}
       </>
     )
   } else if (leader) {
     const own = registrations.find((r) => r.email.toLowerCase() === leader.email.toLowerCase()) ?? null
     const agents = registrations.filter((r) => r.team_leader_id === leader.id && r.email.toLowerCase() !== leader.email.toLowerCase())
     const guests = registrations.filter((r) => r.guest_of_team_leader_id === leader.id)
-    const link = leader.guest_code ? `${origin}/guest/${leader.guest_code}` : ""
     title = leader.name
     subtitle = `Team leader · ${leader.team}`
     body = (
@@ -299,67 +394,7 @@ export default function PersonDetail({
           </dl>
         </section>
 
-        {isAdmin ? (
-          <section className="rounded-2xl border border-[#d4a437]/60 bg-[#fdf8ea] p-5">
-            <h3 className="flex items-center gap-2 text-base font-black text-[#2a1458]">
-              <Sparkles size={18} className="text-[#b8862b]" /> Guest link for {leader.name}
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-[#5c4a2a]">
-              Give this link to {leader.name} for the guests they want to bring. Anyone who registers through it is recorded as
-              their guest, so you know who invited them. Guests still pay you unless you put them on a team in the Guests page.
-            </p>
-            {error ? (
-              <p role="alert" className="mt-3 flex items-start gap-2 rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
-                <TriangleAlert size={18} className="mt-0.5 shrink-0" /> {error}
-              </p>
-            ) : null}
-            {leader.guest_code ? (
-              <>
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <p className="min-w-0 flex-1 break-all rounded-xl border border-[#e3d3a8] bg-white px-4 py-3 text-sm font-semibold text-[#2a1458]">
-                    <Link2 size={15} className="mr-2 inline text-[#b8862b]" />
-                    {link}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => copyLink(link)}
-                    className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#8a6417] bg-gradient-to-r from-[#b8862b] via-[#f3d27a] to-[#b8862b] px-4 text-sm font-bold text-[#2a1408] hover:brightness-105"
-                  >
-                    {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? "Copied" : "Copy link"}
-                  </button>
-                </div>
-                {confirmReplace ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                    <span className="text-[#9a1c15]">The current link will stop working. Guests already registered are kept.</span>
-                    <button type="button" onClick={() => makeLink(true)} disabled={busy} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#b3261e] px-3 text-xs font-bold text-white hover:bg-[#9a1c15] disabled:opacity-60">
-                      {busy ? <Loader2 size={14} className="animate-spin" /> : null} Yes, replace it
-                    </button>
-                    <button type="button" onClick={() => setConfirmReplace(false)} disabled={busy} className="h-9 rounded-lg border border-[#e3d3a8] bg-white px-3 text-xs font-bold text-[#6b4a12]">
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => setConfirmReplace(true)} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[#6b4a12] underline-offset-2 hover:underline">
-                    <RefreshCw size={14} /> Replace with a new link
-                  </button>
-                )}
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => makeLink(false)}
-                disabled={busy}
-                className="mt-4 inline-flex h-11 items-center gap-2 rounded-xl border border-[#8a6417] bg-gradient-to-r from-[#b8862b] via-[#f3d27a] to-[#b8862b] px-5 text-sm font-bold text-[#2a1408] hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {busy ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={16} />} Create guest link
-              </button>
-            )}
-            <h4 className="mt-5 text-sm font-bold text-[#2a1458]">
-              Guests of {leader.name} <span className="font-normal text-[#7a6a4a]">({guests.length.toLocaleString()})</span>
-            </h4>
-            <PeopleList people={guests} empty="No guest has registered through this link yet." onOpen={(person) => onOpen({ kind: "registration", row: person })} />
-          </section>
-        ) : null}
+        {isAdmin ? guestSection(leader.name, leader.guest_code, guests) : null}
 
         <section>
           <h3 className={sectionTitle}>

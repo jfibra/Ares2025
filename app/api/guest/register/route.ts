@@ -87,6 +87,7 @@ export async function POST(request: Request) {
       guest_type: agent ? "lr_agent" : "non_lr",
       // Whose guest they are, when they came through a team leader's own link.
       guest_of_team_leader_id: invite.leader?.id ?? null,
+      guest_of_registration_id: invite.agent?.id ?? null,
     })
     if (error) {
       await removePhotos(photoPaths) // nothing was recorded, so drop the files

@@ -12,6 +12,6 @@ export default async function GuestPage({ params }: { params: { code: string } }
     console.error("Could not check the guest invite:", error)
     return null
   })
-  // A team leader's own link says who is inviting the guest.
-  return <GuestRegister invite={invite ? code : null} invitedBy={invite?.leader ? invite.leader.name : null} />
+  // A team leader's or an agent's own link says who is inviting the guest.
+  return <GuestRegister invite={invite ? code : null} invitedBy={invite?.leader?.name ?? invite?.agent?.name ?? null} />
 }

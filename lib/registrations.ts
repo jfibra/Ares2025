@@ -23,6 +23,10 @@ export type Registration = {
   guest_type: "lr_agent" | "non_lr" | null
   /** The team leader whose guest link this guest registered through; null for the admin's link. */
   guest_of_team_leader_id: number | null
+  /** The registered agent whose guest link this guest registered through (that agent's registration id). */
+  guest_of_registration_id: number | null
+  /** The code of this person's own guest link (/guest/<code>), once the admin has made one. */
+  guest_code: string | null
   confirmed_by_tl: boolean
   confirmed_at: string | null
   payment_status: PaymentStatus
@@ -37,7 +41,7 @@ export type Registration = {
 }
 
 export const REGISTRATION_COLUMNS =
-  "id,name,email,contact_number,birth_date,birth_date_2,whatsapp_number,polo_shirt_size,polo_shirt_size_2,attendee_count,attendees,team,team_leader_id,team_leader_name,guest_type,guest_of_team_leader_id,confirmed_by_tl,confirmed_at,payment_status,amount,remittance_id,agent_receipt_at,agent_receipt_note,photo_count,registration_date"
+  "id,name,email,contact_number,birth_date,birth_date_2,whatsapp_number,polo_shirt_size,polo_shirt_size_2,attendee_count,attendees,team,team_leader_id,team_leader_name,guest_type,guest_of_team_leader_id,guest_of_registration_id,guest_code,confirmed_by_tl,confirmed_at,payment_status,amount,remittance_id,agent_receipt_at,agent_receipt_note,photo_count,registration_date"
 
 export type TeamLeader = {
   id: number
