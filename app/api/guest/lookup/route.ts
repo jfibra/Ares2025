@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { EMAIL_PATTERN } from "@/lib/agent-registration"
-import { isValidGuestInvite } from "@/lib/guest-invite"
+import { resolveGuestInvite } from "@/lib/guest-invite"
 import { resolveGuest } from "@/lib/guest-registration"
 import { getFeeChangedAt, getRegistrationFee, getSlotsLeft } from "@/lib/payments"
 import { getLeaderContact, getTlPaymentDetails } from "@/lib/tl-payment"
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   if (!EMAIL_PATTERN.test(email) || email.length > 320) return fail("Please enter a valid email address.")
 
   try {
-    if (!(await isValidGuestInvite(body?.invite))) {
+    if (!(await resolveGuestInvite(body?.invite))) {
       return fail("This registration link is no longer valid. Please ask the ARES admin for a new one.", 403)
     }
     const result = await resolveGuest(email)

@@ -21,6 +21,8 @@ export type Registration = {
   team_leader_name: string | null
   /** Special registration through the admin's guest link: whether the guest is in the LR records. Null for everyone else. */
   guest_type: "lr_agent" | "non_lr" | null
+  /** The team leader whose guest link this guest registered through; null for the admin's link. */
+  guest_of_team_leader_id: number | null
   confirmed_by_tl: boolean
   confirmed_at: string | null
   payment_status: PaymentStatus
@@ -35,7 +37,7 @@ export type Registration = {
 }
 
 export const REGISTRATION_COLUMNS =
-  "id,name,email,contact_number,birth_date,birth_date_2,whatsapp_number,polo_shirt_size,polo_shirt_size_2,attendee_count,attendees,team,team_leader_id,team_leader_name,guest_type,confirmed_by_tl,confirmed_at,payment_status,amount,remittance_id,agent_receipt_at,agent_receipt_note,photo_count,registration_date"
+  "id,name,email,contact_number,birth_date,birth_date_2,whatsapp_number,polo_shirt_size,polo_shirt_size_2,attendee_count,attendees,team,team_leader_id,team_leader_name,guest_type,guest_of_team_leader_id,confirmed_by_tl,confirmed_at,payment_status,amount,remittance_id,agent_receipt_at,agent_receipt_note,photo_count,registration_date"
 
 export type TeamLeader = {
   id: number
@@ -44,6 +46,8 @@ export type TeamLeader = {
   contact_number: string
   /** Where their agents can contact them. Null until they add it in the portal. */
   facebook_url: string | null
+  /** The code of this leader's own guest link (/guest/<code>), once the admin has made one. */
+  guest_code: string | null
   team: string
   created_at: string
 }
@@ -62,7 +66,7 @@ export const MAX_PAYMENT_ACCOUNTS = 10
 
 export const hasPaymentDetails = (details: TlPaymentDetails | null | undefined) => Boolean(details && details.length > 0)
 
-export const TEAM_LEADER_COLUMNS = "id,name,email,contact_number,facebook_url,team,created_at"
+export const TEAM_LEADER_COLUMNS = "id,name,email,contact_number,facebook_url,guest_code,team,created_at"
 
 /** A team leader who said they are not joining ARES 2027. */
 export type TlDecline = {
@@ -173,6 +177,10 @@ export function resolvePartnerBirthDate(
 /** "M", or "M / L" when a couple are both joining. */
 export const poloSizesLabel = (row: { polo_shirt_size?: unknown; polo_shirt_size_2?: unknown }) =>
   [row.polo_shirt_size, row.polo_shirt_size_2].filter((size) => typeof size === "string" && size).join(" / ")
+
+/** How many polo shirts a registration orders: one for each person joining who gave a size. */
+export const poloQuantity = (row: { polo_shirt_size?: unknown; polo_shirt_size_2?: unknown }) =>
+  [row.polo_shirt_size, row.polo_shirt_size_2].filter((size) => typeof size === "string" && size).length
 
 export const ATTENDING_CHOICES = ["first", "second", "both"] as const
 export type Attending = (typeof ATTENDING_CHOICES)[number]

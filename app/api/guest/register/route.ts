@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { EMAIL_PATTERN } from "@/lib/agent-registration"
-import { isValidGuestInvite } from "@/lib/guest-invite"
+import { resolveGuestInvite } from "@/lib/guest-invite"
 import { GUEST_TEAM, resolveGuest } from "@/lib/guest-registration"
 import { getRegistrationFee, getSlotsLeft } from "@/lib/payments"
 import { photosIn, photosProblem, removePhotos, storePhotos } from "@/lib/photo-store"
@@ -38,7 +38,8 @@ export async function POST(request: Request) {
   if (!details.ok) return fail(details.message, 400, details.field)
 
   try {
-    if (!(await isValidGuestInvite(field("invite")))) {
+    const invite = await resolveGuestInvite(field("invite"))
+    if (!invite) {
       return fail("This registration link is no longer valid. Please ask the ARES admin for a new one.", 403)
     }
     const guest = await resolveGuest(email)
@@ -84,6 +85,8 @@ export async function POST(request: Request) {
       team_leader_id: null,
       team_leader_name: null,
       guest_type: agent ? "lr_agent" : "non_lr",
+      // Whose guest they are, when they came through a team leader's own link.
+      guest_of_team_leader_id: invite.leader?.id ?? null,
     })
     if (error) {
       await removePhotos(photoPaths) // nothing was recorded, so drop the files

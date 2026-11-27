@@ -54,6 +54,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Counter } from "@/components/motion"
 import AdminManagedAgents from "@/components/admin-managed-agents"
 import AdminGuestForm from "@/components/admin-guest-form"
+import AgentQrPanel from "@/components/agent-qr-panel"
+import PersonDetail, { type PersonTarget } from "@/components/person-detail"
 import AdminTeamAccounts, { type TeamAccount } from "@/components/admin-team-accounts"
 import AdminOverview from "@/components/admin-overview"
 import { PaymentCountdown } from "@/components/payment-countdown"
@@ -71,6 +73,7 @@ import {
   hasPaymentDetails,
   splitCouple,
   poloSizesLabel,
+  poloQuantity,
   type PaymentStatus,
   type Registration,
   type Remittance,
@@ -83,7 +86,7 @@ import {
 const LOGO_URL = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
 
 type Role = "admin" | "tl"
-type Tab = "overview" | "pending" | "confirmed" | "remittances" | "leaders" | "assign" | "declined" | "guests" | "adminteam" | "settings" | "payment" | "payadmin"
+type Tab = "overview" | "qr" | "pending" | "confirmed" | "remittances" | "leaders" | "assign" | "declined" | "guests" | "adminteam" | "settings" | "payment" | "payadmin"
 type Row = Record<string, unknown> & { id: number }
 type Column = {
   key: string
@@ -268,6 +271,8 @@ export default function PortalDashboard({
   const [inviteToken, setInviteToken] = useState(initialInviteToken)
   const [guestInviteToken, setGuestInviteToken] = useState(initialGuestInviteToken)
   const [tab, setTab] = useState<Tab>(role === "admin" ? "overview" : "pending")
+  // The person whose page is open (opened by clicking their row).
+  const [detail, setDetail] = useState<PersonTarget | null>(null)
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<Sort>({ key: "registration_date", direction: "desc" })
   const [busyKey, setBusyKey] = useState<string | null>(null)
@@ -559,6 +564,12 @@ export default function PortalDashboard({
     },
     { key: "polo_shirt_size", label: "Polo Size", render: (r: Row) => poloSizesLabel(r as { polo_shirt_size?: unknown; polo_shirt_size_2?: unknown }) || "—" },
     {
+      key: "polo_quantity",
+      label: "Polo Qty",
+      cell: "whitespace-nowrap text-center tabular-nums",
+      render: (r: Row) => poloQuantity(r as { polo_shirt_size?: unknown; polo_shirt_size_2?: unknown }) || "—",
+    },
+    {
       key: "attendee_count",
       label: "Joining",
       cell: `${wrapCell} min-w-[9rem] max-w-[14rem]`,
@@ -771,9 +782,9 @@ export default function PortalDashboard({
     }
     if (tab === "declined") return declines as unknown as Row[]
     if (tab === "remittances") return remittances as unknown as Row[]
-    if (tab === "confirmed") return confirmed as unknown as Row[]
+    if (tab === "confirmed") return confirmed.map((r) => ({ ...r, polo_quantity: poloQuantity(r) })) as unknown as Row[]
     // What each waiting registration owes: the fee for every person joining.
-    return pending.map((r) => ({ ...r, amount_due: fee === null ? null : fee * r.attendee_count }))
+    return pending.map((r) => ({ ...r, polo_quantity: poloQuantity(r), amount_due: fee === null ? null : fee * r.attendee_count }))
   }, [tab, leaders, declines, agentCounts, confirmed, pending, remittances, fee])
 
   const visible = useMemo(() => {
@@ -788,7 +799,7 @@ export default function PortalDashboard({
     setTab(next)
     setQuery("")
     setExpanded(null)
-    const key = { overview: "", pending: "registration_date", confirmed: "registration_date", remittances: "submitted_at", leaders: "created_at", declined: "declined_at", guests: "", adminteam: "", settings: "", assign: "", payment: "", payadmin: "" }[next]
+    const key = { overview: "", qr: "", pending: "registration_date", confirmed: "registration_date", remittances: "submitted_at", leaders: "created_at", declined: "declined_at", guests: "", adminteam: "", settings: "", assign: "", payment: "", payadmin: "" }[next]
     setSort({ key, direction: "desc" })
   }
 
@@ -800,6 +811,7 @@ export default function PortalDashboard({
   const exportCsv = () => {
     const names: Record<Tab, string> = {
       overview: "",
+      qr: "",
       pending: "pending-agents",
       confirmed: "confirmed-agents",
       remittances: "remittances",
@@ -814,6 +826,7 @@ export default function PortalDashboard({
     }
     const exportValue = (r: Row, key: string) => {
       if (key === "birth_date") return [r.birth_date, r.birth_date_2].filter(Boolean).join(" / ")
+      if (key === "polo_quantity") return poloQuantity(r as { polo_shirt_size?: unknown; polo_shirt_size_2?: unknown })
       if (key === "polo_shirt_size") return poloSizesLabel(r as { polo_shirt_size?: unknown; polo_shirt_size_2?: unknown })
       if (key === "time_left") {
         if (isLeaderRow(r)) return ""
@@ -893,6 +906,7 @@ export default function PortalDashboard({
           { id: "assign" as Tab, label: "Assign TL", icon: UserPlus },
           { id: "adminteam" as Tab, label: "Team accounts", count: adminTeamAgents.length, icon: KeyRound },
           { id: "guests" as Tab, label: "Guests", count: guests.length, icon: Sparkles },
+          { id: "qr" as Tab, label: "Agent QR code", icon: QrCode },
           { id: "settings" as Tab, label: "Settings", icon: Settings },
         ]
       : [
@@ -999,11 +1013,23 @@ export default function PortalDashboard({
                                 </div>
     )
   }
+  /** Opens the page of the person on a row. Clicks on a button, link or checkbox inside the row do their own thing. */
+  const openRow = (event: React.MouseEvent, row: Row) => {
+    if ((event.target as HTMLElement).closest("a,button,input,select,label,textarea")) return
+    if (isLeaderTab) {
+      const leader = leaders.find((l) => l.id === row.id)
+      if (leader) setDetail({ kind: "leader", leader })
+    } else if (!isDeclinedTab && !isRemittanceTab) {
+      const registration = rows.find((r) => r.id === row.id)
+      if (registration) setDetail({ kind: "registration", row: registration })
+    }
+  }
+  const rowsOpen = !isDeclinedTab && !isRemittanceTab
   const rowKind = isLeaderTab ? "leader" : isDeclinedTab ? "decline" : isRemittanceTab ? "remittance" : "registration"
   // On a phone each row is a card: these values need the card's full width.
   const wideOnCard = new Set(["agent_receipt_at", "reason", "status", "time_left", "team", "team_leader_name", "reference_no"])
 
-  const emptyText: Record<Exclude<Tab, "overview" | "settings" | "payment" | "payadmin" | "assign" | "guests" | "adminteam">, [string, string]> = {
+  const emptyText: Record<Exclude<Tab, "overview" | "qr" | "settings" | "payment" | "payadmin" | "assign" | "guests" | "adminteam">, [string, string]> = {
     pending: isAdmin
       ? ["No agents waiting to pay", "Agents appear here after they register, until their team leader confirms their payment."]
       : ["No one waiting for you", "Your own registration and your agents' appear here until the payment is confirmed. Check each receipt and confirm once they pay you."],
@@ -1395,6 +1421,8 @@ export default function PortalDashboard({
             <div className="mt-6">
               <AdminOverview registrations={rows} leaders={leaders} declines={declines} slotLimit={slotLimit} fee={fee} />
             </div>
+          ) : tab === "qr" ? (
+            <AgentQrPanel />
           ) : tab === "payment" ? (
             <>
               <PaymentDetailsPanel
@@ -1460,6 +1488,7 @@ export default function PortalDashboard({
                   fee={fee}
                   busyKey={busyKey}
                   onConfirm={setConfirmed}
+                onOpen={(row) => setDetail({ kind: "registration", row })}
                   onDelete={(row) => setPendingAction({ kind: "registration", row })}
                 />
               ))}
@@ -1486,6 +1515,7 @@ export default function PortalDashboard({
                 fee={fee}
                 busyKey={busyKey}
                 onConfirm={setConfirmed}
+                onOpen={(row) => setDetail({ kind: "registration", row })}
                 onDelete={(row) => setPendingAction({ kind: "registration", row })}
               />
             </>
@@ -1584,7 +1614,8 @@ export default function PortalDashboard({
                     return (
                       <article
                         key={`${tab}-card-${row.id}`}
-                        className={`rounded-2xl border border-[#d4a437]/50 bg-white p-4 text-sm text-[#2a1a3d] shadow-[0_18px_40px_-30px_rgba(58,13,42,0.5)] ${busy ? "opacity-55" : ""}`}
+                        onClick={rowsOpen ? (event: React.MouseEvent) => openRow(event, row) : undefined}
+                        className={`rounded-2xl border border-[#d4a437]/50 bg-white p-4 text-sm text-[#2a1a3d] shadow-[0_18px_40px_-30px_rgba(58,13,42,0.5)] ${busy ? "opacity-55" : ""} ${rowsOpen ? "cursor-pointer" : ""}`}
                       >
                         <div className="flex items-start gap-3">
                           {selectable && row.payment_status === "paid_to_tl" ? (
@@ -1683,7 +1714,9 @@ export default function PortalDashboard({
                               initial={{ opacity: 0, y: 8 }}
                               animate={{ opacity: busy ? 0.55 : 1, y: 0 }}
                               transition={{ duration: 0.35, delay: Math.min(index, 12) * 0.03 }}
-                              className="border-b border-[#f1e6c8] align-top transition-colors last:border-0 odd:bg-white even:bg-[#fdfaf1] hover:bg-[#fdf3d7]"
+                              onClick={rowsOpen ? (event: React.MouseEvent) => openRow(event, row) : undefined}
+                              title={rowsOpen ? "Click to open the full details" : undefined}
+                              className={`border-b border-[#f1e6c8] align-top transition-colors last:border-0 odd:bg-white even:bg-[#fdfaf1] hover:bg-[#fdf3d7] ${rowsOpen ? "cursor-pointer" : ""}`}
                             >
                               <td className="px-4 py-4 text-right tabular-nums text-[#a89a7c]">
                                 {selectable ? (
@@ -1740,6 +1773,7 @@ export default function PortalDashboard({
                   fee={fee}
                   busyKey={busyKey}
                   onConfirm={setConfirmed}
+                onOpen={(row) => setDetail({ kind: "registration", row })}
                   onDelete={(row) => setPendingAction({ kind: "registration", row })}
                 />
               ) : null}
@@ -1751,6 +1785,18 @@ export default function PortalDashboard({
 
           <GoldRule className="mx-auto mt-10 max-w-xs" />
         </main>
+
+        <PersonDetail
+          target={detail}
+          registrations={rows}
+          leaders={leaders}
+          isAdmin={isAdmin}
+          fee={fee}
+          call={call}
+          onOpen={setDetail}
+          onLeaderChange={(leaderId, guestCode) => setLeaders((all) => all.map((l) => (l.id === leaderId ? { ...l, guest_code: guestCode } : l)))}
+          onClose={() => setDetail(null)}
+        />
 
         <AlertDialog open={pendingAction !== null} onOpenChange={(open) => (open ? null : setPendingAction(null))}>
           <AlertDialogContent className="rounded-2xl border-[#d4a437]/60 bg-white font-sans text-[#2a1a3d] sm:rounded-2xl">

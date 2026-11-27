@@ -1,9 +1,9 @@
 "use client"
 
 import { useMemo } from "react"
-import { Building2, Sparkles, Ticket, UserCog, Users } from "lucide-react"
+import { Building2, Shirt, Sparkles, Ticket, UserCog, Users } from "lucide-react"
 import { CornerFlourish, GoldRule, Lotus, goldLattice, goldText } from "@/components/thai-ornaments"
-import type { Registration, TeamLeader, TlDecline } from "@/lib/registrations"
+import { POLO_SHIRT_SIZES, type Registration, type TeamLeader, type TlDecline } from "@/lib/registrations"
 
 // Admin, on the Overview tab: who has registered, counted so that team leaders and agents are
 // never mixed up. A "registration" is one record; a couple who are both joining is one
@@ -160,6 +160,15 @@ export default function AdminOverview({
   const longest = Math.max(1, ...chartTeams.map((team) => team.leaderPeople + team.agentPeople))
 
   // The site's own surfaces: deep purple, maroon, bronze and gold, each with the gold lattice.
+  // Polo shirts: one for each person joining, in the size they chose.
+  const shirtsBySize = POLO_SHIRT_SIZES.map((size) => ({
+    size,
+    count: registrations.reduce((total, r) => total + (r.polo_shirt_size === size ? 1 : 0) + (r.polo_shirt_size_2 === size ? 1 : 0), 0),
+  }))
+  const totalShirts = shirtsBySize.reduce((total, item) => total + item.count, 0)
+  const mostShirts = Math.max(1, ...shirtsBySize.map((item) => item.count))
+  const missingShirts = stats.totalPeople - totalShirts
+
   const heroCards = [
     { ...tiles[0], card: "from-[#2a1458] via-[#1a0d3d] to-[#3a1f74]", dark: true },
     { ...tiles[1], card: "from-[#3a0d2a] via-[#5a1540] to-[#7a1f52]", dark: true },
@@ -306,6 +315,45 @@ export default function AdminOverview({
           </ul>
         </section>
       </div>
+
+      <section aria-labelledby="overview-polo" className={panel}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 id="overview-polo" className={`flex items-center gap-2 ${heading}`}>
+              <Shirt size={20} className="text-[#b8862b]" /> Polo shirts ordered
+            </h2>
+            <GoldRule className="mt-3 w-40" />
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-[#5c4a2a]">
+              One shirt for each person joining, in the size they chose when registering. A couple who are both joining orders
+              two.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[#d4a437]/60 bg-[#fdf8ea] px-6 py-4 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#7a6a4a]">Total shirts</p>
+            <p className="mt-1 text-4xl font-black leading-none tabular-nums text-[#2a1458]">{count(totalShirts)}</p>
+          </div>
+        </div>
+        {/* Columns by size, smallest to largest, each labelled with its count. */}
+        <ul className="mt-6 grid grid-cols-4 gap-3 sm:grid-cols-8">
+          {shirtsBySize.map((item) => (
+            <li key={item.size} className="flex flex-col items-center" title={`${item.size}: ${count(item.count)} ${item.count === 1 ? "shirt" : "shirts"}`}>
+              <span className="text-lg font-black tabular-nums text-[#2a1458]">{count(item.count)}</span>
+              <span className="mt-1 flex h-28 w-full items-end justify-center border-b border-[#e3d3a8]">
+                <span
+                  className="w-6 rounded-t"
+                  style={{ height: item.count ? `${Math.max((item.count / mostShirts) * 100, 4)}%` : "0%", backgroundColor: "#6a4ce2" }}
+                />
+              </span>
+              <span className="mt-2 text-sm font-semibold text-[#4a3413]">{item.size}</span>
+            </li>
+          ))}
+        </ul>
+        {missingShirts > 0 ? (
+          <p className="mt-4 text-xs text-[#7a6a4a]">
+            {count(missingShirts)} {missingShirts === 1 ? "person has" : "people have"} no size recorded.
+          </p>
+        ) : null}
+      </section>
 
       <section aria-labelledby="overview-payments">
         <h2 id="overview-payments" className={heading}>

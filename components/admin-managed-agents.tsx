@@ -2,7 +2,7 @@
 
 import { CheckCircle2, ImageIcon, Loader2, Receipt, Trash2, Undo2 } from "lucide-react"
 import { PaymentCountdown } from "@/components/payment-countdown"
-import { poloSizesLabel, splitCouple, type Registration, type TeamLeader } from "@/lib/registrations"
+import { poloQuantity, poloSizesLabel, splitCouple, type Registration, type TeamLeader } from "@/lib/registrations"
 import { isOnPaymentClock } from "@/lib/unpaid-rule"
 
 // Admin, on the "Not joining" tab: agents whose team leader is not joining ARES. They still
@@ -56,6 +56,7 @@ export default function AdminManagedAgents({
   busyKey,
   onConfirm,
   onDelete,
+  onOpen,
   leaders = [],
   onAssign,
 }: {
@@ -73,11 +74,16 @@ export default function AdminManagedAgents({
   onConfirm: (agent: Registration, received: boolean) => void
   /** Left out for an account that may confirm payments but not delete registrations. */
   onDelete?: (agent: Registration) => void
+  /** Opens the full details of the person on a clicked row. */
+  onOpen?: (agent: Registration) => void
   /** Guests only: the registered team leaders a guest can be handed to. */
   leaders?: TeamLeader[]
   /** Guests only: hand the guest to a team leader, or back to the admin (null). */
   onAssign?: (agent: Registration, teamLeaderId: number | null) => void
 }) {
+  /** The team leader whose guest link a guest registered through, by name. */
+  const invitedBy = (agent: Registration) =>
+    agent.guest_of_team_leader_id === null ? null : (leaders.find((leader) => leader.id === agent.guest_of_team_leader_id)?.name ?? null)
   const unpaid = agents.filter((agent) => agent.payment_status === "unpaid").length
   const copy = COPY[variant]
 
@@ -106,7 +112,7 @@ export default function AdminManagedAgents({
             <table className="w-full border-collapse text-sm text-[#2a1a3d]">
               <thead>
                 <tr className="bg-gradient-to-r from-[#2a1458] to-[#1a0d3d] text-left text-[#fbe7a1]">
-                  {["#", "Name", "Contact", "Team", copy.column, ...(copy.handler ? [copy.handler] : []), "Joining", "Polo", "Photo", "Receipt", "Registered", "Payment", ""].map(
+                  {["#", "Name", "Contact", "Team", copy.column, ...(copy.handler ? [copy.handler] : []), "Joining", "Polo", "Polo qty", "Photo", "Receipt", "Registered", "Payment", ""].map(
                     (heading) => (
                       <th
                         key={heading}
@@ -127,7 +133,18 @@ export default function AdminManagedAgents({
                   const onTeam = agent.team_leader_id !== null
                   const names = agent.photo_count === 2 ? splitCouple(agent.attendees ?? "") : null
                   return (
-                    <tr key={agent.id} className={`border-t border-[#f1e6c8] align-top odd:bg-white even:bg-[#fdfaf1] ${busy ? "opacity-55" : ""}`}>
+                    <tr
+                      key={agent.id}
+                      onClick={
+                        onOpen
+                          ? (event) => {
+                              if (!(event.target as HTMLElement).closest("a,button,input,select,label,textarea")) onOpen(agent)
+                            }
+                          : undefined
+                      }
+                      title={onOpen ? "Click to open the full details" : undefined}
+                      className={`border-t border-[#f1e6c8] align-top odd:bg-white even:bg-[#fdfaf1] ${onOpen ? "cursor-pointer hover:bg-[#fdf3d7]" : ""} ${busy ? "opacity-55" : ""}`}
+                    >
                       <td className="px-4 py-4 text-right tabular-nums text-[#a89a7c]">{index + 1}</td>
                       <td className="min-w-[13rem] max-w-[19rem] break-words px-4 py-4">
                         <p className="font-semibold leading-snug text-[#2a1458]">{agent.name}</p>
@@ -144,6 +161,7 @@ export default function AdminManagedAgents({
                         {variant !== "guests" ? (
                           agent.team_leader_name || "—"
                         ) : (
+                          <>
                           <span
                             className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${
                               agent.guest_type === "lr_agent" ? "border-green-200 bg-green-50 text-green-800" : "border-violet-200 bg-violet-50 text-violet-800"
@@ -151,6 +169,8 @@ export default function AdminManagedAgents({
                           >
                             {agent.guest_type === "lr_agent" ? "Yes · LR agent" : "No · not in LR"}
                           </span>
+                          {invitedBy(agent) ? <p className="mt-1.5 max-w-[12rem] whitespace-normal text-xs text-[#7a6a4a]">Guest of {invitedBy(agent)}</p> : null}
+                          </>
                         )}
                       </td>
                       {copy.handler ? (
@@ -200,6 +220,7 @@ export default function AdminManagedAgents({
                             : null}
                       </td>
                       <td className="whitespace-nowrap px-4 py-4">{poloSizesLabel(agent) || "—"}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-center tabular-nums">{poloQuantity(agent) || "—"}</td>
                       <td className="px-4 py-4">
                         {agent.photo_count ? (
                           <div className="space-y-1">

@@ -36,7 +36,7 @@ type LrAgent = { name: string; team: string }
  * first, to note whether the guest is an LR agent; either way they may register, and they pay
  * the ARES admin. `invite` is null when the link's code is missing or no longer valid.
  */
-export default function GuestRegister({ invite }: { invite: string | null }) {
+export default function GuestRegister({ invite, invitedBy = null }: { invite: string | null; invitedBy?: string | null }) {
   const [stage, setStage] = useState<Stage>("email")
   const [email, setEmail] = useState("")
   const [agent, setAgent] = useState<LrAgent | null>(null)
@@ -222,7 +222,7 @@ export default function GuestRegister({ invite }: { invite: string | null }) {
             <motion.div variants={staggerItem} className="hidden lg:block">
               <GoldRule className="my-6 max-w-[14rem]" />
               <p className="text-lg leading-relaxed text-white/80">
-                You have been invited to ARES 2027 as a guest. Register here, pay the ARES admin, and your slot is confirmed
+                {invitedBy ? `${invitedBy} has invited you to ARES 2027 as a guest.` : "You have been invited to ARES 2027 as a guest."} Register here, pay the ARES admin, and your slot is confirmed
                 once your payment is received.
               </p>
             </motion.div>

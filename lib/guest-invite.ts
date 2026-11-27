@@ -45,3 +45,35 @@ export async function isValidGuestInvite(candidate: unknown): Promise<boolean> {
   const given = Buffer.from(candidate.toLowerCase())
   return expected.length === given.length && timingSafeEqual(expected, given)
 }
+
+// ---- A team leader's own guest link ----------------------------------------------------
+
+/** Who a guest link belongs to: nobody (the admin's general link) or one team leader. */
+export type GuestInvite = { leader: { id: number; name: string; team: string } | null }
+
+/**
+ * Checks the code in a guest link. It is either the admin's general code or one team leader's
+ * own code; null when it is neither.
+ */
+export async function resolveGuestInvite(candidate: unknown): Promise<GuestInvite | null> {
+  if (typeof candidate !== "string" || !candidate) return null
+  if (await isValidGuestInvite(candidate)) return { leader: null }
+  const code = candidate.trim().toLowerCase()
+  if (!/^[a-z0-9]{6,20}$/.test(code)) return null
+  const { data, error } = await createSupabaseAdmin().from("team_leaders").select("id,name,team").eq("guest_code", code).maybeSingle()
+  if (error) throw error
+  return data ? { leader: { id: data.id, name: data.name, team: data.team } } : null
+}
+
+/** The team leader's guest code, made the first time, or replaced when asked. Null when the leader does not exist. */
+export async function createLeaderGuestCode(leaderId: number, replace: boolean): Promise<string | null> {
+  const supabase = createSupabaseAdmin()
+  const { data: leader, error } = await supabase.from("team_leaders").select("id,guest_code").eq("id", leaderId).maybeSingle()
+  if (error) throw error
+  if (!leader) return null
+  if (leader.guest_code && !replace) return leader.guest_code
+  const code = newCode()
+  const { error: saveError } = await supabase.from("team_leaders").update({ guest_code: code }).eq("id", leaderId)
+  if (saveError) throw saveError
+  return code
+}
