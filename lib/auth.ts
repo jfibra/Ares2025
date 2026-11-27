@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import { TEAM_LEADER_COLUMNS, type TeamLeader } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { adminTeamOf, type AdminTeam } from "@/lib/direct-teams"
+import { dashboardLeaderOf } from "@/lib/co-leaders"
 
 // Server only. The session is a signed, http-only cookie holding the email and role.
 
@@ -86,11 +87,21 @@ export async function getAdmin(): Promise<string | null> {
   return (await isAllowedAdmin(session.email)) ? session.email : null
 }
 
-/** The signed-in team leader, or null. Re-checks that they still exist. */
-export async function getTeamLeader(): Promise<TeamLeader | null> {
+/** The team leader who is signed in: the person themselves. Null when nobody is. Re-checks that they still exist. */
+export async function getTeamLeaderAccount(): Promise<TeamLeader | null> {
   const session = readSession()
   if (!session || session.role !== "tl") return null
   return findTeamLeaderByEmail(session.email)
+}
+
+/**
+ * The team leader whose dashboard the signed-in team leader works on, or null when nobody is
+ * signed in. Normally that is the person themselves. In a team with several team leaders they
+ * all share one dashboard, so this is the same leader for each of them (see lib/co-leaders).
+ */
+export async function getTeamLeader(): Promise<TeamLeader | null> {
+  const account = await getTeamLeaderAccount()
+  return account ? dashboardLeaderOf(account) : null
 }
 
 export async function isTeamAccount(email: string) {

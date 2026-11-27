@@ -84,6 +84,7 @@ export default function PersonDetail({
   onOpen,
   onLeaderChange,
   onRegistrationChange,
+  onRegistrationEmailed,
   onClose,
 }: {
   /** Who to show; null closes the page. */
@@ -100,6 +101,8 @@ export default function PersonDetail({
   onLeaderChange: (leaderId: number, guestCode: string) => void
   /** The same, for a registered agent's own guest link. */
   onRegistrationChange: (registrationId: number, guestCode: string) => void
+  /** Called after the "you are registered" email was sent to a registrant, with the time it was sent. */
+  onRegistrationEmailed?: (registrationId: number, sentAt: string) => void
   onClose: () => void
 }) {
   const [origin, setOrigin] = useState("")
@@ -108,12 +111,17 @@ export default function PersonDetail({
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [confirmReplace, setConfirmReplace] = useState(false)
+  const [mailing, setMailing] = useState(false)
+  const [mailError, setMailError] = useState<string | null>(null)
+  const [mailed, setMailed] = useState(false)
   // A fresh page for each person.
   const targetKey = target ? `${target.kind}-${target.kind === "leader" ? target.leader.id : target.row.id}` : ""
   useEffect(() => {
     setError(null)
     setCopied(false)
     setConfirmReplace(false)
+    setMailError(null)
+    setMailed(false)
   }, [targetKey])
 
   // The freshest copy of the registration, so a link made a moment ago shows at once.
@@ -138,6 +146,24 @@ export default function PersonDetail({
       setError(linkError instanceof Error ? linkError.message : "We could not create the link.")
     } finally {
       setBusy(false)
+    }
+  }
+
+  const sendRegisteredEmail = async () => {
+    if (!row || mailing) return
+    setMailing(true)
+    setMailError(null)
+    setMailed(false)
+    try {
+      const result = await call(`/api/admin/registrations/${row.id}/confirmation-email`, { method: "POST" })
+      if (result) {
+        onRegistrationEmailed?.(row.id, result.confirmation_emailed_at)
+        setMailed(true)
+      }
+    } catch (sendError) {
+      setMailError(sendError instanceof Error ? sendError.message : "We could not send the email.")
+    } finally {
+      setMailing(false)
     }
   }
 
@@ -331,6 +357,38 @@ export default function PersonDetail({
                 "Not sent yet"
               )}
             </Field>
+            {isAdmin ? (
+              <Field label="“You are registered” email" wide>
+                {row.confirmation_emailed_at ? (
+                  <span className="font-semibold text-green-800">
+                    Sent to {row.email} on {dateFormat.format(new Date(row.confirmation_emailed_at))}
+                  </span>
+                ) : row.payment_status === "verified" ? (
+                  "Not sent yet"
+                ) : (
+                  <span className="text-[#7a6a4a]">Sent automatically once this payment reaches the admin.</span>
+                )}
+                {row.payment_status === "verified" ? (
+                  <span className="mt-2 block">
+                    <button
+                      type="button"
+                      onClick={sendRegisteredEmail}
+                      disabled={mailing}
+                      className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#8a6417] bg-gradient-to-r from-[#b8862b] via-[#f3d27a] to-[#b8862b] px-4 text-sm font-bold text-[#2a1408] transition-all hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {mailing ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
+                      {row.confirmation_emailed_at ? "Send the email again" : "Send the email now"}
+                    </button>
+                    {mailed ? <span className="ml-3 text-sm font-semibold text-green-800">Sent.</span> : null}
+                    {mailError ? (
+                      <span role="alert" className="mt-2 block text-sm font-medium text-[#9a1c15]">
+                        {mailError}
+                      </span>
+                    ) : null}
+                  </span>
+                ) : null}
+              </Field>
+            ) : null}
           </dl>
         </section>
 

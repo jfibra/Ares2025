@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getAdmin } from "@/lib/auth"
+import { sendPendingConfirmationEmails } from "@/lib/confirmation-email"
 import { RECEIPT_BUCKET, setPaymentReceived } from "@/lib/payments"
 import { PHOTO_BUCKET } from "@/lib/photo"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
@@ -23,6 +24,8 @@ export async function PATCH(request: Request, { params }: Context) {
   try {
     const result = await setPaymentReceived(id, body.confirmed_by_tl)
     if (!result.ok) return NextResponse.json({ success: false, message: result.message }, { status: result.status })
+    // Paid straight to the admin, so this registrant is now fully registered: congratulate them.
+    if (result.registration.payment_status === "verified") await sendPendingConfirmationEmails()
     return NextResponse.json({ success: true, registration: result.registration })
   } catch (error) {
     console.error("Admin update failed:", error)

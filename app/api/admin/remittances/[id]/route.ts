@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getAdmin } from "@/lib/auth"
+import { sendPendingConfirmationEmails } from "@/lib/confirmation-email"
 import { toRemittance } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 
@@ -32,5 +33,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     console.error("Remittance review failed:", error)
     return fail("Could not update the remittance.", 500)
   }
+  // The team leader's payment reached the admin, so these agents are now fully registered: congratulate them.
+  if (decision === "verified") await sendPendingConfirmationEmails()
   return NextResponse.json({ success: true, remittance: toRemittance(data as Record<string, unknown>) })
 }

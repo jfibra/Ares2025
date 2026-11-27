@@ -35,13 +35,15 @@ export type Registration = {
   /** When the agent uploaded proof of payment; null if they have not. */
   agent_receipt_at: string | null
   agent_receipt_note: string | null
+  /** When the "your payment was received, you are registered" email was sent; null if not yet. */
+  confirmation_emailed_at: string | null
   /** How many formal photos (for the posters) are on file: one per person joining, 0 for older registrations. */
   photo_count: number
   registration_date: string
 }
 
 export const REGISTRATION_COLUMNS =
-  "id,name,email,contact_number,birth_date,birth_date_2,whatsapp_number,polo_shirt_size,polo_shirt_size_2,attendee_count,attendees,team,team_leader_id,team_leader_name,guest_type,guest_of_team_leader_id,guest_of_registration_id,guest_code,confirmed_by_tl,confirmed_at,payment_status,amount,remittance_id,agent_receipt_at,agent_receipt_note,photo_count,registration_date"
+  "id,name,email,contact_number,birth_date,birth_date_2,whatsapp_number,polo_shirt_size,polo_shirt_size_2,attendee_count,attendees,team,team_leader_id,team_leader_name,guest_type,guest_of_team_leader_id,guest_of_registration_id,guest_code,confirmed_by_tl,confirmed_at,payment_status,amount,remittance_id,agent_receipt_at,agent_receipt_note,confirmation_emailed_at,photo_count,registration_date"
 
 export type TeamLeader = {
   id: number
@@ -50,6 +52,8 @@ export type TeamLeader = {
   contact_number: string
   /** Where their agents can contact them. Null until they add it in the portal. */
   facebook_url: string | null
+  /** The contact number shown to agents, when the leader chose a different one in their settings. */
+  agent_contact_number: string | null
   /** The code of this leader's own guest link (/guest/<code>), once the admin has made one. */
   guest_code: string | null
   team: string
@@ -70,7 +74,7 @@ export const MAX_PAYMENT_ACCOUNTS = 10
 
 export const hasPaymentDetails = (details: TlPaymentDetails | null | undefined) => Boolean(details && details.length > 0)
 
-export const TEAM_LEADER_COLUMNS = "id,name,email,contact_number,facebook_url,guest_code,team,created_at"
+export const TEAM_LEADER_COLUMNS = "id,name,email,contact_number,agent_contact_number,facebook_url,guest_code,team,created_at"
 
 /** A team leader who said they are not joining ARES 2027. */
 export type TlDecline = {

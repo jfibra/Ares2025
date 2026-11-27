@@ -213,6 +213,8 @@ export default function PortalDashboard({
   initialGuestInviteToken = null,
   initialPaymentDetails = null,
   initialFacebookUrl = null,
+  initialContactNumber = null,
+  sharedWith = null,
   initialAdminAccounts = [],
   initialTeamLogins = [],
   initialDeclines = [],
@@ -236,6 +238,10 @@ export default function PortalDashboard({
   initialPaymentDetails?: TlPaymentDetails | null
   /** Team leader only: the Facebook link their agents use to contact them. */
   initialFacebookUrl?: string | null
+  /** Team leader: the contact number their agents are shown. */
+  initialContactNumber?: string | null
+  /** Team leader: the names of the team leaders who share this dashboard, when the team has several. */
+  sharedWith?: string[] | null
   initialAdminAccounts?: TlPaymentAccount[]
   /** Admin only: the accounts and the contact person shown to the agents of the team the admin handles. */
   initialTeamLogins?: TeamAccount[]
@@ -261,6 +267,11 @@ export default function PortalDashboard({
   // Team leader: where their agents send the registration fee.
   const [paymentDetails, setPaymentDetails] = useState(initialPaymentDetails)
   const [facebookUrl, setFacebookUrl] = useState(initialFacebookUrl)
+  const [contactNumber, setContactNumber] = useState(initialContactNumber ?? "")
+  const [contactDraft, setContactDraft] = useState(initialContactNumber ?? "")
+  const [contactBusy, setContactBusy] = useState(false)
+  const [contactError, setContactError] = useState<string | null>(null)
+  const [contactSaved, setContactSaved] = useState(false)
   // The organizer's accounts: the admin manages them, team leaders send their collections there.
   const [adminAccounts, setAdminAccounts] = useState(initialAdminAccounts)
   // Team leader: agents ticked to send to the admin in one remittance.
@@ -484,6 +495,31 @@ export default function PortalDashboard({
       body: JSON.stringify({ facebook_url: value }),
     })
     if (result) setFacebookUrl(result.facebook_url)
+  }
+
+  /** Team leader: save the contact number agents are shown. */
+  const saveContactNumber = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (contactBusy) return
+    setContactBusy(true)
+    setContactError(null)
+    setContactSaved(false)
+    try {
+      const result = await call("/api/tl/facebook", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contact_number: contactDraft }),
+      })
+      if (result) {
+        setContactNumber(result.contact_number)
+        setContactDraft(result.contact_number)
+        setContactSaved(true)
+      }
+    } catch (saveError) {
+      setContactError(saveError instanceof Error ? saveError.message : "We could not save the contact number.")
+    } finally {
+      setContactBusy(false)
+    }
   }
 
   /** Admin: add, change or delete one of the organizer's accounts. Throws so the panel can show the reason. */
@@ -1425,6 +1461,16 @@ export default function PortalDashboard({
             <AgentQrPanel />
           ) : tab === "payment" ? (
             <>
+              {sharedWith ? (
+                <p className="mb-4 flex items-start gap-2 rounded-2xl border border-[#d4a437]/60 bg-[#fdf3d7] px-5 py-4 text-sm leading-relaxed text-[#5c4a2a]">
+                  <Info size={18} className="mt-0.5 shrink-0 text-[#b8862b]" />
+                  <span>
+                    <strong className="text-[#2a1458]">Your team shares this dashboard.</strong> {sharedWith.join(", ")} each sign in with
+                    their own account and see the same agents. The payment details, Facebook link and contact number below are the same
+                    for all of you, and they are what your agents see, so agree on one of each.
+                  </span>
+                </p>
+              ) : null}
               <PaymentDetailsPanel
                 accounts={paymentDetails ?? []}
                 fee={fee}
@@ -1436,11 +1482,50 @@ export default function PortalDashboard({
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">For your agents</p>
                 <h2 className="mt-2 text-2xl font-black text-[#2a1458]">How agents contact you</h2>
                 <p className="mt-3 max-w-2xl leading-relaxed text-[#5c4a2a]">
-                  Shown to your agents together with your contact number, below your payment details.
+                  Your agents see this Facebook link and contact number below your payment details, after they register.
                 </p>
                 <div className="mt-5 max-w-xl">
                   <FacebookLinkForm current={facebookUrl} onSave={saveFacebookUrl} />
                 </div>
+                <form onSubmit={saveContactNumber} noValidate className="mt-8 max-w-xl border-t border-[#e3d3a8] pt-6">
+                  <label htmlFor="tl-agent-contact" className="block text-sm font-semibold text-[#2a1458]">
+                    Contact number shown to your agents <span className="text-[#b3261e]">*</span>
+                  </label>
+                  <input
+                    id="tl-agent-contact"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={contactDraft}
+                    onChange={(event) => {
+                      setContactDraft(event.target.value)
+                      setContactSaved(false)
+                    }}
+                    placeholder="0917 123 4567"
+                    className="mt-2 h-12 w-full rounded-xl border border-[#e3d3a8] bg-white px-4 text-[#2a1458] placeholder:text-[#a8997a] focus:border-[#c9972f] focus:outline-none focus:ring-2 focus:ring-[#c9972f]/30"
+                  />
+                  <p className="mt-2 text-sm text-[#7a6a4a]">The one number your agents should call or message about their registration.</p>
+                  {contactError ? (
+                    <p role="alert" className="mt-3 rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
+                      {contactError}
+                    </p>
+                  ) : null}
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <button
+                      type="submit"
+                      disabled={contactBusy || contactDraft.trim() === contactNumber}
+                      className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-[#f3d27a] to-[#c9972f] px-5 text-sm font-bold text-[#2a1408] shadow-sm hover:brightness-105 disabled:opacity-60"
+                    >
+                      {contactBusy ? <Loader2 size={16} className="animate-spin" /> : null}
+                      Save contact number
+                    </button>
+                    {contactSaved ? (
+                      <span role="status" className="text-sm font-semibold text-[#2f6b3a]">
+                        Saved
+                      </span>
+                    ) : null}
+                  </div>
+                </form>
               </section>
             </>
           ) : tab === "payadmin" ? (
@@ -1463,7 +1548,7 @@ export default function PortalDashboard({
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="max-w-3xl">
                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">For your secretaries</p>
-                    <h2 className="mt-2 text-2xl font-black text-[#2a1458]">Accounts for {ADMIN_TEAMS.join(" and ")}</h2>
+                    <h2 className="mt-2 text-2xl font-black text-[#2a1458]">Accounts for {new Intl.ListFormat("en", { style: "long", type: "conjunction" }).format(ADMIN_TEAMS)}</h2>
                     <p className="mt-3 leading-relaxed text-[#5c4a2a]">
                       These teams have no team leader for ARES 2027. Create an account for the person who will look after each
                       team. They sign in to a dashboard for that team only, where they add their name, contact number and
@@ -1796,6 +1881,7 @@ export default function PortalDashboard({
           call={call}
           onOpen={setDetail}
           onLeaderChange={(leaderId, guestCode) => setLeaders((all) => all.map((l) => (l.id === leaderId ? { ...l, guest_code: guestCode } : l)))}
+          onRegistrationEmailed={(registrationId, sentAt) => setRows((all) => all.map((r) => (r.id === registrationId ? { ...r, confirmation_emailed_at: sentAt } : r)))}
           onRegistrationChange={(registrationId, guestCode) => setRows((all) => all.map((r) => (r.id === registrationId ? { ...r, guest_code: guestCode } : r)))}
           onClose={() => setDetail(null)}
         />

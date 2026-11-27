@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { EMAIL_PATTERN } from "@/lib/agent-registration"
 import { findTeamLeaderByEmail, setSession } from "@/lib/auth"
+import { dashboardLeaderOf } from "@/lib/co-leaders"
 import { TEAM_LEADER_COLUMNS, type TeamLeader } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { photosIn, photosProblem, removePhotos, storePhotos } from "@/lib/photo-store"
@@ -105,7 +106,7 @@ export async function POST(request: Request) {
     try {
       if (ticket?.ok) {
         photoPaths = await storePhotos(photos)
-        await saveOwnTicket(leader as TeamLeader, ticket.ticket, photoPaths)
+        await saveOwnTicket(leader as TeamLeader, ticket.ticket, photoPaths, await dashboardLeaderOf(leader as TeamLeader))
         // They are attending: drop any earlier "can't attend" answer.
         await supabase.from("team_leader_declines").delete().eq("email", email)
       } else {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { isAdminTeamRow } from "@/lib/admin-team"
 import { getTeamAccount } from "@/lib/auth"
+import { sendPendingConfirmationEmails } from "@/lib/confirmation-email"
 import { adminTeamOf } from "@/lib/direct-teams"
 import { setPaymentReceived } from "@/lib/payments"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
@@ -23,6 +24,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (!row || !isAdminTeamRow(row) || adminTeamOf(row.team) !== account.team) return fail("Registration not found.", 404)
     const result = await setPaymentReceived(id, body.confirmed_by_tl)
     if (!result.ok) return fail(result.message, result.status)
+    if (result.registration.payment_status === "verified") await sendPendingConfirmationEmails()
     return NextResponse.json({ success: true, registration: result.registration })
   } catch (error) {
     console.error("Team payment update failed:", error)

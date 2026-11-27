@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import { getTeamLeader } from "@/lib/auth"
+import { getTeamLeaderAccount } from "@/lib/auth"
+import { dashboardLeaderOf } from "@/lib/co-leaders"
 import { photosIn, photosProblem, removePhotos, storePhotos } from "@/lib/photo-store"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { checkOwnTicket, saveOwnTicket } from "@/lib/tl-ticket"
@@ -9,7 +10,8 @@ export const dynamic = "force-dynamic"
 
 /** A signed-in team leader who has no registration of their own yet adds it from their portal. */
 export async function POST(request: Request) {
-  const leader = await getTeamLeader()
+  // The person signing in registers themselves; it is listed on their dashboard, which a team with several leaders shares.
+  const leader = await getTeamLeaderAccount()
   if (!leader) return NextResponse.json({ success: false, message: "Not signed in." }, { status: 401 })
   const form = await request.formData().catch(() => null)
   if (!form) return NextResponse.json({ success: false, message: "Invalid request." }, { status: 400 })
@@ -31,7 +33,7 @@ export async function POST(request: Request) {
     const photoPaths = await storePhotos(photos)
     let saved: "saved" | "exists"
     try {
-      saved = await saveOwnTicket(leader, checked.ticket, photoPaths)
+      saved = await saveOwnTicket(leader, checked.ticket, photoPaths, await dashboardLeaderOf(leader))
     } catch (saveError) {
       await removePhotos(photoPaths)
       throw saveError

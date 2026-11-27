@@ -168,10 +168,10 @@ export async function getLeaderContact(leaderId: number | null): Promise<LeaderC
   if (leaderId === null) return null
   const { data, error } = await createSupabaseAdmin()
     .from("team_leaders")
-    .select("facebook_url,contact_number")
+    .select("facebook_url,contact_number,agent_contact_number")
     .eq("id", leaderId)
     .maybeSingle()
   if (error) throw error
   if (!data) return null
-  return { facebook_url: data.facebook_url ?? null, contact_number: data.contact_number || null }
+  return { facebook_url: data.facebook_url ?? null, contact_number: data.agent_contact_number || data.contact_number || null }
 }

@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "crypto"
 import { NextResponse } from "next/server"
+import { sendPendingConfirmationEmails } from "@/lib/confirmation-email"
 import { removeUnpaidRegistrations } from "@/lib/unpaid-expiry"
 
 export const runtime = "nodejs"
@@ -19,7 +20,9 @@ export async function GET(request: Request) {
   }
   try {
     const result = await removeUnpaidRegistrations()
-    return NextResponse.json({ success: true, ...result })
+    // Also retries any "you are registered" email that could not be sent earlier.
+    const confirmations = await sendPendingConfirmationEmails()
+    return NextResponse.json({ success: true, ...result, confirmations })
   } catch (error) {
     console.error("Removing unpaid registrations failed:", error)
     return NextResponse.json({ success: false, message: "Could not remove unpaid registrations." }, { status: 500 })

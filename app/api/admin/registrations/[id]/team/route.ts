@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getAdmin } from "@/lib/auth"
-import { REGISTRATION_COLUMNS, type Registration } from "@/lib/registrations"
+import { dashboardLeaderOf } from "@/lib/co-leaders"
+import { REGISTRATION_COLUMNS, TEAM_LEADER_COLUMNS, type Registration, type TeamLeader } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 
 export const runtime = "nodejs"
@@ -30,9 +31,11 @@ export async function PATCH(request: Request, { params }: Context) {
     if (leaderId === null) {
       change = { team_leader_id: null, team_leader_name: null }
     } else {
-      const { data: leader, error } = await supabase.from("team_leaders").select("id,name,team").eq("id", leaderId).maybeSingle()
+      const { data: chosen, error } = await supabase.from("team_leaders").select(TEAM_LEADER_COLUMNS).eq("id", leaderId).maybeSingle()
       if (error) throw error
-      if (!leader) return fail("That team leader was not found. Please refresh and try again.", 404)
+      if (!chosen) return fail("That team leader was not found. Please refresh and try again.", 404)
+      // A team with several team leaders shares one dashboard.
+      const leader = await dashboardLeaderOf(chosen as TeamLeader)
       change = { team_leader_id: leader.id, team_leader_name: leader.name, team: leader.team }
     }
 

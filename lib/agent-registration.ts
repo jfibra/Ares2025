@@ -3,6 +3,7 @@ import { isPastAttendee } from "@/lib/past-attendees"
 import { generalRegistrationOpensAtMs } from "@/lib/registration-opening"
 import { TEAM_LEADER_COLUMNS, type TeamLeader } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
+import { dashboardLeaderOf, sharedLeaderForTeam } from "@/lib/co-leaders"
 import { isAdminTeam } from "@/lib/direct-teams"
 import { getAssignmentForTeam, normaliseTeam, type TlAssignment } from "@/lib/tl-assignments"
 
@@ -16,13 +17,16 @@ async function findTeamLeaderFor(agent: DirectoryAgent, assigned: TlAssignment |
   const { data, error } = await createSupabaseAdmin().from("team_leaders").select(TEAM_LEADER_COLUMNS)
   if (error) throw error
   const leaders = (data ?? []) as TeamLeader[]
+  // A team with several team leaders shares one dashboard: every agent of the team goes there.
+  const shared = sharedLeaderForTeam(agent.team, leaders)
+  if (shared) return shared
   if (assigned) {
     const chosen = leaders.find((leader) => leader.email === assigned.email)
-    if (chosen) return chosen
+    if (chosen) return dashboardLeaderOf(chosen)
   }
   if (agent.team_leader_email) {
     const byEmail = leaders.find((leader) => leader.email === agent.team_leader_email)
-    if (byEmail) return byEmail
+    if (byEmail) return dashboardLeaderOf(byEmail)
   }
   const team = normaliseTeam(agent.team)
   const sameTeam = leaders.filter((leader) => normaliseTeam(leader.team) === team)
