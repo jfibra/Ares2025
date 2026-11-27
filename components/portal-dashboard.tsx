@@ -17,6 +17,12 @@ import {
   Copy,
   Download,
   ImageIcon,
+  KeyRound,
+  UserPlus,
+  UserX,
+  LayoutDashboard,
+  Building2,
+  Ticket,
   Info,
   Link2,
   Loader2,
@@ -48,10 +54,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Counter } from "@/components/motion"
 import AdminManagedAgents from "@/components/admin-managed-agents"
 import AdminGuestForm from "@/components/admin-guest-form"
-import AdminTeamHandlerForm, { type TeamHandler } from "@/components/admin-team-handler-form"
+import AdminTeamAccounts, { type TeamAccount } from "@/components/admin-team-accounts"
+import AdminOverview from "@/components/admin-overview"
 import { PaymentCountdown } from "@/components/payment-countdown"
 import { FacebookLinkForm } from "@/components/facebook-link-form"
-import { ADMIN_TEAMS, isAdminTeam } from "@/lib/direct-teams"
+import { ADMIN_TEAMS, adminTeamOf, isAdminTeam } from "@/lib/direct-teams"
 import { isOnPaymentClock, paymentDeadlineMs } from "@/lib/unpaid-rule"
 import { OwnTicketCard } from "@/components/own-ticket-fields"
 import PastAttendeesPanel from "@/components/past-attendees-panel"
@@ -76,7 +83,7 @@ import {
 const LOGO_URL = "https://filipinohomes123.s3.ap-southeast-1.amazonaws.com/ares/logo/ARES+Landscape+LOGO.png"
 
 type Role = "admin" | "tl"
-type Tab = "pending" | "confirmed" | "remittances" | "leaders" | "assign" | "declined" | "guests" | "adminteam" | "settings" | "payment" | "payadmin"
+type Tab = "overview" | "pending" | "confirmed" | "remittances" | "leaders" | "assign" | "declined" | "guests" | "adminteam" | "settings" | "payment" | "payadmin"
 type Row = Record<string, unknown> & { id: number }
 type Column = {
   key: string
@@ -204,8 +211,7 @@ export default function PortalDashboard({
   initialPaymentDetails = null,
   initialFacebookUrl = null,
   initialAdminAccounts = [],
-  initialTeamAccounts = [],
-  initialTeamHandler = null,
+  initialTeamLogins = [],
   initialDeclines = [],
   ownEmail,
   ownName,
@@ -229,8 +235,7 @@ export default function PortalDashboard({
   initialFacebookUrl?: string | null
   initialAdminAccounts?: TlPaymentAccount[]
   /** Admin only: the accounts and the contact person shown to the agents of the team the admin handles. */
-  initialTeamAccounts?: TlPaymentAccount[]
-  initialTeamHandler?: TeamHandler | null
+  initialTeamLogins?: TeamAccount[]
   initialDeclines?: TlDecline[]
   /** Team leader: their email and LR record name, to pick out (or add) their own registration. */
   ownEmail?: string
@@ -255,8 +260,6 @@ export default function PortalDashboard({
   const [facebookUrl, setFacebookUrl] = useState(initialFacebookUrl)
   // The organizer's accounts: the admin manages them, team leaders send their collections there.
   const [adminAccounts, setAdminAccounts] = useState(initialAdminAccounts)
-  const [teamAccounts, setTeamAccounts] = useState(initialTeamAccounts)
-  const [teamHandler, setTeamHandler] = useState(initialTeamHandler)
   // Team leader: agents ticked to send to the admin in one remittance.
   const [selected, setSelected] = useState<Set<number>>(() => new Set())
   const [remitOpen, setRemitOpen] = useState(false)
@@ -264,7 +267,7 @@ export default function PortalDashboard({
   const [expanded, setExpanded] = useState<number | null>(null)
   const [inviteToken, setInviteToken] = useState(initialInviteToken)
   const [guestInviteToken, setGuestInviteToken] = useState(initialGuestInviteToken)
-  const [tab, setTab] = useState<Tab>("pending")
+  const [tab, setTab] = useState<Tab>(role === "admin" ? "overview" : "pending")
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<Sort>({ key: "registration_date", direction: "desc" })
   const [busyKey, setBusyKey] = useState<string | null>(null)
@@ -455,22 +458,6 @@ export default function PortalDashboard({
   const changePaymentAccounts = async (url: string, init: RequestInit) => {
     const result = await call(url, init)
     if (result) setPaymentDetails(result.accounts)
-  }
-
-  /** Admin: add, change or delete an account shown to the agents of the team the admin handles. */
-  const changeTeamAccounts = async (url: string, init: RequestInit) => {
-    const result = await call(url, init)
-    if (result) setTeamAccounts(result.accounts)
-  }
-
-  /** Admin: who looks after the team the admin handles. Throws so the form can show the reason. */
-  const saveTeamHandler = async (next: { name: string; contact_number: string; facebook_url: string }) => {
-    const result = await call("/api/admin/team-handler", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(next),
-    })
-    if (result) setTeamHandler(result.handler)
   }
 
   /** Admin: put a guest on a team, so its leader handles them, or take them back (null). */
@@ -801,7 +788,7 @@ export default function PortalDashboard({
     setTab(next)
     setQuery("")
     setExpanded(null)
-    const key = { pending: "registration_date", confirmed: "registration_date", remittances: "submitted_at", leaders: "created_at", declined: "declined_at", guests: "", adminteam: "", settings: "", assign: "", payment: "", payadmin: "" }[next]
+    const key = { overview: "", pending: "registration_date", confirmed: "registration_date", remittances: "submitted_at", leaders: "created_at", declined: "declined_at", guests: "", adminteam: "", settings: "", assign: "", payment: "", payadmin: "" }[next]
     setSort({ key, direction: "desc" })
   }
 
@@ -812,6 +799,7 @@ export default function PortalDashboard({
 
   const exportCsv = () => {
     const names: Record<Tab, string> = {
+      overview: "",
       pending: "pending-agents",
       confirmed: "confirmed-agents",
       remittances: "remittances",
@@ -856,15 +844,35 @@ export default function PortalDashboard({
   const slotsTaken = rows.reduce((total, r) => total + (Number(r.attendee_count) || 1), 0)
   // Money that reached the admin: remittances marked received, plus agents who paid the admin directly.
   const verifiedTotal = sum(remittances.filter((r) => r.status === "verified")) + sum([...adminManaged, ...adminTeamAgents, ...guests].filter((r) => r.team_leader_id === null && r.payment_status === "verified"))
+  // Team leaders and agents are counted apart: a team leader's own registration is not an agent.
+  const leaderRowCount = rows.filter((r) => isLeaderRow(r as unknown as Row)).length
+  const agentRowCount = rows.filter((r) => !isLeaderRow(r as unknown as Row) && !r.guest_type).length
+  const teamCount = new Set(
+    [...leaders.map((l) => l.team), ...rows.filter((r) => !(r.guest_type && r.team_leader_id === null)).map((r) => r.team)].map((team) =>
+      team.trim().toLowerCase().replace(/\s+/g, " "),
+    ),
+  ).size
   const statCards: { label: string; icon: typeof Users; count?: number; money?: number; hint?: string }[] = isAdmin
     ? [
-        { label: "Team leaders", icon: UserCog, count: leaders.length },
         {
-          label: "Agents registered",
-          icon: Users,
-          count: rows.length,
-          hint: `${slotsTaken.toLocaleString()} of ${slotLimit.toLocaleString()} slots taken · ${rows.filter((r) => !r.confirmed_by_tl).length.toLocaleString()} not paid yet`,
+          label: "Total registrants",
+          icon: Ticket,
+          count: slotsTaken,
+          hint: `${rows.length.toLocaleString()} registrations · ${slotsTaken.toLocaleString()} of ${slotLimit.toLocaleString()} slots taken`,
         },
+        {
+          label: "Team leaders",
+          icon: UserCog,
+          count: leaders.length,
+          hint: `${leaderRowCount.toLocaleString()} attending · ${(leaders.length - leaderRowCount).toLocaleString()} not attending`,
+        },
+        {
+          label: "Agents",
+          icon: Users,
+          count: agentRowCount,
+          hint: `Team leaders not counted · ${rows.filter((r) => !r.confirmed_by_tl).length.toLocaleString()} registrations not paid yet`,
+        },
+        { label: "Teams", icon: Building2, count: teamCount },
         { label: "Remittances to check", icon: Clock, money: sum(waiting), hint: `${waiting.length.toLocaleString()} waiting` },
         { label: "Received", icon: BadgeCheck, money: verifiedTotal },
       ]
@@ -875,15 +883,15 @@ export default function PortalDashboard({
         { label: "Received by admin", icon: BadgeCheck, money: verifiedTotal },
       ]
   const tabs: { id: Tab; label: string; count?: number; icon?: typeof Users }[] = [
-    { id: "pending", label: "Pending", count: pending.length },
-    { id: "confirmed", label: "Confirmed", count: confirmed.length },
-    { id: "remittances", label: "Remittances", count: isAdmin ? waiting.length : remittances.length },
+    ...(isAdmin ? [{ id: "overview" as Tab, label: "Overview", icon: LayoutDashboard }] : []),
+    { id: "pending", label: "Pending", count: pending.length, icon: Clock },
+    { id: "confirmed", label: isAdmin ? "Confirmed by TL" : "Confirmed", count: confirmed.length, icon: BadgeCheck },
+    { id: "remittances", label: isAdmin ? "Received Payment" : "Remittances", count: isAdmin ? waiting.length : remittances.length, icon: Banknote },
     ...(isAdmin
       ? [
-          { id: "leaders" as Tab, label: "Team leaders", count: leaders.length },
-          { id: "assign" as Tab, label: "Assign TL", icon: UserCog },
-          { id: "declined" as Tab, label: "Not joining", count: declines.length + adminManaged.length },
-          { id: "adminteam" as Tab, label: ADMIN_TEAMS.join(" / "), count: adminTeamAgents.length, icon: Users },
+          { id: "leaders" as Tab, label: "Team leaders", count: leaders.length, icon: UserCog },
+          { id: "assign" as Tab, label: "Assign TL", icon: UserPlus },
+          { id: "adminteam" as Tab, label: "Team accounts", count: adminTeamAgents.length, icon: KeyRound },
           { id: "guests" as Tab, label: "Guests", count: guests.length, icon: Sparkles },
           { id: "settings" as Tab, label: "Settings", icon: Settings },
         ]
@@ -893,11 +901,16 @@ export default function PortalDashboard({
         ]),
   ]
 
+  // "Not joining" is part of the Team leaders page: the menu shows one item for both.
+  const navTab: Tab = tab === "declined" ? "leaders" : tab
+  const activeTab = tabs.find((item) => item.id === navTab)
+  const ActiveIcon = activeTab?.icon ?? LayoutDashboard
+
   /** The buttons for one row: confirm or undo a payment, review a remittance, delete. Used by the table and the phone cards. */
   const renderActions = (row: Row, busy: boolean) => {
     const status = row.payment_status as PaymentStatus | undefined
     return (
-                                <div className="flex flex-wrap items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2 md:flex-nowrap">
                                   {isRemittanceTab ? (
                                     isAdmin && row.status === "submitted" ? (
                                       <>
@@ -990,7 +1003,7 @@ export default function PortalDashboard({
   // On a phone each row is a card: these values need the card's full width.
   const wideOnCard = new Set(["agent_receipt_at", "reason", "status", "time_left", "team", "team_leader_name", "reference_no"])
 
-  const emptyText: Record<Exclude<Tab, "settings" | "payment" | "payadmin" | "assign" | "guests" | "adminteam">, [string, string]> = {
+  const emptyText: Record<Exclude<Tab, "overview" | "settings" | "payment" | "payadmin" | "assign" | "guests" | "adminteam">, [string, string]> = {
     pending: isAdmin
       ? ["No agents waiting to pay", "Agents appear here after they register, until their team leader confirms their payment."]
       : ["No one waiting for you", "Your own registration and your agents' appear here until the payment is confirmed. Check each receipt and confirm once they pay you."],
@@ -1051,7 +1064,7 @@ export default function PortalDashboard({
         {/* ---------------------------------------------------------------- */}
         {/* Header band                                                        */}
         {/* ---------------------------------------------------------------- */}
-        <header className="relative overflow-hidden border-b-2 border-[#d4a437] bg-gradient-to-r from-[#2a1458] via-[#1a0d3d] to-[#3a0d2a] pb-24 text-white">
+        <header className={`relative overflow-hidden border-b-2 border-[#d4a437] bg-gradient-to-r from-[#2a1458] via-[#1a0d3d] to-[#3a0d2a] pb-24 text-white ${isAdmin ? "hidden" : ""}`}>
           <div aria-hidden className="absolute inset-0 opacity-[0.13]" style={{ backgroundImage: goldLattice }} />
           <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-80 w-80 rounded-full bg-[#d4a437]/20 blur-[110px]" />
 
@@ -1093,9 +1106,43 @@ export default function PortalDashboard({
           </motion.div>
         </header>
 
-        <main className="relative mx-auto -mt-16 max-w-[1680px] px-4 pb-12 sm:px-6">
+        <main
+          className={
+            isAdmin
+              ? "relative min-h-screen px-4 pb-12 sm:px-6 lg:pl-[19.5rem] lg:pr-8"
+              : "relative mx-auto -mt-16 max-w-[1680px] px-4 pb-12 sm:px-6"
+          }
+        >
+          {/* Admin: a top bar with the current section, who is signed in, and sign out. */}
+          {isAdmin ? (
+            <div className="sticky top-0 z-30 -mx-4 mb-6 flex h-[4.5rem] items-center justify-between gap-3 border-b-2 border-[#d4a437] bg-[#fffdf7]/95 px-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-ml-6 lg:-mr-8 lg:px-8">
+              <div className="flex min-w-0 items-center gap-4">
+                <span className="ml-1 grid h-9 w-9 shrink-0 rotate-45 place-items-center border border-[#d4a437] bg-[#2a1458] text-[#f3d27a] shadow-[0_8px_18px_-8px_rgba(42,20,88,0.8)]">
+                  <ActiveIcon size={16} className="-rotate-45" />
+                </span>
+                <div className="min-w-0">
+                  <p lang="th" className="text-xs font-medium leading-none text-[#b8862b]">
+                    การลงทะเบียน <span className="font-semibold uppercase tracking-[0.2em] lg:hidden">· ARES 2027 Admin</span>
+                  </p>
+                  <h1 className="mt-1 truncate text-xl font-black uppercase leading-none tracking-tight text-[#2a1458] sm:text-2xl">
+                    {activeTab?.label ?? "Dashboard"}
+                  </h1>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                <span className="hidden max-w-[16rem] truncate text-sm text-[#5c4a2a] md:inline">{userLabel}</span>
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#d4a437]/70 bg-white px-3 text-sm font-semibold text-[#6b4a12] transition-colors hover:border-[#c9972f] hover:bg-[#fdf3d7]"
+                >
+                  <LogOut size={16} /> <span className="hidden sm:inline">Sign out</span>
+                </button>
+              </div>
+            </div>
+          ) : null}
           {/* Summary cards overlap the header band */}
-          <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+          <dl className={`grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4 ${isAdmin ? "hidden" : ""}`}>
             {statCards.map((stat, i) => (
               <motion.div
                 key={stat.label}
@@ -1233,9 +1280,41 @@ export default function PortalDashboard({
           {needsOwnTicket && ownName ? <OwnTicketCard name={ownName} fee={fee} onSaved={refresh} declinedReason={ownDeclineReason} /> : null}
 
           {/* Tabs */}
-          <div role="tablist" aria-label="Lists" className="mt-8 flex gap-2 overflow-x-auto pb-1">
+          {/* The admin's sections are a fixed sidebar on large screens; on small ones (and for team leaders) a row of tabs. */}
+          <div className={isAdmin ? "" : "mt-8"}>
+          <div
+            role="tablist"
+            aria-label="Sections"
+            aria-orientation={isAdmin ? "vertical" : "horizontal"}
+            className={`flex gap-2 overflow-x-auto pb-1 ${
+              isAdmin
+                ? "mb-4 lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:mb-0 lg:w-72 lg:flex-col lg:gap-0 lg:overflow-y-auto lg:overflow-x-hidden lg:border-r-2 lg:border-[#d4a437] lg:bg-gradient-to-b lg:from-[#2a1458] lg:via-[#1a0d3d] lg:to-[#3a0d2a] lg:pb-6"
+                : ""
+            }`}
+          >
+            {isAdmin ? (
+              <>
+                <div aria-hidden className="pointer-events-none absolute inset-0 hidden opacity-[0.12] lg:block" style={{ backgroundImage: goldLattice }} />
+                <Link href="/" aria-label="ARES 2027 home" className="relative hidden h-[4.5rem] shrink-0 items-center gap-3 border-b border-[#d4a437]/40 px-6 lg:flex">
+                  <img src={LOGO_URL} alt="Asian Real Estate Summit" className="h-9 w-auto" />
+                  <span className="border-l border-white/40 pl-3 text-lg font-black leading-none text-white">2027</span>
+                </Link>
+                <div className="relative hidden flex-col items-center px-6 pb-2 pt-6 text-center lg:flex">
+                  <Lotus bloom className="h-10 w-16 text-[#f0c24b]" />
+                  <p lang="th" className="mt-2 text-sm font-medium text-[#f3d27a]">
+                    ยินดีต้อนรับ
+                  </p>
+                  <p className="mt-1 max-w-full truncate text-sm font-bold text-white">{userLabel}</p>
+                  <p className="mt-1 rounded-full border border-[#d4a437]/60 bg-[#d4a437]/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#f3d27a]">
+                    Administrator
+                  </p>
+                  <GoldRule className="mt-5 w-40" />
+                </div>
+              </>
+            ) : null}
             {tabs.map((item) => {
-              const active = tab === item.id
+              const active = navTab === item.id
+              const Icon = item.icon
               return (
                 <button
                   key={item.id}
@@ -1244,34 +1323,79 @@ export default function PortalDashboard({
                   aria-selected={active}
                   onClick={() => changeTab(item.id)}
                   className={`inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors ${
+                    isAdmin
+                      ? "lg:relative lg:h-[3.25rem] lg:w-full lg:justify-between lg:rounded-none lg:border-y-0 lg:border-l-4 lg:border-r-0 lg:px-6 lg:font-medium"
+                      : ""
+                  } ${
                     active
-                      ? "border-[#2a1458] bg-[#2a1458] text-[#fbe7a1]"
-                      : "border-[#e3d3a8] bg-white text-[#6b4a12] hover:border-[#c9972f] hover:bg-[#fdf3d7]"
+                      ? `border-[#2a1458] bg-[#2a1458] text-[#fbe7a1] ${isAdmin ? "lg:border-[#f3d27a] lg:bg-gradient-to-r lg:from-[#d4a437]/30 lg:to-transparent lg:font-bold lg:text-[#fbe7a1]" : ""}`
+                      : `border-[#e3d3a8] bg-white text-[#6b4a12] hover:border-[#c9972f] hover:bg-[#fdf3d7] ${
+                          isAdmin ? "lg:border-transparent lg:bg-transparent lg:text-white/85 lg:hover:border-[#d4a437]/60 lg:hover:bg-white/10 lg:hover:text-white" : ""
+                        }`
                   }`}
                 >
-                  {item.icon ? <item.icon size={16} /> : null}
-                  {item.label}
-                  {item.count !== undefined ? (
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs tabular-nums ${
-                        active ? "bg-[#f3d27a] text-[#2a1408]" : "bg-[#f1e6c8] text-[#6b4a12]"
-                      }`}
-                    >
-                      {item.count.toLocaleString()}
-                    </span>
-                  ) : null}
+                  <span className="flex min-w-0 items-center gap-2">
+                    {Icon ? <Icon size={16} className={isAdmin ? "lg:hidden" : ""} /> : null}
+                    <span className="truncate">{item.label}</span>
+                    {item.count !== undefined ? (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${
+                          active
+                            ? `bg-[#f3d27a] text-[#2a1408] ${isAdmin ? "lg:bg-[#f3d27a] lg:text-[#2a1408]" : ""}`
+                            : `bg-[#f1e6c8] text-[#6b4a12] ${isAdmin ? "lg:bg-white/15 lg:text-[#fbe7a1]" : ""}`
+                        }`}
+                      >
+                        {item.count.toLocaleString()}
+                      </span>
+                    ) : null}
+                  </span>
+                  {isAdmin && Icon ? <Icon size={18} className={`hidden shrink-0 lg:block ${active ? "text-[#f3d27a]" : "text-[#d4a437]/70"}`} /> : null}
                 </button>
               )
             })}
           </div>
 
+          <div>
           {errorMessage ? (
             <p role="alert" className="mt-4 rounded-xl border border-[#b3261e]/25 bg-[#b3261e]/5 px-4 py-3 text-sm font-medium text-[#9a1c15]">
               {errorMessage}
             </p>
           ) : null}
 
-          {tab === "payment" ? (
+          {isAdmin && (tab === "leaders" || tab === "declined") ? (
+            <div role="tablist" aria-label="Team leaders" className="mt-4 inline-flex flex-wrap gap-1 rounded-2xl border border-[#d4a437]/50 bg-white p-1.5">
+              {[
+                { id: "leaders" as Tab, label: "Registered team leaders", count: leaders.length, icon: UserCog },
+                { id: "declined" as Tab, label: "Not joining", count: declines.length + adminManaged.length, icon: UserX },
+              ].map((item) => {
+                const active = tab === item.id
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => changeTab(item.id)}
+                    className={`inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors ${
+                      active ? "bg-[#2a1458] text-[#fbe7a1]" : "text-[#6b4a12] hover:bg-[#fdf3d7]"
+                    }`}
+                  >
+                    <item.icon size={16} />
+                    {item.label}
+                    <span className={`rounded-full px-2 py-0.5 text-xs tabular-nums ${active ? "bg-[#f3d27a] text-[#2a1408]" : "bg-[#f1e6c8] text-[#6b4a12]"}`}>
+                      {item.count.toLocaleString()}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
+
+          {tab === "overview" ? (
+            <div className="mt-6">
+              <AdminOverview registrations={rows} leaders={leaders} declines={declines} slotLimit={slotLimit} fee={fee} />
+            </div>
+          ) : tab === "payment" ? (
             <>
               <PaymentDetailsPanel
                 accounts={paymentDetails ?? []}
@@ -1309,63 +1433,36 @@ export default function PortalDashboard({
             <>
               <section className="mt-4 rounded-2xl border border-[#d4a437]/50 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)] sm:p-8">
                 <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="max-w-2xl">
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">Handled by you</p>
-                    <h2 className="mt-2 text-2xl font-black text-[#2a1458]">{ADMIN_TEAMS.join(" / ")}</h2>
-                    <p className="mt-2 leading-relaxed text-[#5c4a2a]">
-                      This team has no team leader for ARES 2027. Its agents register on the normal registration page without
-                      waiting for a team leader, pay you directly, and you confirm each payment here.
+                  <div className="max-w-3xl">
+                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">For your secretaries</p>
+                    <h2 className="mt-2 text-2xl font-black text-[#2a1458]">Accounts for {ADMIN_TEAMS.join(" and ")}</h2>
+                    <p className="mt-3 leading-relaxed text-[#5c4a2a]">
+                      These teams have no team leader for ARES 2027. Create an account for the person who will look after each
+                      team. They sign in to a dashboard for that team only, where they add their name, contact number and
+                      Facebook link and confirm the agents&apos; payments. The agents pay into your own payment details from
+                      Settings.
                     </p>
                   </div>
                   <button type="button" onClick={refresh} disabled={refreshing} className={outlineButton}>
                     <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} /> Refresh
                   </button>
                 </div>
-                <dl className="mt-6 grid gap-3 sm:grid-cols-3">
-                  {[
-                    { label: "Registered", value: adminTeamAgents.length.toLocaleString() },
-                    { label: "Not paid yet", value: adminTeamAgents.filter((r) => r.payment_status === "unpaid").length.toLocaleString() },
-                    { label: "Received", value: formatMoney(sum(adminTeamAgents.filter((r) => r.payment_status === "verified"))) },
-                  ].map((item) => (
-                    <div key={item.label} className="rounded-xl border border-[#e3d3a8] bg-[#fdf8ea] px-4 py-3">
-                      <dt className="text-xs font-semibold uppercase tracking-wider text-[#8a7a58]">{item.label}</dt>
-                      <dd className="mt-1 text-2xl font-black tabular-nums text-[#2a1458]">{item.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-              <section className="mt-4 rounded-2xl border border-[#d4a437]/50 bg-white p-6 shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)] sm:p-8">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#b8862b]">Shown to the agents</p>
-                <h2 className="mt-2 text-2xl font-black text-[#2a1458]">Who handles {ADMIN_TEAMS.join(" / ")}</h2>
-                <p className="mt-3 max-w-2xl leading-relaxed text-[#5c4a2a]">
-                  After registering, the team&apos;s agents are told to pay this person and can contact them by number or
-                  Facebook. You still confirm each payment here.{" "}
-                  {teamHandler ? null : <span className="font-semibold text-[#2a1458]">Until you save a name, they are told to pay the ARES admin.</span>}
-                </p>
-                <div className="mt-6 max-w-2xl">
-                  <AdminTeamHandlerForm handler={teamHandler} onSave={saveTeamHandler} />
+                <div className="mt-6 max-w-3xl">
+                  <AdminTeamAccounts initial={initialTeamLogins} teams={ADMIN_TEAMS} call={call} signInPath="/admin/login" />
                 </div>
               </section>
-              <PaymentDetailsPanel
-                accounts={teamAccounts}
-                fee={fee}
-                onAdd={(form) => changeTeamAccounts("/api/admin/payment-details?scope=team", { method: "POST", body: form })}
-                onUpdate={(id, form) => changeTeamAccounts(`/api/admin/payment-details/${id}?scope=team`, { method: "PUT", body: form })}
-                onDelete={(id) => changeTeamAccounts(`/api/admin/payment-details/${id}?scope=team`, { method: "DELETE" })}
-              />
-              {teamAccounts.length === 0 ? (
-                <p className="mt-3 text-sm text-[#7a6a4a]">
-                  No account added here yet, so {ADMIN_TEAMS.join(" / ")} agents are shown your general payment details from Settings.
-                </p>
-              ) : null}
-              <AdminManagedAgents
-                variant="team"
-                agents={adminTeamAgents}
-                fee={fee}
-                busyKey={busyKey}
-                onConfirm={setConfirmed}
-                onDelete={(row) => setPendingAction({ kind: "registration", row })}
-              />
+              {ADMIN_TEAMS.map((team) => (
+                <AdminManagedAgents
+                  key={team}
+                  variant="team"
+                  title={`${team}: registered agents`}
+                  agents={adminTeamAgents.filter((r) => adminTeamOf(r.team) === team)}
+                  fee={fee}
+                  busyKey={busyKey}
+                  onConfirm={setConfirmed}
+                  onDelete={(row) => setPendingAction({ kind: "registration", row })}
+                />
+              ))}
             </>
           ) : tab === "guests" ? (
             <>
@@ -1648,6 +1745,9 @@ export default function PortalDashboard({
               ) : null}
             </>
           )}
+
+          </div>
+          </div>
 
           <GoldRule className="mx-auto mt-10 max-w-xs" />
         </main>

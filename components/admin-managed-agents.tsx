@@ -26,10 +26,17 @@ const COPY = {
   },
   team: {
     heading: "Registered agents",
-    intro: "This team has no team leader for ARES, so you handle it. Its agents pay you directly, using your payment details in Settings, and only you can confirm their payment.",
+    intro: "The team's account confirms these payments; you can confirm them here too. The agents pay into your payment details from Settings.",
     column: "Team leader in LR",
     handler: null,
     empty: "No agent of this team has registered yet.",
+  },
+  secretary: {
+    heading: "Registered agents",
+    intro: "When an agent has paid, press Payment received to confirm their slot. Undo it if it was a mistake.",
+    column: "Team leader in LR",
+    handler: null,
+    empty: "No agent of your team has registered yet.",
   },
   guests: {
     heading: "Registered guests",
@@ -42,6 +49,8 @@ const COPY = {
 
 export default function AdminManagedAgents({
   variant = "declined",
+  title,
+  emptyText,
   agents,
   fee,
   busyKey,
@@ -52,13 +61,18 @@ export default function AdminManagedAgents({
 }: {
   /** "guests" lists special registrations and shows whether each guest is in the LR records. */
   variant?: keyof typeof COPY
+  /** Replaces the heading, for a page that lists more than one team. */
+  title?: string
+  /** Replaces the "nobody yet" line, for a list that shows only some of the agents. */
+  emptyText?: string
   agents: Registration[]
   /** Registration fee per person; null until it is set. */
   fee: number | null
   /** `registration-<id>` while that row's request is running. */
   busyKey: string | null
   onConfirm: (agent: Registration, received: boolean) => void
-  onDelete: (agent: Registration) => void
+  /** Left out for an account that may confirm payments but not delete registrations. */
+  onDelete?: (agent: Registration) => void
   /** Guests only: the registered team leaders a guest can be handed to. */
   leaders?: TeamLeader[]
   /** Guests only: hand the guest to a team leader, or back to the admin (null). */
@@ -69,7 +83,7 @@ export default function AdminManagedAgents({
 
   return (
     <section className="mt-8">
-      <h2 className="text-xl font-black text-[#2a1458]">{copy.heading}</h2>
+      <h2 className="text-xl font-black text-[#2a1458]">{title ?? copy.heading}</h2>
       <p className="mt-1 max-w-3xl text-sm leading-relaxed text-[#5c4a2a]">
         {copy.intro}
         {agents.length ? (
@@ -85,7 +99,7 @@ export default function AdminManagedAgents({
       <div className="mt-4 overflow-hidden rounded-2xl border border-[#d4a437]/50 bg-white shadow-[0_24px_60px_-34px_rgba(58,13,42,0.5)]">
         {agents.length === 0 ? (
           <p className="px-5 py-10 text-center text-sm text-[#7a6a4a]">
-            {copy.empty}
+            {emptyText ?? copy.empty}
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -252,7 +266,7 @@ export default function AdminManagedAgents({
                             {busy ? <Loader2 size={14} className="animate-spin" /> : paid ? <Undo2 size={14} /> : <CheckCircle2 size={14} />}
                             {paid ? "Undo" : "Payment received"}
                           </button>
-                          {!paid ? (
+                          {!paid && onDelete ? (
                             <button
                               type="button"
                               onClick={() => onDelete(agent)}

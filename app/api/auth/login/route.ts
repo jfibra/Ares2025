@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
-import { findTeamLeaderByEmail, isAllowedAdmin, setSession, type Role } from "@/lib/auth"
+import { findTeamLeaderByEmail, isAllowedAdmin, isTeamAccount, setSession, type Role } from "@/lib/auth"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
     let role: Role | null = null
     if (await isAllowedAdmin(email)) role = "admin"
     else if (await findTeamLeaderByEmail(email)) role = "tl"
+    else if (await isTeamAccount(email)) role = "team"
     if (!role) {
       return NextResponse.json({ success: false, message: "This account does not have access." }, { status: 403 })
     }

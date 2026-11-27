@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
-import { getAdmin, getTeamLeader } from "@/lib/auth"
+import { getAdmin, getTeamAccount, getTeamLeader } from "@/lib/auth"
+import { isAdminTeamRow } from "@/lib/admin-team"
+import { adminTeamOf } from "@/lib/direct-teams"
 import { PHOTO_BUCKET } from "@/lib/photo"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
 
@@ -17,12 +19,15 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
   const isAdmin = Boolean(await getAdmin())
   const leader = isAdmin ? null : await getTeamLeader()
-  if (!isAdmin && !leader) return new NextResponse("Not signed in", { status: 401 })
+  // The Team Tycoons account sees only the agents of the team the admin handles.
+  const teamAccount = isAdmin || leader ? null : await getTeamAccount()
+  if (!isAdmin && !leader && !teamAccount) return new NextResponse("Not signed in", { status: 401 })
 
   const supabase = createSupabaseAdmin()
-  let query = supabase.from("registrations").select("photo_paths").eq("id", id)
+  let query = supabase.from("registrations").select("photo_paths,team,team_leader_id,guest_type").eq("id", id)
   if (leader) query = query.eq("team_leader_id", leader.id)
   const { data, error } = await query.maybeSingle()
+  if (teamAccount && (!data || !isAdminTeamRow(data) || adminTeamOf(data.team) !== teamAccount.team)) return new NextResponse("Not found", { status: 404 })
   const path = (data?.photo_paths as string[] | null | undefined)?.[index]
   if (error || !path) return new NextResponse("Not found", { status: 404 })
 

@@ -8,7 +8,7 @@ import { createSupabaseAdmin } from "@/lib/supabase-server"
 import { getGuestInviteCode } from "@/lib/guest-invite"
 import { getTlInviteCode } from "@/lib/tl-invite"
 import { getTlPaymentDetails } from "@/lib/tl-payment"
-import { getAdminTeamHandler } from "@/lib/admin-team"
+import { listTeamAccounts } from "@/lib/admin-team"
 
 export const metadata: Metadata = { title: "Admin - Registrations", robots: { index: false, follow: false } }
 export const dynamic = "force-dynamic"
@@ -17,7 +17,7 @@ export default async function AdminPage() {
   const admin = await getAdmin()
   if (!admin) redirect("/admin/login")
 
-  const [data, teamLeaders, inviteToken, declines, adminAccounts, guestInviteToken, teamAccounts, teamHandler] = await Promise.all([
+  const [data, teamLeaders, inviteToken, declines, adminAccounts, guestInviteToken, teamAccounts] = await Promise.all([
     loadDashboardData().catch((error) => {
       console.error("Admin page could not load registrations:", error)
       return null
@@ -36,13 +36,9 @@ export default async function AdminPage() {
       console.error("Admin page could not load the guest invite:", error)
       return null
     }),
-    getTlPaymentDetails("admin-team").catch((error) => {
-      console.error("Admin page could not load the team's payment accounts:", error)
+    listTeamAccounts().catch((error) => {
+      console.error("Admin page could not load the team's accounts:", error)
       return []
-    }),
-    getAdminTeamHandler().catch((error) => {
-      console.error("Admin page could not load the team's handler:", error)
-      return null
     }),
   ])
   if (declines.error) console.error("Admin page could not load TL declines:", declines.error)
@@ -62,8 +58,7 @@ export default async function AdminPage() {
       initialGuestInviteToken={guestInviteToken}
       initialDeclines={(declines.data ?? []) as TlDecline[]}
       initialAdminAccounts={adminAccounts ?? []}
-      initialTeamAccounts={teamAccounts}
-      initialTeamHandler={teamHandler}
+      initialTeamLogins={teamAccounts}
       loadFailed={!data || !adminAccounts || Boolean(teamLeaders.error) || Boolean(declines.error)}
     />
   )

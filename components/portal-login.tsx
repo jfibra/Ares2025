@@ -68,7 +68,7 @@ export default function PortalLogin({ variant }: { variant: "admin" | "tl" }) {
         return
       }
       // Keep the button in its loading state until the dashboard takes over.
-      router.replace(result.role === "tl" ? "/tl" : "/admin")
+      router.replace(result.role === "tl" ? "/tl" : result.role === "team" ? "/team" : "/admin")
       router.refresh()
     } catch {
       fail("Could not sign in. Please check your connection and try again.")

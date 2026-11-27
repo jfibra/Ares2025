@@ -2,10 +2,15 @@ import { createHmac, timingSafeEqual } from "crypto"
 import { cookies } from "next/headers"
 import { TEAM_LEADER_COLUMNS, type TeamLeader } from "@/lib/registrations"
 import { createSupabaseAdmin } from "@/lib/supabase-server"
+import { adminTeamOf, type AdminTeam } from "@/lib/direct-teams"
 
 // Server only. The session is a signed, http-only cookie holding the email and role.
 
-export type Role = "admin" | "tl"
+// "team" is the account of the people who look after the team the admin handles (Team Tycoons).
+export type Role = "admin" | "tl" | "team"
+
+/** Where each kind of account lands after signing in. */
+export const HOME_OF: Record<Role, string> = { admin: "/admin", tl: "/tl", team: "/team" }
 
 export const SESSION_COOKIE = "ares_session"
 const MAX_AGE_SECONDS = 60 * 60 * 8
@@ -47,7 +52,7 @@ function readSession(): { email: string; role: Role } | null {
   try {
     const { email, role, exp } = JSON.parse(Buffer.from(payload, "base64url").toString())
     if (typeof email !== "string" || typeof exp !== "number" || exp < Date.now() / 1000) return null
-    if (role !== "admin" && role !== "tl") return null
+    if (role !== "admin" && role !== "tl" && role !== "team") return null
     return { email, role }
   } catch {
     return null
@@ -88,9 +93,26 @@ export async function getTeamLeader(): Promise<TeamLeader | null> {
   return findTeamLeaderByEmail(session.email)
 }
 
+export async function isTeamAccount(email: string) {
+  const { data, error } = await createSupabaseAdmin().from("team_accounts").select("email").eq("email", email.toLowerCase()).maybeSingle()
+  if (error) throw error
+  return Boolean(data)
+}
+
+/** The signed-in account of an admin-handled team, with its team; or null. Re-checks the list, so removing an account takes effect at once. */
+export async function getTeamAccount(): Promise<{ email: string; team: AdminTeam } | null> {
+  const session = readSession()
+  if (!session || session.role !== "team") return null
+  const { data, error } = await createSupabaseAdmin().from("team_accounts").select("email,team").eq("email", session.email.toLowerCase()).maybeSingle()
+  if (error) throw error
+  const team = data ? adminTeamOf(data.team) : null
+  return data && team ? { email: data.email, team } : null
+}
+
 /** Which portal a signed-in visitor belongs to, for redirects. */
 export async function getSignedInRole(): Promise<Role | null> {
   if (await getAdmin()) return "admin"
   if (await getTeamLeader()) return "tl"
+  if (await getTeamAccount()) return "team"
   return null
 }
